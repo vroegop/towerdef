@@ -42,7 +42,8 @@
 .hud .over-rewards .rew { display: flex; justify-content: space-between; align-items: center; padding: 8px 2px; border-bottom: 1px solid #1f2740; }
 .hud .over-rewards .rew:last-child { border-bottom: 0; }
 .hud .over-rewards .rew span { color: #8b93a7; }
-.hud .over-rewards .rew b { color: #ffd24a; font-size: 18px; display: inline-flex; align-items: center; gap: 4px; }
+.hud .over-rewards .rew b { color: #ff2e4e; font-size: 18px; display: inline-flex; align-items: center; gap: 4px; }
+.hud .over-rewards .rew b.tok { color: #5fd0ff; }
 .hud .over-sub { text-align: center; color: #8b93a7; font-size: 13px; padding: 4px 16px 14px; }
 .hud .over-stats { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin: 0; border: 0; border-top: 1px solid #2a3550; border-radius: 0;
   padding: 13px; font: inherit; font-weight: 700; cursor: pointer; background: #1c2030; color: #d8deea; }
@@ -55,8 +56,8 @@
 .hud .tabcontent.collapsed { display: none; }
 .hud .up { display: flex; justify-content: space-between; align-items: center; gap: 6px;
   background: #1c2030; border: 1px solid #262c3d; color: #d8deea; border-radius: 4px; padding: 9px 12px; cursor: pointer; font: inherit; }
-.hud .up:hover:not(:disabled) { border-color: #4aa8ff; }
-.hud .up:disabled { opacity: .4; cursor: default; }
+.hud .up:hover:not(:disabled):not(.cant) { border-color: #4aa8ff; }
+.hud .up:disabled, .hud .up.cant { opacity: .4; cursor: default; }
 .hud .up .nm { font-weight: 600; flex: 1; }
 .hud .up .delta, .hud .perm .delta { color: #8b93a7; font-size: 12.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .hud .up .cost { color: #ffd24a; font-variant-numeric: tabular-nums; }
@@ -88,7 +89,7 @@
 
 .hud .cores-chip { display: inline-block; background: rgba(21,24,35,.8); border: 1px solid #262c3d; border-radius: 4px;
   padding: 6px 14px; color: #8b93a7; margin: 0 auto 14px; }
-.hud .cores-chip b { color: #ffd24a; font-size: 17px; margin-left: 4px; }
+.hud .cores-chip b { color: #ff2e4e; font-size: 17px; margin-left: 4px; } /* cores chip = neon red */
 
 /* framed avatar — vertical gradient, more intense at the middle than top/bottom */
 .hud .avatar-frame { width: 200px; height: 200px; margin: 4px auto 0; border-radius: 5px;
@@ -131,14 +132,15 @@
 .hud .ic.gold { color: #ffd24a; }
 .hud .ic.green { color: #2dff8c; }
 .hud .ic.token { color: #5fd0ff; }
+.hud .ic.core { color: #ff2e4e; filter: drop-shadow(0 0 3px rgba(255,46,78,.6)); } /* cores = neon red */
 .hud .startsq .ic { vertical-align: middle; }
 
 /* ---- cards tab ---- */
 .hud .cardbtns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 0 auto 16px; }
 .hud .cardbtn { display: inline-flex; align-items: center; gap: 8px; background: #1c2030; border: 1px solid #2a3550;
   color: #d8deea; border-radius: 4px; padding: 11px 16px; font: inherit; font-weight: 700; cursor: pointer; }
-.hud .cardbtn:hover:not(:disabled) { border-color: #5fd0ff; }
-.hud .cardbtn:disabled { opacity: .4; cursor: default; }
+.hud .cardbtn:hover:not(:disabled):not(.cant) { border-color: #5fd0ff; }
+.hud .cardbtn:disabled, .hud .cardbtn.cant { opacity: .4; cursor: default; }
 .hud .cardbtn .ct { color: #5fd0ff; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; }
 .hud .cardgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
 .hud .card { background: linear-gradient(180deg, #161b2a, #0e1119); border: 2px solid #3a445f;
@@ -157,17 +159,17 @@
 .hud .card.locked .card-val { color: #4a5168; }
 
 /* permanent upgrades list */
-.hud .permlist { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.hud .permlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 8px; }
 .hud .perm { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: space-between;
   gap: 4px; background: #151823; border: 1px solid #262c3d; border-radius: 4px; padding: 8px 5px; margin: 0;
   cursor: pointer; font: inherit; color: #d8deea; text-align: center; }
-.hud .perm:hover:not(:disabled) { border-color: #ffd24a; }
-.hud .perm:disabled { opacity: .4; cursor: default; }
+.hud .perm:hover:not(:disabled):not(.cant) { border-color: #ffd24a; }
+.hud .perm:disabled, .hud .perm.cant { opacity: .4; cursor: default; }
 .hud .perm.tut { border-color: #ffd24a; box-shadow: 0 0 0 3px rgba(255,210,74,.15); }
 .hud .perm .ptop { display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .hud .perm .pname { font-size: 10px; line-height: 1.1; font-weight: 700; }
 .hud .perm .pcur { font-size: 17px; font-weight: 800; color: #fff; }
-.hud .perm .pcost { color: #ffd24a; font-size: 11px; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+.hud .perm .pcost { color: #ff2e4e; font-size: 11px; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
 
 
 .hud .locked-tab { text-align: center; color: #4a5168; padding-top: 70px; }
@@ -261,8 +263,8 @@
 .hud .cardbtns { display: flex; gap: 12px; justify-content: center; margin: 8px auto 18px; }
 .hud .cardbtn { width: 92px; height: 92px; display: flex; align-items: center; justify-content: space-between;
   background: #1c2030; border: 1px solid #2a3550; border-radius: 4px; padding: 12px; cursor: pointer; font: inherit; }
-.hud .cardbtn:hover:not(:disabled) { border-color: #5fd0ff; }
-.hud .cardbtn:disabled { opacity: .4; cursor: default; }
+.hud .cardbtn:hover:not(:disabled):not(.cant) { border-color: #5fd0ff; }
+.hud .cardbtn:disabled, .hud .cardbtn.cant { opacity: .4; cursor: default; }
 .hud .cardbtn .ct { color: #5fd0ff; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; gap: 3px; }
 .hud .cardgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 14px; }
 .hud .card { background: linear-gradient(180deg, #161b2a, #0e1119); border: 2px solid #3a445f; border-radius: 6px;
@@ -299,3 +301,22 @@
 .hud .csr.have { opacity: 1; }
 .hud .csr .csv { display: inline-flex; align-items: center; gap: 5px; color: #c3cad8; font-variant-numeric: tabular-nums; }
 .hud .csr .csv b { color: #fff; }
+
+/* ---- HP bar in the topbar (keeps the numeric readout) ---- */
+.hud .stat.hp { display: flex; align-items: center; gap: 7px; }
+.hud .hpbar { width: 64px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.12); overflow: hidden; }
+.hud .hpbar i { display: block; height: 100%; width: 100%; background: #3ddc84; transition: width .15s linear, background .2s; }
+
+/* ---- wave countdown: a narrow vertical bar on the right edge that fills, then drops ---- */
+.hud .wavebar { position: absolute; right: 0; top: 16%; bottom: 16%; width: 5px;
+  background: rgba(255,255,255,.05); border-left: 1px solid #262c3d; overflow: hidden; }
+.hud .wavebar i { position: absolute; left: 0; right: 0; bottom: 0; height: 0%;
+  background: linear-gradient(0deg, #7a2cff, #e64cff); box-shadow: 0 0 8px rgba(230,76,255,.5); transition: height .12s linear; }
+
+/* ---- unaffordable feedback: shake the currency indicator ---- */
+@keyframes shake { 10%,90%{transform:translateX(-1px)} 20%,80%{transform:translateX(2px)} 30%,50%,70%{transform:translateX(-4px)} 40%,60%{transform:translateX(4px)} }
+.hud .shake { animation: shake .4s ease both; }
+
+/* ---- tutorial: pulse the in-run tab bar when gold can first afford an upgrade ---- */
+.hud .tabbar.pulse { animation: tabpulse 1.2s ease-in-out infinite; }
+@keyframes tabpulse { 0%,100% { box-shadow: 0 0 0 rgba(74,168,255,0); } 50% { box-shadow: 0 -4px 20px rgba(74,168,255,.55); } }

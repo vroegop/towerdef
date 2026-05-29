@@ -99,6 +99,7 @@
   Sim.prototype._hero = function (dt) {
     const h = this.s.hero, st = this.stats, s = this.s;
     // hero is stationary at its spawn point — combat is positioning-free
+    h.range = st.range; // surfaced in the snapshot so the renderer/camera read the true range
     // derived max + regen
     h.hpMax = st.maxHp; if (h.hp > h.hpMax) h.hp = h.hpMax;
     h.sinceHit += dt;

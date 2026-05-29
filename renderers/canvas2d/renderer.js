@@ -1,6 +1,11 @@
 /* renderers/canvas2d/renderer.js — simple-shapes renderer. Reads snapshots only.
-   Owns ALL decorative effects (sparks, hero rings); they reset on reload by design. */
+   Owns ALL decorative effects (sparks, shatter, hit vignette, screen shake) and the
+   camera (zoom-on-tower); they reset on reload by design.
+   draw(snapshot, alpha, paused): alpha in [0,1) interpolates between sim ticks; paused
+   freezes the decorative clock so every effect holds still for inspection. */
 (function (A) {
+  const VIEW_MARGIN = 1.5; // how much room around the range ring to show (bigger = more zoomed out)
+
   function drawShape(ctx, shape, x, y, r, color, facing, flash, veteran) {
     ctx.save();
     ctx.translate(x, y); ctx.rotate(facing || 0);
@@ -25,9 +30,15 @@
     let bolts = [];                // UI-only lightning bolts (dev lightning mode)
     const seen = new Map();        // track hitFlash edges → fire sparks/bolts once per hit
     const prevEnemies = new Map(); // id → last-seen {screenX, screenY, color}; a vanished id = a kill
+    let prevPos = new Map();       // id → world {x,y} at the END of the previous sim tick (for interpolation)
+    let curPos = new Map();        // id → world {x,y} this frame (recaptured every draw)
     let lastTick = -1;             // detect run restarts (tick backwards) / offline jumps (big forward leap)
     let heroWasAlive = true;       // edge-detect the hero's death to explode it once
+    let prevHp = null;             // edge-detect hero HP drops → hit feedback
+    let hurt = 0;                  // red-vignette intensity (decays on the UI clock)
+    let shakeT = 0;                // screen-shake time remaining
     let lastTs = performance.now();
+    const HERO_ID = 0;             // reserved key (enemy/projectile ids start at 1)
 
     function resize() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -40,8 +51,6 @@
       for (let i = 0; i < 5; i++) { const a = Math.random() * Math.PI * 2; sparks.push({ x, y, vx: Math.cos(a) * 70, vy: Math.sin(a) * 70, life: 0.35, color }); }
     }
 
-    // Kill effect: shape-colored fragments that fly out, spin, and fade. `count` is chosen
-    // adaptively by the caller so a crowded screen stays cheap.
     function spawnShatter(x, y, color, count) {
       for (let i = 0; i < count; i++) {
         const a = Math.random() * Math.PI * 2, sp = 90 + Math.random() * 150, life = 0.5 + Math.random() * 0.3;
@@ -49,7 +58,6 @@
       }
     }
 
-    // Lightning bolt (dev mode): a jagged polyline frozen at fire time, fading fast.
     function spawnBolt(x1, y1, x2, y2) {
       const segs = 6, pts = [{ x: x1, y: y1 }], dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
       const px = -dy / len, py = dx / len; // unit perpendicular for the zigzag offset
@@ -58,19 +66,54 @@
       bolts.push({ pts, life: 0.12, max: 0.12 });
     }
 
-    function draw(s, paused) {
+    // capture every entity's world position this frame, keyed by id (hero = HERO_ID)
+    function capture(s) {
+      const m = new Map();
+      m.set(HERO_ID, { x: s.hero.x, y: s.hero.y });
+      for (const e of s.enemies) m.set(e.id, { x: e.x, y: e.y });
+      for (const p of s.projectiles) m.set(p.id, { x: p.x, y: p.y });
+      return m;
+    }
+
+    function draw(s, alpha, paused) {
       const now = performance.now(), rdt = paused ? 0 : Math.min((now - lastTs) / 1000, 0.05); lastTs = now;
+      if (alpha == null) alpha = 1;
       // tick going backwards = a new run; a big forward leap = offline catch-up. Either way the
-      // enemy set is discontinuous, so resync the kill-tracker WITHOUT shattering everything.
-      const tickJump = s.tick - lastTick, resync = tickJump < 0 || tickJump > 90; lastTick = s.tick;
+      // entity set is discontinuous, so resync trackers WITHOUT shattering or interpolating across the gap.
+      const tickJump = s.tick - lastTick, resync = tickJump < 0 || tickJump > 90;
+      if (s.tick !== lastTick) { prevPos = curPos; lastTick = s.tick; } // shift: last frame's positions become "previous tick"
+      curPos = capture(s);                                              // current positions (recaptured every draw)
+
+      // interpolated world position for an id, falling back to (fx,fy)
+      const ipos = (id, fx, fy) => {
+        const cur = curPos.get(id) || { x: fx, y: fy };
+        if (resync) return cur;
+        const prev = prevPos.get(id);
+        if (!prev) return cur;
+        return { x: prev.x + (cur.x - prev.x) * alpha, y: prev.y + (cur.y - prev.y) * alpha };
+      };
+
       const W = canvas.clientWidth, H = canvas.clientHeight;
-      const scale = Math.min(W / s.arena.w, H / s.arena.h);
-      const ox = (W - s.arena.w * scale) / 2, oy = (H - s.arena.h * scale) / 2;
+      // ---- camera: center on the tower, zoom by range, clamp so arena edges stay off-screen ----
+      const range = (s.hero && s.hero.range) || 220;
+      const coverScale = Math.max(W / s.arena.w, H / s.arena.h); // arena always covers the screen (no letterbox; spawns off-screen)
+      const rangeScale = Math.min(W, H) / (2 * range * VIEW_MARGIN); // smaller range → zoom in; bigger range → zoom out
+      const scale = Math.max(coverScale, rangeScale);
+      const hp = ipos(HERO_ID, s.hero.x, s.hero.y);
+      // screen shake nudges the whole scene (decays on the UI clock)
+      let shx = 0, shy = 0;
+      if (shakeT > 0) { const amp = 9 * (shakeT / 0.35); shx = (Math.random() - 0.5) * amp; shy = (Math.random() - 0.5) * amp; shakeT = Math.max(0, shakeT - rdt); }
+      let ox = W / 2 - hp.x * scale + shx, oy = H / 2 - hp.y * scale + shy;
+      const minOx = W - s.arena.w * scale, minOy = H - s.arena.h * scale; // keep the view inside the arena
+      ox = Math.min(0, Math.max(minOx, ox)); oy = Math.min(0, Math.max(minOy, oy));
       const tx = (x) => ox + x * scale, ty = (y) => oy + y * scale;
 
+      // ---- floor: radial glow centered on the tower (no arena border) ----
       ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = '#090b11'; ctx.fillRect(ox, oy, s.arena.w * scale, s.arena.h * scale);
-      ctx.strokeStyle = '#2a3350'; ctx.lineWidth = 1; ctx.strokeRect(ox, oy, s.arena.w * scale, s.arena.h * scale);
+      const hsx = tx(hp.x), hsy = ty(hp.y);
+      const fg = ctx.createRadialGradient(hsx, hsy, 0, hsx, hsy, Math.max(W, H) * 0.78);
+      fg.addColorStop(0, '#121826'); fg.addColorStop(0.55, '#0a0e16'); fg.addColorStop(1, '#06080d');
+      ctx.fillStyle = fg; ctx.fillRect(0, 0, W, H);
 
       // black hole effects (gameplay-authored position; visual is ours)
       for (const e of s.effects) {
@@ -82,12 +125,13 @@
 
       for (const e of s.enemies) {
         const col = A.TIERS[e.tier].color;
+        const ep = ipos(e.id, e.x, e.y), esx = tx(ep.x), esy = ty(ep.y);
         const rot = e.shape === 'triangle' ? e.facing + Math.PI / 2 : 0;
-        drawShape(ctx, e.shape, tx(e.x), ty(e.y), e.r * scale, col, rot, e.hitFlash, e.veteran);
+        drawShape(ctx, e.shape, esx, esy, e.r * scale, col, rot, e.hitFlash, e.veteran);
         const prev = seen.get(e.id) || 0;
         if (e.hitFlash > 0 && prev <= 0) {
-          spawnSparks(tx(e.x), ty(e.y), col);
-          if (s.atkMode === 'lightning') spawnBolt(tx(s.hero.x), ty(s.hero.y), tx(e.x), ty(e.y));
+          spawnSparks(esx, esy, col);
+          if (s.atkMode === 'lightning') spawnBolt(hsx, hsy, esx, esy);
         }
         seen.set(e.id, e.hitFlash);
       }
@@ -95,7 +139,8 @@
       // travelling bullets — small white dots, no trail (empty in lightning mode)
       ctx.fillStyle = '#ffffff';
       for (const p of s.projectiles) {
-        ctx.beginPath(); ctx.arc(tx(p.x), ty(p.y), Math.max(1.5, p.r * 0.5 * scale), 0, Math.PI * 2); ctx.fill();
+        const pp = ipos(p.id, p.x, p.y);
+        ctx.beginPath(); ctx.arc(tx(pp.x), ty(pp.y), Math.max(1.5, p.r * 0.5 * scale), 0, Math.PI * 2); ctx.fill();
       }
 
       // kill shatter: an id seen last frame but gone now died (enemies only leave via death)
@@ -109,22 +154,27 @@
         }
       }
       prevEnemies.clear();
-      for (const e of s.enemies) prevEnemies.set(e.id, { x: tx(e.x), y: ty(e.y), color: A.TIERS[e.tier].color });
+      for (const e of s.enemies) { const ep = ipos(e.id, e.x, e.y); prevEnemies.set(e.id, { x: tx(ep.x), y: ty(ep.y), color: A.TIERS[e.tier].color }); }
 
       const h = s.hero;
       if (s.alive) {
-        // range ring (decorative)
+        // range ring (decorative) — reads the true range from the snapshot
         ctx.strokeStyle = 'rgba(74,168,255,.12)'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.arc(tx(h.x), ty(h.y), 220 * scale, 0, Math.PI * 2); ctx.stroke();
-        drawShape(ctx, 'circle', tx(h.x), ty(h.y), h.r * scale, '#4aa8ff', 0, 0, false);
+        ctx.beginPath(); ctx.arc(hsx, hsy, range * scale, 0, Math.PI * 2); ctx.stroke();
+        drawShape(ctx, 'circle', hsx, hsy, h.r * scale, '#4aa8ff', 0, 0, false);
         // hp ring
         const frac = h.hpMax > 0 ? h.hp / h.hpMax : 0;
         ctx.strokeStyle = frac > 0.3 ? '#3ddc84' : '#ff5d6c'; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.arc(tx(h.x), ty(h.y), (h.r + 6) * scale, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac); ctx.stroke();
+        ctx.beginPath(); ctx.arc(hsx, hsy, (h.r + 6) * scale, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac); ctx.stroke();
       } else if (heroWasAlive) {
-        spawnShatter(tx(h.x), ty(h.y), '#4aa8ff', 24); // the hero "explodes" once, like an enemy but bigger
+        spawnShatter(hsx, hsy, '#4aa8ff', 24); // the hero "explodes" once, like an enemy but bigger
       }
       heroWasAlive = s.alive;
+
+      // ---- hero hit feedback: edge-detect an HP drop → red vignette + screen shake ----
+      if (resync || prevHp === null) prevHp = h.hp; // don't flash on first frame or after an offline jump
+      else if (s.alive && h.hp < prevHp - 0.001) { hurt = 1; shakeT = 0.35; prevHp = h.hp; }
+      else if (h.hp > prevHp) prevHp = h.hp; // track regen so the next drop is detected
 
       // sparks (advanced on the UI clock, not the sim clock)
       for (const p of sparks) { p.x += p.vx * rdt; p.y += p.vy * rdt; p.life -= rdt; ctx.globalAlpha = Math.max(0, p.life / 0.35); ctx.fillStyle = p.color; ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3); }
@@ -152,6 +202,14 @@
       }
       ctx.globalAlpha = 1; ctx.shadowBlur = 0;
       bolts = bolts.filter((b) => b.life > 0);
+
+      // ---- red damage vignette (drawn in screen space, unaffected by shake) ----
+      if (hurt > 0) {
+        const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.32, W / 2, H / 2, Math.max(W, H) * 0.72);
+        vg.addColorStop(0, 'rgba(255,40,60,0)'); vg.addColorStop(1, 'rgba(255,40,60,' + (0.55 * hurt).toFixed(3) + ')');
+        ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+        hurt = Math.max(0, hurt - rdt * 3);
+      }
     }
 
     resize();

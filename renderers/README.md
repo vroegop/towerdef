@@ -11,9 +11,13 @@ engine (Canvas2D today; WebGL, Pixi, Three.js, even a DOM/SVG experiment) withou
 ARENA.SomeRenderer = function (canvasOrRoot) {
   return {
     resize() { /* recompute backing size; called on viewport change */ },
-    draw(snapshot, alpha) {
+    draw(snapshot, alpha, paused) {
       // snapshot = sim.snapshot() — read-only.
-      // alpha = leftover/DT in [0,1) for interpolation between fixed sim ticks.
+      // alpha = leftover acc/DT in [0,1) for interpolation between fixed sim ticks
+      //         (the loop steps the sim at a fixed DT but renders at display rate).
+      // paused = dev freeze: hold the decorative clock (no spark/shatter advance) so a
+      //          frame can be inspected. The loop passes alpha=1 for one-off live frames
+      //          (e.g. the post-death drift) where the snapshot already holds final positions.
       // Decorative effects (sparks, shake, smoke) are INVENTED here and discarded on reload.
     },
   };

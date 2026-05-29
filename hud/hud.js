@@ -40,15 +40,16 @@
         '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
         PATHS[name] + '</svg>';
     }
-    const cores = (size) => icon('cores', size || 14, 'gold');
+    const cores = (size) => icon('cores', size || 14, 'core');
 
     root.innerHTML =
       '<div class="topbar" id="h-top">' +
       '  <div class="stat wave"><span class="lbl">Wave</span><b id="h-wave">1</b></div>' +
-      '  <div class="stat"><span class="lbl">HP</span><b id="h-hp">1</b></div>' +
+      '  <div class="stat hp"><span class="lbl">HP</span><b id="h-hp">1</b><span class="hpbar"><i id="h-hpfill"></i></span></div>' +
       '  <div class="stat gold"><span class="lbl">Gold</span><b id="h-gold">0</b></div>' +
       '  <button class="iconbtn" id="h-chart" title="Stats">' + icon('chart', 20) + '</button>' +
       '</div>' +
+      '<div class="wavebar" id="h-wavebar" title="Next wave"><i id="h-wavefill"></i></div>' +
       '<div class="statswrap hide" id="h-stats"><div class="statscard" id="h-statscard"></div></div>' +
       '<div class="ghint hide" id="h-ghint"></div>' +
       '<div class="tabbar" id="h-tabbar"><div id="h-tabcontent"></div><div class="tabs" id="h-tabs"></div></div>' +
@@ -94,7 +95,7 @@
     const STAT_ICON = { rangedDamage: 'bow', attackSpeed: 'rate', health: 'heart', regen: 'regen' };
     const STAT_LABEL = { rangedDamage: 'Ranged', attackSpeed: 'Speed', health: 'Health', regen: 'Regen' };
     // currencies shown on the Hero screen — add a row here (+ a meta field) for future currencies
-    const CURRENCIES = [{ key: 'cores', icon: 'cores', cls: 'gold' }, { key: 'tokens', icon: 'token', cls: 'token' }];
+    const CURRENCIES = [{ key: 'cores', icon: 'cores', cls: 'core' }, { key: 'tokens', icon: 'token', cls: 'token' }];
     function starSvg(kind) {
       const fill = kind === 'white' ? '#eef2f8' : kind === 'gold' ? '#ffd24a' : 'url(#chroma)';
       return '<svg class="star ' + kind + '" width="16" height="16" viewBox="0 0 24 24"><path fill="' + fill + '" stroke="rgba(0,0,0,.3)" stroke-width="1" d="' + STARP + '"/></svg>';
@@ -140,16 +141,6 @@
       }
       return h;
     }
-    // press-and-hold (~0.6s, no scroll) to open the per-star breakdown
-    function attachLongPress(el, fn) {
-      let t = null, sx = 0, sy = 0;
-      const cancel = () => { if (t) { clearTimeout(t); t = null; } };
-      el.addEventListener('pointerdown', (e) => { sx = e.clientX; sy = e.clientY; cancel(); t = setTimeout(() => { t = null; fn(); }, 300); });
-      el.addEventListener('pointermove', (e) => { if (t && (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10)) cancel(); });
-      el.addEventListener('pointerup', cancel);
-      el.addEventListener('pointerleave', cancel);
-      el.addEventListener('pointercancel', cancel);
-    }
     function openCardModal(id) {
       const def = A.CARDS[id]; if (!def) return;
       const owned = ((lastMeta && lastMeta.cards) || []).find((c) => c.id === id);
@@ -169,13 +160,14 @@
     // ---------- in-game tab bar ----------
     const tabsEl = $('#h-tabs'), contentEl = $('#h-tabcontent');
     const rowEls = {};
-    let activeTab = A.TABS[0].id, tabOpen = false; // collapsed by default
+    let activeTab = A.TABS[0].id, tabOpen = false, taughtTabs = false; // collapsed by default
     A.TABS.forEach((tab) => {
       const b = document.createElement('button');
       b.textContent = tab.label; b.dataset.tab = tab.id;
       b.addEventListener('click', () => {
         if (tabOpen && activeTab === tab.id) tabOpen = false;        // click active = close
         else { activeTab = tab.id; tabOpen = true; }                 // open / switch
+        taughtTabs = true; $('#h-tabbar').classList.remove('pulse'); // opening a tab dismisses the upgrade hint
         renderTabButtons(); renderTabContent();
       });
       tabsEl.appendChild(b);
@@ -190,7 +182,10 @@
         btn.className = 'up';
         btn.innerHTML = '<span class="nm">' + u.label + '</span>' +
           '<span class="delta"><span class="cur"></span> ' + icon('arrow', 12) + ' <span class="nxt"></span></span><span class="cost"></span>';
-        btn.addEventListener('click', () => handlers.onBuyRun && handlers.onBuyRun(u.stat));
+        btn.addEventListener('click', () => {
+          if (lastS && lastS.econ.gold < A.runUpgradeCost(lastS, u.stat)) { shake(root.querySelector('.stat.gold')); return; }
+          handlers.onBuyRun && handlers.onBuyRun(u.stat);
+        });
         contentEl.appendChild(btn);
         rowEls[u.stat] = { btn, cur: btn.querySelector('.cur'), nxt: btn.querySelector('.nxt'), cost: btn.querySelector('.cost') };
       }
@@ -198,11 +193,28 @@
     renderTabContent();
 
     let lastS = null;
+    // brief shake to signal "can't afford" on a currency indicator
+    function shake(el) { if (!el) return; el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
     function update(s) {
       lastS = s;
       $('#h-wave').textContent = s.wave.n;
       $('#h-hp').textContent = Math.ceil(s.hero.hp) + ' / ' + Math.ceil(s.hero.hpMax);
       $('#h-gold').textContent = fmt(s.econ.gold);
+      // HP bar (mirrors the hero's hp ring colour)
+      const hpf = s.hero.hpMax > 0 ? Math.max(0, Math.min(1, s.hero.hp / s.hero.hpMax)) : 0;
+      const hpfill = $('#h-hpfill');
+      hpfill.style.width = (hpf * 100) + '%';
+      hpfill.style.background = hpf > 0.3 ? '#3ddc84' : '#ff5d6c';
+      // wave countdown bar (hidden during the scripted first run, which has no wave clock)
+      const wbar = $('#h-wavebar');
+      if (s.firstRun) wbar.style.display = 'none';
+      else { wbar.style.display = ''; $('#h-wavefill').style.height = (Math.max(0, Math.min(1, s.wave.clock / A.WAVE.interval)) * 100) + '%'; }
+      // teach mid-run upgrades: pulse the tab bar the first time gold can afford any upgrade
+      if (!taughtTabs && !s.firstRun && !tabOpen) {
+        let min = Infinity;
+        for (const t of A.TABS) for (const u of t.ups) min = Math.min(min, A.runUpgradeCost(s, u.stat));
+        $('#h-tabbar').classList.toggle('pulse', s.econ.gold >= min);
+      }
       if (tabOpen) {
         const lvl = A.computeStats(s).lvl;
         const tab = A.TABS.find((t) => t.id === activeTab);
@@ -212,7 +224,7 @@
           r.nxt.textContent = A.statDisplay(u.stat, lvl[u.stat] + 1);
           const cost = A.runUpgradeCost(s, u.stat);
           r.cost.textContent = fmt(cost) + ' g';
-          r.btn.disabled = s.econ.gold < cost;
+          r.btn.classList.toggle('cant', s.econ.gold < cost);
         }
       }
       if (!$('#h-stats').classList.contains('hide')) refreshStats(s);
@@ -231,9 +243,7 @@
       set('cores', fmt(m.cores || 0));
       set('run', fmt(coresRun));
     }
-    function openStats(opts) {
-      opts = opts || {};
-      const exitBtn = opts.fromOverview ? '' : '<button class="exitrun" id="h-stats-exit">Exit run</button>';
+    function openStats() {
       $('#h-statscard').innerHTML =
         '<div class="statshead"><h2>Run Stats</h2><button class="iconclose" id="h-stats-close" title="Close">' + icon('close', 18) + '</button></div>' +
         '<div class="statsbody">' +
@@ -242,10 +252,9 @@
         '<div class="strow"><span>Core multiplier</span><b id="st-mult">x1</b></div>' +
         '<div class="strow"><span>Total cores</span><b id="st-cores">0</b></div>' +
         '<div class="strow"><span>Cores this run (so far)</span><b id="st-run">0</b></div>' +
-        '</div>' + exitBtn;
-      $('#h-stats-close').addEventListener('click', () => $('#h-stats').classList.add('hide')); // reveals game OR overview underneath
-      const ex = $('#h-stats-exit');
-      if (ex) ex.addEventListener('click', () => { $('#h-stats').classList.add('hide'); handlers.onExitRun && handlers.onExitRun(); });
+        '</div><button class="exitrun" id="h-stats-exit">Exit run</button>';
+      $('#h-stats-close').addEventListener('click', () => $('#h-stats').classList.add('hide'));
+      $('#h-stats-exit').addEventListener('click', () => { $('#h-stats').classList.add('hide'); handlers.onExitRun && handlers.onExitRun(); });
       if (lastS) refreshStats(lastS);
       $('#h-stats').classList.remove('hide');
     }
@@ -351,7 +360,7 @@
         const cur = A.statDisplay(up.stat, eff); // current effect (no increase shown)
         const cost = A.permCost(meta, up.id), afford = (meta.cores || 0) >= cost;
         const isTut = tutoring && i === 0 && permLvl === 0;
-        html += '<button class="perm' + (isTut ? ' tut' : '') + '" data-perm="' + up.id + '"' + (afford ? '' : ' disabled') + '>' +
+        html += '<button class="perm' + (isTut ? ' tut' : '') + (afford ? '' : ' cant') + '" data-perm="' + up.id + '">' +
           '<span class="ptop">' + icon(STAT_ICON[up.stat] || 'burst', 18) + '<span class="pname">' + up.label + '</span></span>' +
           '<span class="pcur">' + cur + '</span>' +
           '<span class="pcost">' + cost + ' ' + cores(12) + '</span></button>';
@@ -423,8 +432,8 @@
           const owned = meta.cards || [];
           const bc = A.buyCardCost(meta), uc = A.upgradeCost(meta);
           html += '<div class="cardbtns">' +
-            '<button class="cardbtn" id="h-buycard" title="Buy card"' + ((meta.tokens || 0) < bc ? ' disabled' : '') + '>' + icon('cards', 26) + '</button>' +
-            '<button class="cardbtn" id="h-upcard" title="Add star"' + (((meta.tokens || 0) < uc || !owned.length) ? ' disabled' : '') + '>' + icon('star', 26, 'gold') + '</button>' +
+            '<button class="cardbtn' + ((meta.tokens || 0) < bc ? ' cant' : '') + '" id="h-buycard" title="Buy card">' + icon('cards', 26) + '</button>' +
+            '<button class="cardbtn' + ((meta.tokens || 0) < uc ? ' cant' : '') + '" id="h-upcard" title="Add star"' + (!owned.length ? ' disabled' : '') + '>' + icon('star', 26, 'gold') + '</button>' +
             '</div>';
           html += '<div class="cardgrid">' + cardGridHtml(meta) + '</div>';
         }
@@ -447,11 +456,14 @@
         $('#h-start').addEventListener('click', () => handlers.onStartRun && handlers.onStartRun());
       } else if (menuTab === 'upgrades') {
         menuContent.querySelectorAll('[data-perm]').forEach((b) =>
-          b.addEventListener('click', () => { if (handlers.onBuyPerm && handlers.onBuyPerm(b.dataset.perm)) renderMenu(); }));
+          b.addEventListener('click', () => {
+            if (handlers.onBuyPerm && handlers.onBuyPerm(b.dataset.perm)) renderMenu();
+            else shake(menuContent.querySelector('.cores-chip'));
+          }));
       } else if (menuTab === 'cards') {
-        const bb = $('#h-buycard'); if (bb) bb.addEventListener('click', () => { if (handlers.onBuyCard && handlers.onBuyCard()) renderMenu(); });
-        const ub = $('#h-upcard'); if (ub) ub.addEventListener('click', () => { if (handlers.onUpgradeCard && handlers.onUpgradeCard()) renderMenu(); });
-        menuContent.querySelectorAll('.card[data-card]').forEach((el) => attachLongPress(el, () => openCardModal(el.dataset.card)));
+        const bb = $('#h-buycard'); if (bb) bb.addEventListener('click', () => { if (handlers.onBuyCard && handlers.onBuyCard()) renderMenu(); else shake(bb); });
+        const ub = $('#h-upcard'); if (ub) ub.addEventListener('click', () => { if (handlers.onUpgradeCard && handlers.onUpgradeCard()) renderMenu(); else shake(ub); });
+        menuContent.querySelectorAll('.card[data-card]').forEach((el) => el.addEventListener('click', () => openCardModal(el.dataset.card)));
       }
       // tutorial spotlight: hero step points at the upgrades tab, upgrades step points at the upgrade button
       let spotTarget = null, spotText = '';
@@ -475,16 +487,22 @@
     const overEl = $('#h-over'), overCard = $('#h-over-card');
     function showOverview(meta, earn) {
       lastMeta = meta; const e = earn || {};
-      $('#h-stats').classList.add('hide'); // start clean; Run Stats opens on top of this
+      $('#h-stats').classList.add('hide');
+      const tier = meta.tier || 1;
       let rew = '<div class="rew"><span>Cores</span><b>+' + (e.cores || 0) + ' ' + cores(16) + '</b></div>';
-      if (e.tokens) rew += '<div class="rew"><span>Tokens</span><b>+' + e.tokens + ' ' + icon('token', 15, 'token') + '</b></div>';
+      if (e.tokens) rew += '<div class="rew"><span>Tokens</span><b class="tok">+' + e.tokens + ' ' + icon('token', 15, 'token') + '</b></div>';
+      const row = (label, val) => '<div class="strow"><span>' + label + '</span><b>' + val + '</b></div>';
       overCard.innerHTML =
         '<div class="statshead"><h2>Run Over</h2><button class="iconclose" id="h-over-close" title="Workshop">' + icon('close', 18) + '</button></div>' +
         '<div class="over-rewards">' + rew + '</div>' +
-        '<div class="over-sub">' + (e.kills || 0) + ' kills · wave ' + (e.wave || 0) + '</div>' +
-        '<button class="over-stats" id="h-over-stats">' + icon('chart', 16) + ' Run Stats</button>';
+        '<div class="statsbody">' +
+        row('Kills', fmt(e.kills || 0)) +
+        row('Wave reached', fmt(e.wave || 0)) +
+        row('Foes per wave', fmt(A.waveCount((e.wave || 1) * A.tierDifficulty(tier)))) +
+        row('Core multiplier', 'x' + A.coreMult(tier).toFixed(1)) +
+        row('Total cores', fmt(meta.cores || 0)) +
+        '</div>';
       $('#h-over-close').addEventListener('click', () => handlers.onToWorkshop && handlers.onToWorkshop());
-      $('#h-over-stats').addEventListener('click', () => openStats({ fromOverview: true }));
       overEl.classList.remove('hide');
       tabbarEl.style.display = 'none'; topEl.style.display = 'none';
     }

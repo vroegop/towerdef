@@ -108,7 +108,7 @@
       s.enemies = [e];
       s.projectiles = [{ id: s.nextId++, x: hx + 70, y: hy, vx: A.BULLET_SPEED, vy: 0, r: A.BULLET_R, dmg: 1, traveled: 70, maxDist: 1000 }];
       togglePause(true);
-      renderer.draw(s, true);
+      renderer.draw(s, 0, true);
     }
 
     // ---- input ----
@@ -160,15 +160,15 @@
       if (!running || (mode !== 'playing' && mode !== 'dying')) return;
       const dt = Math.min((now - last) / 1000, 0.25); last = now;
       if (mode === 'dying') { // ~1s post-death flourish: enemies drift in, hero shatter plays out
-        dyingT += dt; A.tickDying(sim.s, dt); renderer.draw(sim.s, false);
+        dyingT += dt; A.tickDying(sim.s, dt); renderer.draw(sim.s, 1, false); // live positions: no interp
         if (dyingT >= 1) { enterOverview(bankRun()); return; }
         requestAnimationFrame(frame); return;
       }
-      if (paused) { renderer.draw(sim.s, true); hud.update(sim.s); requestAnimationFrame(frame); return; }
+      if (paused) { renderer.draw(sim.s, 0, true); hud.update(sim.s); requestAnimationFrame(frame); return; }
       acc += dt;
       let g = 0;
       while (acc >= DT && g++ < 8) { sim.step(DT); acc -= DT; }
-      renderer.draw(sim.s, false);
+      renderer.draw(sim.s, acc / DT, false); // alpha = how far we are toward the next tick
       hud.update(sim.s);
       if (!sim.s.alive) { startDying(); return; }
       requestAnimationFrame(frame);

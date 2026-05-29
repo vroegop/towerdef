@@ -17,6 +17,7 @@
       hero: {
         x: A.ARENA_W / 2, y: A.ARENA_H / 2, r: 16,
         hp: 1, hpMax: 1, shield: 0, shieldMax: 0, sinceHit: 99, atkCd: 0,
+        range: 220,              // attack radius, written by the sim each step (renderer/camera read it)
       },
       enemies: [],
       projectiles: [],
