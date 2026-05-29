@@ -34,21 +34,26 @@
     return A.WAVE.screenCap; // concurrent cap stays fixed; wave SIZE is what upgrades grow
   };
 
+  // Effective wave for difficulty: real wave scaled by the run's tier multiplier. The real
+  // counter (w.n) still drives display, spawn timing, and milestones.
+  Sim.prototype._effWave = function (n) { return n * (this.s.difficultyMult || 1); };
+
   Sim.prototype._startWave = function (n) {
     const w = this.s.wave;
     w.n = n; w.maxWave = Math.max(w.maxWave, n);
-    w.count = A.waveCount(n);
+    const eff = this._effWave(n);
+    w.count = A.waveCount(eff);
     w.toSpawn = w.count;
     w.releaseGap = A.WAVE.spawnWindow / Math.max(1, w.count);
     w.releaseTimer = 0;
-    A.ageSurvivors(this.s, n); // survivors get stronger as the new wave begins
+    A.ageSurvivors(this.s, eff); // survivors get stronger as the new wave begins
   };
 
   Sim.prototype._spawnOne = function () {
-    const s = this.s;
-    const type = A.pickType(this.rng, s.wave.n);
-    const tier = A.pickTier(this.rng, s.wave.n);
-    s.enemies.push(A.makeEnemy(s.nextId++, type, tier, s.wave.n, this.rng, s.arena));
+    const s = this.s, eff = this._effWave(s.wave.n);
+    const type = A.pickType(this.rng, eff);
+    const tier = A.pickTier(this.rng, eff);
+    s.enemies.push(A.makeEnemy(s.nextId++, type, tier, eff, this.rng, s.arena));
   };
 
   // First run only: a scripted, deliberately lethal trickle of weak melee so a

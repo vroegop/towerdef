@@ -42,6 +42,7 @@
       return {
         cores: m.cores || 0, perm: m.perm || {}, hasPlayed: !!m.hasPlayed,
         bestWave: m.bestWave || 0, claimedMilestones: m.claimedMilestones || {}, tier: m.tier || 1, coreMult: m.coreMult || 1,
+        tierBest: m.tierBest || {}, // furthest wave reached per tier (gates tier unlocks)
         tokens: m.tokens || 0, cards: m.cards || [], cardBuys: m.cardBuys || 0, starBuys: m.starBuys || 0,
       };
     }
@@ -56,6 +57,7 @@
       onBuyRun: (stat) => { if (sim) A.buyRunUpgrade(sim.s, stat); },
       onBuyPerm: (id) => { const ok = A.buyPerm(meta, id); if (ok) saveMeta(); return ok; },
       onClaimMilestone: (wave) => { const r = A.claimMilestone(meta, wave); if (r) saveMeta(); return r; },
+      onSetTier: (t) => { t = t | 0; if (t < 1 || t > A.MAX_TIER || !A.tierUnlocked(meta, t)) return false; meta.tier = t; saveMeta(); return true; },
       onBuyCard: () => { const r = A.buyCard(meta); if (r) saveMeta(); return r; },
       onUpgradeCard: () => { const r = A.upgradeRandomCard(meta); if (r) saveMeta(); return r; },
       onStartRun: () => startRun(false),
@@ -137,10 +139,13 @@
       const firstRunJustEnded = !meta.hasPlayed;
       const wave = sim.s.wave.maxWave || sim.s.wave.n;
       const cores = firstRunJustEnded
-        ? A.FIRST_PERM_COST // exactly enough to raise attack speed
-        : Math.max(1, Math.floor(sim.s.econ.kills / 10) + (sim.s.wave.maxWave || 0));
+        ? A.FIRST_PERM_COST // exactly enough to raise attack speed (tutorial grant, not tier-scaled)
+        : Math.max(1, Math.round((Math.floor(sim.s.econ.kills / 10) + (sim.s.wave.maxWave || 0)) * A.coreMult(meta.tier || 1)));
       meta.cores = (meta.cores || 0) + cores;
       meta.bestWave = Math.max(meta.bestWave || 0, wave);
+      const runTier = meta.tier || 1; // this run played at the selected tier; credit its furthest wave
+      meta.tierBest = meta.tierBest || {};
+      meta.tierBest[runTier] = Math.max(meta.tierBest[runTier] || 0, wave);
       if (firstRunJustEnded) meta.hasPlayed = true;
       saveMeta();
       return { cores, kills: sim.s.econ.kills, wave };

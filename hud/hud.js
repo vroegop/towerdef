@@ -32,6 +32,7 @@
       powers: '<path d="M13 2L4 14h6l-1 8 9-12h-6z"/>',
       prestige: '<path d="M5 18h14"/><path d="M5 18l-1-9 4 3 4-7 4 7 4-3-1 9z"/>',
       tier: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+      fwd: '<path d="M9 5l7 7-7 7"/>',
     };
     function icon(name, size, cls) {
       size = size || 16;
@@ -221,12 +222,12 @@
     let boundMeta = null;
     function setMeta(m) { boundMeta = m; }
     function refreshStats(s) {
-      const m = boundMeta || {};
-      const coresRun = s.firstRun ? A.FIRST_PERM_COST : Math.max(1, Math.floor(s.econ.kills / 10) + (s.wave.maxWave || 0));
+      const m = boundMeta || {}, tier = m.tier || 1;
+      const coresRun = s.firstRun ? A.FIRST_PERM_COST : Math.max(1, Math.round((Math.floor(s.econ.kills / 10) + (s.wave.maxWave || 0)) * A.coreMult(tier)));
       const set = (id, v) => { const e = $('#st-' + id); if (e) e.textContent = v; };
       set('kills', fmt(s.econ.kills));
-      set('foes', fmt(A.waveCount(s.wave.n)));
-      set('mult', 'x' + (m.coreMult || 1));
+      set('foes', fmt(A.waveCount(s.wave.n * (s.difficultyMult || 1))));
+      set('mult', 'x' + A.coreMult(tier).toFixed(1));
       set('cores', fmt(m.cores || 0));
       set('run', fmt(coresRun));
     }
@@ -399,13 +400,18 @@
           '<div class="es">' + opts.earn.kills + ' kills / wave ' + opts.earn.wave + '</div></div>';
         const curChips = CURRENCIES.map((c) => '<span class="chip">' + icon(c.icon, 13, c.cls) + ' <b>' + (meta[c.key] || 0) + '</b></span>').join('');
         html += '<div class="chips">' +
-          '<span class="chip">' + icon('tier', 13) + ' <b>' + (meta.tier || 1) + '</b></span>' +
-          '<span class="chip">' + cores(13) + ' <b>x' + (meta.coreMult || 1) + '</b></span>' +
           curChips +
           '<span class="chip">' + icon('best', 13) + ' <b>wave ' + (meta.bestWave || 0) + '</b></span></div>';
         html += '<div class="avatar-frame"><canvas id="h-avatar" width="200" height="200"></canvas></div>';
         const claim = A.claimableCount(meta);
         html += '<button class="msbtn" id="h-ms">Milestones' + (claim > 0 ? '<span class="badge">' + claim + '</span>' : '') + '</button>';
+        const tier = meta.tier || 1, canUp = tier < A.MAX_TIER && A.tierUnlocked(meta, tier + 1);
+        html += '<div class="tiersel">' +
+          '<button class="tierstep' + (tier > 1 ? '' : ' invisible') + '" id="h-tier-down"' + (tier > 1 ? '' : ' disabled') + '>' + icon('back', 18) + '</button>' +
+          '<span class="tierlabel"><span class="tl-tier">' + icon('tier', 14) + ' Tier ' + tier + '</span>' +
+          '<span class="tl-core">' + cores(12) + ' <b>x' + A.coreMult(tier).toFixed(1) + '</b></span></span>' +
+          '<button class="tierstep' + (canUp ? '' : ' locked') + '" id="h-tier-up">' + icon('fwd', 18) + '</button>' +
+          '</div>';
         html += '<button class="startsq" id="h-start">' + icon('play', 35, 'green') + '</button>';
       } else if (menuTab === 'upgrades') {
         html += '<div class="cores-chip">' + cores(15) + ' <b>' + (meta.cores || 0) + '</b></div>';
@@ -415,11 +421,10 @@
           html += '<div class="locked-tab">' + icon('lock', 46) + '<div class="lockmsg">Reach wave 30 to unlock cards</div></div>';
         } else {
           const owned = meta.cards || [];
-          html += '<div class="cores-chip">' + icon('token', 15, 'token') + ' <b>' + (meta.tokens || 0) + '</b></div>';
           const bc = A.buyCardCost(meta), uc = A.upgradeCost(meta);
           html += '<div class="cardbtns">' +
-            '<button class="cardbtn" id="h-buycard" title="Buy card"' + ((meta.tokens || 0) < bc ? ' disabled' : '') + '>' + icon('cards', 26) + '<span class="ct">' + bc + ' ' + icon('token', 14, 'token') + '</span></button>' +
-            '<button class="cardbtn" id="h-upcard" title="Add star"' + (((meta.tokens || 0) < uc || !owned.length) ? ' disabled' : '') + '>' + icon('star', 26, 'gold') + '<span class="ct">' + uc + ' ' + icon('token', 14, 'token') + '</span></button>' +
+            '<button class="cardbtn" id="h-buycard" title="Buy card"' + ((meta.tokens || 0) < bc ? ' disabled' : '') + '>' + icon('cards', 26) + '</button>' +
+            '<button class="cardbtn" id="h-upcard" title="Add star"' + (((meta.tokens || 0) < uc || !owned.length) ? ' disabled' : '') + '>' + icon('star', 26, 'gold') + '</button>' +
             '</div>';
           html += '<div class="cardgrid">' + cardGridHtml(meta) + '</div>';
         }
@@ -431,6 +436,14 @@
       if (menuTab === 'hero') {
         drawAvatar($('#h-avatar'), meta);
         $('#h-ms').addEventListener('click', () => { renderMilestones(); modal.classList.remove('hide'); setSpotlight(false); });
+        const tdn = $('#h-tier-down');
+        if (tdn) tdn.addEventListener('click', () => { if (handlers.onSetTier && handlers.onSetTier((meta.tier || 1) - 1)) renderMenu(); });
+        $('#h-tier-up').addEventListener('click', (e) => {
+          const cur = meta.tier || 1;
+          if (cur >= A.MAX_TIER) return showUnlockTip(e.currentTarget, 'Tier ' + A.MAX_TIER + ' is the highest tier');
+          if (A.tierUnlocked(meta, cur + 1)) { if (handlers.onSetTier && handlers.onSetTier(cur + 1)) renderMenu(); }
+          else showUnlockTip(e.currentTarget, 'Reach wave ' + A.TIER_UNLOCK_WAVE + ' in Tier ' + cur + ' to unlock Tier ' + (cur + 1));
+        });
         $('#h-start').addEventListener('click', () => handlers.onStartRun && handlers.onStartRun());
       } else if (menuTab === 'upgrades') {
         menuContent.querySelectorAll('[data-perm]').forEach((b) =>

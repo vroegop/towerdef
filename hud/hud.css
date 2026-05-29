@@ -102,6 +102,20 @@
 .hud .msbtn { position: relative; background: #171b27; border: 1px solid #2a3550; color: #d8deea; border-radius: 4px;
   padding: 11px 20px; font: inherit; font-weight: 700; cursor: pointer; margin: 6px auto 0; }
 .hud .msbtn:hover { border-color: #4aa8ff; }
+
+/* tier stepper: < [Tier N / Core xM] > */
+.hud .tiersel { display: flex; align-items: stretch; justify-content: center; gap: 8px; margin: 8px auto 0; }
+.hud .tiersel .tierlabel { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  min-width: 116px; background: #171b27; border: 1px solid #2a3550; border-radius: 4px; padding: 7px 14px; }
+.hud .tiersel .tl-tier { display: inline-flex; align-items: center; gap: 5px; font-weight: 800; }
+.hud .tiersel .tl-core { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: #8b93a7; }
+.hud .tiersel .tl-core b { color: #ffd24a; }
+.hud .tiersel .tierstep { display: inline-flex; align-items: center; justify-content: center; background: #171b27;
+  border: 1px solid #2a3550; color: #d8deea; border-radius: 4px; padding: 0 12px; cursor: pointer; }
+.hud .tiersel .tierstep:hover { border-color: #4aa8ff; color: #fff; }
+.hud .tiersel .tierstep.locked { color: #434a60; }
+.hud .tiersel .tierstep.locked:hover { border-color: #2a3550; color: #434a60; }
+.hud .tiersel .tierstep.invisible { opacity: 0; pointer-events: none; } /* tier 1: keep layout centered */
 .hud .msbtn .badge { position: absolute; top: -8px; right: -8px; background: #3ddc84; color: #06210f; border-radius: 4px;
   min-width: 20px; height: 20px; padding: 0 5px; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
 

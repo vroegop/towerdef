@@ -23,4 +23,18 @@
   };
   A.waveStr = function (n) { return 1 + A.WAVE.strPerWave * (n - 1); };
   A.waveSpeed = function (n) { return 1 + A.WAVE.speedPerWave * (n - 1); };
+
+  // Game tiers (distinct from enemy A.TIERS strength classes): each tier doubles the
+  // *effective* wave number, so tier 2 wave 4 plays like wave 8, tier 3 like wave 16, etc.
+  A.MAX_TIER = 5;
+  A.TIER_UNLOCK_WAVE = 300; // reach this wave in a tier to unlock the next one
+  A.tierDifficulty = function (tier) { return Math.pow(2, ((tier || 1) - 1)); };
+  // Core reward multiplier per tier: 1 + 0.8 * tier (higher tiers pay out more cores).
+  A.coreMult = function (tier) { return 1 + 0.8 * (tier || 1); };
+  // Tier 1 is always open; tier N>1 needs TIER_UNLOCK_WAVE reached in the tier below.
+  A.tierUnlocked = function (meta, tier) {
+    if (tier <= 1) return true;
+    const prevBest = (meta && meta.tierBest && meta.tierBest[tier - 1]) || 0;
+    return prevBest >= A.TIER_UNLOCK_WAVE;
+  };
 })(window.ARENA = window.ARENA || {});

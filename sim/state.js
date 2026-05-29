@@ -12,6 +12,7 @@
       nextId: 1,
       atkMode: 'bullet',         // 'bullet' (travelling projectile) | 'lightning' (instant beam, dev toggle)
       firstRun: !!firstRun,      // scripted lethal intro run
+      difficultyMult: A.tierDifficulty((meta && meta.tier) || 1), // tier scaling, set once per run
       arena: { w: A.ARENA_W, h: A.ARENA_H },
       hero: {
         x: A.ARENA_W / 2, y: A.ARENA_H / 2, r: 16,
