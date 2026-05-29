@@ -29,6 +29,9 @@
       rate: '<circle cx="12" cy="13" r="7"/><path d="M12 13V9.5"/><path d="M10 3h4M12 3v3"/>',
       heart: '<path d="M12 20s-6.5-4.3-6.5-9.3A3.7 3.7 0 0 1 12 8a3.7 3.7 0 0 1 6.5 2.7c0 5-6.5 9.3-6.5 9.3z"/>',
       regen: '<path d="M10 19s-4.8-3.2-4.8-6.7A2.6 2.6 0 0 1 10 10 2.6 2.6 0 0 1 14.8 12.3C14.8 15.8 10 19 10 19z"/><path d="M14 8.4A2.6 2.6 0 0 1 19 10.7c0 2.4-1.9 4.3-3.2 5.5"/>',
+      powers: '<path d="M13 2L4 14h6l-1 8 9-12h-6z"/>',
+      prestige: '<path d="M5 18h14"/><path d="M5 18l-1-9 4 3 4-7 4 7 4-3-1 9z"/>',
+      tier: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
     };
     function icon(name, size, cls) {
       size = size || 16;
@@ -55,6 +58,7 @@
       '</div>' +
       '<div class="over hide" id="h-over"><div class="over-card" id="h-over-card"></div></div>' +
       '<div class="tut-dim hide" id="h-spot"></div><div class="tut-thought hide" id="h-thought"></div>' +
+      '<div class="lk-tip hide" id="h-lktip"></div>' +
       '<div class="dev" id="h-dev">' +
       '  <button class="devtoggle" id="h-devtoggle">DEV</button>' +
       '  <div class="devpanel hide" id="h-devpanel">' +
@@ -267,18 +271,23 @@
     const spot = $('#h-spot'), thought = $('#h-thought');
     const MENU_TABS = [
       { id: 'hero', icon: 'hero' }, { id: 'upgrades', icon: 'upgrades' },
-      { id: 'cards', icon: 'cards', gated: true }, // unlocks at wave 30
-      { id: 'powers', locked: true }, { id: 'prestige', locked: true },
+      { id: 'cards', icon: 'cards', gated: true, unlock: 'Reach wave 30 to unlock Cards' }, // unlocks at wave 30
+      { id: 'powers', icon: 'powers', locked: true, unlock: 'Powers unlock in Tier 2' },
+      { id: 'prestige', icon: 'prestige', locked: true, unlock: 'Prestige unlocks in Tier 3' },
     ];
     let menuTab = 'hero', lastMeta = null, lastOpts = {};
 
     MENU_TABS.forEach((t) => {
       const b = document.createElement('button');
       b.dataset.mtab = t.id;
-      if (t.locked) { b.innerHTML = icon('lock', 18); b.classList.add('locked'); }            // permanently locked
+      if (t.locked) {                                                                          // permanently locked: show real icon + unlock tooltip on click
+        b.innerHTML = icon(t.icon, 24);
+        b.classList.add('locked');
+        b.addEventListener('click', () => showUnlockTip(b, t.unlock));
+      }
       else if (t.gated) {                                                                      // cards: unlock-gated
         b.innerHTML = icon(t.icon, 24);
-        b.addEventListener('click', () => { if (A.cardsUnlocked(lastMeta)) { menuTab = t.id; modal.classList.add('hide'); renderMenu(); } });
+        b.addEventListener('click', () => { if (A.cardsUnlocked(lastMeta)) { menuTab = t.id; modal.classList.add('hide'); renderMenu(); } else showUnlockTip(b, t.unlock); });
       } else {
         b.innerHTML = icon(t.icon, 24);
         b.addEventListener('click', () => { menuTab = t.id; modal.classList.add('hide'); renderMenu(); });
@@ -299,18 +308,38 @@
       ctx.fillStyle = '#4aa8ff'; ctx.beginPath(); ctx.arc(cx, cy, 12, 0, Math.PI * 2); ctx.fill();
     }
 
-    function setSpotlight(show) {
-      if (!show) { spot.classList.add('hide'); thought.classList.add('hide'); return; }
-      const btn = menuTabsEl.querySelector('[data-mtab="upgrades"]');
-      const r = btn.getBoundingClientRect();
+    function setSpotlight(show, targetEl, text) {
+      if (!show || !targetEl) { spot.classList.add('hide'); thought.classList.add('hide'); return; }
+      const r = targetEl.getBoundingClientRect();
       const pad = 3;
       spot.style.left = (r.left + pad) + 'px'; spot.style.top = (r.top + pad) + 'px';
       spot.style.width = (r.width - pad * 2) + 'px'; spot.style.height = (r.height - pad * 2) + 'px';
       spot.classList.remove('hide');
-      thought.innerHTML = 'Spend your ' + cores(15) + ' here';
-      thought.style.left = (r.left + r.width / 2) + 'px';
-      thought.style.top = (r.top - 70) + 'px';
+      thought.innerHTML = text;
+      thought.style.top = (r.top - 10) + 'px';
       thought.classList.remove('hide');
+      // clamp within the viewport, keeping the arrow over the target (same trick as the unlock tooltip)
+      const margin = 8, w = thought.offsetWidth, center = r.left + r.width / 2;
+      const left = Math.max(margin, Math.min(center - w / 2, window.innerWidth - margin - w));
+      thought.style.left = left + 'px';
+      thought.style.transform = 'translateY(-100%)';
+      thought.style.setProperty('--arrow-x', (center - left) + 'px');
+    }
+
+    const lktip = $('#h-lktip'); let lktipTimer = null;
+    function showUnlockTip(btn, text) {
+      const r = btn.getBoundingClientRect();
+      lktip.innerHTML = icon('lock', 13) + '<span>' + (text || 'Locked') + '</span>';
+      lktip.style.top = (r.top - 6) + 'px';
+      lktip.classList.remove('hide');
+      // position by the tooltip's left edge (not center) so we can clamp it within the viewport
+      const margin = 8, w = lktip.offsetWidth, center = r.left + r.width / 2;
+      const left = Math.max(margin, Math.min(center - w / 2, window.innerWidth - margin - w));
+      lktip.style.left = left + 'px';
+      lktip.style.transform = 'translateY(-100%)';
+      lktip.style.setProperty('--arrow-x', (center - left) + 'px'); // keep the arrow over the tab even when clamped
+      clearTimeout(lktipTimer);
+      lktipTimer = setTimeout(() => lktip.classList.add('hide'), 2600);
     }
 
     function permRowsHtml(meta, tutoring) {
@@ -351,12 +380,18 @@
 
     function renderMenu() {
       const meta = lastMeta, opts = lastOpts, tutoring = sumPerm(meta) === 0;
+      const totalStars = (meta.cards || []).reduce((a, c) => a + (c.stars || 0), 0);
       [...menuTabsEl.children].forEach((b) => {
         b.classList.toggle('on', b.dataset.mtab === menuTab);
         b.classList.toggle('tut', tutoring && b.dataset.mtab === 'upgrades' && menuTab !== 'upgrades');
-        if (b.dataset.mtab === 'cards') { const u = A.cardsUnlocked(meta); b.classList.toggle('locked', !u); b.innerHTML = u ? icon('cards', 24) : icon('lock', 18); }
+        b.classList.toggle('tut-off', tutoring && b.dataset.mtab !== 'upgrades'); // tutorial: only the upgrades tab stays clickable
+        if (b.dataset.mtab === 'cards') {
+          const u = A.cardsUnlocked(meta); b.classList.toggle('locked', !u); // keep the card icon even while locked (just dimmed)
+          b.innerHTML = icon('cards', 24) +
+            (u && totalStars > 0 ? '<span class="tabbadge br">' + totalStars + icon('star', 11, 'gold') + '</span>' : '');
+        }
       });
-      menuContent.className = 'menu-content tab-' + menuTab;
+      menuContent.className = 'menu-content tab-' + menuTab + (tutoring && menuTab === 'hero' ? ' tut-block' : '');
       let html = '';
       if (menuTab === 'hero') {
         if (opts.earn) html += '<div class="earncard"><div class="el">Last run</div>' +
@@ -364,19 +399,17 @@
           '<div class="es">' + opts.earn.kills + ' kills / wave ' + opts.earn.wave + '</div></div>';
         const curChips = CURRENCIES.map((c) => '<span class="chip">' + icon(c.icon, 13, c.cls) + ' <b>' + (meta[c.key] || 0) + '</b></span>').join('');
         html += '<div class="chips">' +
-          '<span class="chip">Tier <b>' + (meta.tier || 1) + '</b></span>' +
-          '<span class="chip">Core <b>x' + (meta.coreMult || 1) + '</b></span>' +
+          '<span class="chip">' + icon('tier', 13) + ' <b>' + (meta.tier || 1) + '</b></span>' +
+          '<span class="chip">' + cores(13) + ' <b>x' + (meta.coreMult || 1) + '</b></span>' +
           curChips +
           '<span class="chip">' + icon('best', 13) + ' <b>wave ' + (meta.bestWave || 0) + '</b></span></div>';
-        html += '<div class="avatar-frame"><canvas id="h-avatar" width="200" height="200"></canvas></div>' +
-          '<div class="hero-name">Hero</div>';
+        html += '<div class="avatar-frame"><canvas id="h-avatar" width="200" height="200"></canvas></div>';
         const claim = A.claimableCount(meta);
         html += '<button class="msbtn" id="h-ms">Milestones' + (claim > 0 ? '<span class="badge">' + claim + '</span>' : '') + '</button>';
-        html += '<button class="startsq" id="h-start">' + icon('play', 46, 'green') + '</button>';
+        html += '<button class="startsq" id="h-start">' + icon('play', 35, 'green') + '</button>';
       } else if (menuTab === 'upgrades') {
         html += '<div class="cores-chip">' + cores(15) + ' <b>' + (meta.cores || 0) + '</b></div>';
         html += '<div class="permlist">' + permRowsHtml(meta, tutoring) + '</div>';
-        if (tutoring) html += '<div class="tutcallout">Buy this to grow stronger, more unlock after</div>';
       } else if (menuTab === 'cards') {
         if (!A.cardsUnlocked(meta)) {
           html += '<div class="locked-tab">' + icon('lock', 46) + '<div class="lockmsg">Reach wave 30 to unlock cards</div></div>';
@@ -407,8 +440,13 @@
         const ub = $('#h-upcard'); if (ub) ub.addEventListener('click', () => { if (handlers.onUpgradeCard && handlers.onUpgradeCard()) renderMenu(); });
         menuContent.querySelectorAll('.card[data-card]').forEach((el) => attachLongPress(el, () => openCardModal(el.dataset.card)));
       }
-      const wantSpot = tutoring && menuTab === 'hero' && modal.classList.contains('hide');
-      requestAnimationFrame(() => setSpotlight(wantSpot));
+      // tutorial spotlight: hero step points at the upgrades tab, upgrades step points at the upgrade button
+      let spotTarget = null, spotText = '';
+      if (tutoring && modal.classList.contains('hide')) {
+        if (menuTab === 'hero') { spotTarget = menuTabsEl.querySelector('[data-mtab="upgrades"]'); spotText = 'Spend your ' + cores(15) + ' here'; }
+        else if (menuTab === 'upgrades') { spotTarget = menuContent.querySelector('.perm.tut'); spotText = 'Buy this to grow stronger, more unlock after'; }
+      }
+      requestAnimationFrame(() => setSpotlight(!!spotTarget, spotTarget, spotText));
     }
 
     function showMenu(meta, opts) {
