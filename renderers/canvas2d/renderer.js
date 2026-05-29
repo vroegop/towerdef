@@ -23,6 +23,43 @@
     ctx.restore();
   }
 
+  // rounded-rect path builder (calls beginPath); falls back if ctx.roundRect is missing
+  function roundRectPath(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    if (ctx.roundRect) { ctx.roundRect(x, y, w, h, r); return; }
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+
+  // health bar with a red→yellow→green gradient track and the HP value readable inside it.
+  // (cx, topY) = horizontal centre and top edge; frac in [0,1]; label is drawn centred.
+  function drawHealthBar(ctx, cx, topY, w, h, frac, label) {
+    frac = Math.max(0, Math.min(1, frac));
+    const x = cx - w / 2, y = topY, r = Math.min(h / 2, 4);
+    // dark track behind the fill
+    roundRectPath(ctx, x, y, w, h, r);
+    ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fill();
+    // gradient fill, clipped to the rounded track and to the current fraction
+    if (frac > 0) {
+      ctx.save();
+      roundRectPath(ctx, x, y, w, h, r); ctx.clip();
+      const g = ctx.createLinearGradient(x, 0, x + w, 0);
+      g.addColorStop(0, '#e5484d'); g.addColorStop(0.5, '#ffd23f'); g.addColorStop(1, '#3fc34d');
+      ctx.fillStyle = g; ctx.fillRect(x, y, w * frac, h);
+      ctx.restore();
+    }
+    // crisp outline
+    roundRectPath(ctx, x, y, w, h, r);
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.stroke();
+    // HP number — white with a dark stroke so it stays legible over any fill colour
+    ctx.font = '700 ' + Math.round(h * 0.74) + 'px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.9)';
+    ctx.strokeText(label, cx, y + h / 2 + 0.5);
+    ctx.fillStyle = '#ffffff'; ctx.fillText(label, cx, y + h / 2 + 0.5);
+  }
+
   A.Canvas2DRenderer = function (canvas, settings) {
     const ctx = canvas.getContext('2d');
     settings = settings || {};     // shared by reference with the settings modal; toggles take effect live
@@ -143,11 +180,10 @@
           if (settings.damageNumbers && e.hitDmg) spawnFloat(esx, esy - e.r * scale - 4, '' + e.hitDmg, '#ffffff', 13);
         }
         seen.set(e.id, e.hitFlash);
-        // enemy health bar (only once damaged)
+        // enemy health bar (only once damaged) — gradient track with the HP value inside
         if (settings.enemyHp && e.hp < e.hpMax && e.hp > 0) {
-          const bw = Math.max(14, e.r * scale * 2), bh = 3, bx = esx - bw / 2, by = esy - e.r * scale - 7;
-          ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(bx, by, bw, bh);
-          ctx.fillStyle = col; ctx.fillRect(bx, by, bw * Math.max(0, e.hp / e.hpMax), bh);
+          const bh = 12, bw = Math.max(30, e.r * scale * 2 + 8), by = esy - e.r * scale - bh - 5;
+          drawHealthBar(ctx, esx, by, bw, bh, e.hp / e.hpMax, '' + Math.ceil(e.hp));
         }
       }
 
