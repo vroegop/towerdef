@@ -1,46 +1,102 @@
-/* sim/skills.js — LITERAL integer stat model.
-   Four core stats start at 1 (regen at 0). The number you see IS the value:
-   damage 1 = 1 dmg/shot, attackSpeed 1 = 1 shot/sec, health 1 = 1 HP.
+/* sim/skills.js — UNIFIED upgrade model.
 
-   Effective level = base + permanent levels (cores) + run levels (gold, the tabs).
-   Run levels reset every game; permanent levels persist in meta. */
+   ONE list of upgrades (A.UPGRADES). Every upgrade is buyable in two contexts:
+     • in a run, with GOLD   → A.run.levels[id]  (resets each run)
+     • out of a run, with CORES → A.meta.perm[id] (permanent; a "base level skip")
+
+   The effective number of levels a stat has is perm + run (capped at the upgrade's max).
+   Permanent levels are pure head-starts: a run begins as if you'd already bought them,
+   and the in-run price is driven ONLY by run.levels[id] — so buying level "11" in a run
+   costs the same as level 1 when 10 levels came from cores. Both currencies' costs
+   accelerate with their own level, so the last upgrade feels unreachable at first and
+   trivial once income compounds.
+
+   Tabs: attack / defense / economic (icons, not words). Economic unlocks at Tier 2. */
 (function (A) {
-  // `unit` = value the sim runs on per level. `disp` = number shown to the player per level.
-  A.CORE = {
-    rangedDamage: { base: 1, unit: 1,   disp: 1,   label: 'Ranged Damage' }, // dmg per shot
-    attackSpeed:  { base: 1, unit: 1,   disp: 1,   label: 'Attack Speed' },  // shots per second
-    health:       { base: 1, unit: 1,   disp: 1,   label: 'Health' },        // max HP
-    regen:        { base: 0, unit: 0.2, disp: 0.2, label: 'Health Regen' },  // HP/sec
-  };
+  // pixel/metre scale: the literal range stat is in METRES; the sim runs in pixels.
+  A.PX_PER_METER = 4;
+  A.BASE_RANGE_M = 50;   // default attack radius before any Range upgrade
+  A.MAX_RANGE_M = 1000;  // hard cap on range (metres)
 
-  // The number the player reads for a stat at a given LEVEL.
-  A.statDisplay = function (stat, level) {
-    const v = level * A.CORE[stat].disp;
-    return stat === 'regen' ? Math.round(v * 10) / 10 : v;
-  };
+  // cost factory: round(base · growth^n). growth > 1 → accelerating curve.
+  const curve = (base, grow) => ({ base, grow, cost: (n) => Math.round(base * Math.pow(grow, n)) });
 
-  // In-game upgrades, grouped into the three bottom tabs. Bought with gold; reset each run.
-  A.TABS = [
-    { id: 'offense', label: 'Offense', ups: [
-      { stat: 'rangedDamage', label: 'Ranged Damage', cost: (n) => Math.round(10 * 1.5 ** n) },
-      { stat: 'attackSpeed',  label: 'Attack Speed',  cost: (n) => Math.round(15 * 1.6 ** n) },
-    ] },
-    { id: 'survival', label: 'Survival', ups: [
-      { stat: 'health', label: 'Health', cost: (n) => Math.round(10 * 1.5 ** n) },
-      { stat: 'regen',  label: 'Regen',  cost: (n) => Math.round(20 * 1.6 ** n) },
-    ] },
+  // The three subtabs shared by the in-run bar and the out-of-run Upgrades menu.
+  A.TAB_DEFS = [
+    { id: 'attack',   icon: 'sword' },
+    { id: 'defense',  icon: 'shield' },
+    { id: 'economic', icon: 'coins', gated: true }, // locked until Tier 2 is reached
   ];
 
-  // Permanent upgrades (cores), ORDERED. Progressive reveal: skill[i] is only visible
-  // once skill[i-1] is owned (level >= 1). Each adds +1 level to a core stat.
-  A.PERM_UPGRADES = [
-    { id: 'attackSpeed',  stat: 'attackSpeed',  label: 'Attack Speed',  cost: (n) => Math.round(3 * 2 ** n) },
-    { id: 'rangedDamage', stat: 'rangedDamage', label: 'Ranged Damage', cost: (n) => Math.round(4 * 2 ** n) },
-    { id: 'health',       stat: 'health',       label: 'Health',        cost: (n) => Math.round(4 * 2 ** n) },
-    { id: 'regen',        stat: 'regen',        label: 'Health Regen',  cost: (n) => Math.round(5 * 2 ** n) },
-  ];
+  // Every upgrade. `value(b)` turns a level count into the stat number; `fmt(b)` is the
+  // string shown to the player; `max` caps perm+run; `gold`/`core` are the two cost curves.
+  A.UPGRADES = [
+    // ---- ATTACK ----
+    { id: 'attackSpeed',  tab: 'attack',  icon: 'rate',  label: 'Attack Speed',  max: 10000,
+      value: (b) => 1 + b,                          fmt: (b) => (1 + b) + '/s',
+      gold: curve(15, 1.6),    core: curve(3, 1.0018) },
+    { id: 'rangedDamage', tab: 'attack',  icon: 'bow',   label: 'Ranged Damage', max: 10000,
+      value: (b) => 1 + b,                          fmt: (b) => '' + (1 + b),
+      gold: curve(10, 1.5),    core: curve(4, 1.0018) },
+    { id: 'dmgPerMeter',  tab: 'attack',  icon: 'ruler', label: 'Damage / Metre', max: 10000,
+      value: (b) => b * 0.001,                      fmt: (b) => '+' + (b * 0.001).toFixed(3) + '×/m',
+      gold: curve(25, 1.55),   core: curve(6, 1.0018) },
+    { id: 'range',        tab: 'attack',  icon: 'range', label: 'Range', max: 9500, // 50 + 9500·0.1 = 1000 m
+      value: (b) => Math.min(A.MAX_RANGE_M, A.BASE_RANGE_M + b * 0.1),
+      fmt:   (b) => Math.min(A.MAX_RANGE_M, A.BASE_RANGE_M + b * 0.1).toFixed(1) + 'm',
+      gold: curve(20, 1.5),    core: curve(5, 1.0018) },
+    { id: 'critChance',   tab: 'attack',  icon: 'crit',  label: 'Crit Chance', max: 1200, // 1200·0.1% = 120%
+      value: (b) => Math.min(1.2, b * 0.001),       fmt: (b) => (Math.min(1.2, b * 0.001) * 100).toFixed(1) + '%',
+      gold: curve(40, 1.6),    core: curve(20, 1.008) },
+    { id: 'critDamage',   tab: 'attack',  icon: 'burst', label: 'Crit Damage', max: 10000, // 1000× at level 10000
+      value: (b) => 1 + b * (999 / 10000),          fmt: (b) => { const v = 1 + b * (999 / 10000); return (v < 10 ? v.toFixed(1) : v.toFixed(0)) + '×'; },
+      gold: curve(50, 1.6),    core: curve(25, 1.0018) },
 
-  A.FIRST_PERM_COST = A.PERM_UPGRADES[0].cost(0); // cores the scripted first run grants
+    // ---- DEFENSE ----
+    { id: 'health',       tab: 'defense', icon: 'heart', label: 'Health', max: 10000,
+      value: (b) => 1 + b,                          fmt: (b) => '' + (1 + b),
+      gold: curve(10, 1.5),    core: curve(4, 1.0018) },
+    { id: 'regen',        tab: 'defense', icon: 'regen', label: 'Health Regen', max: 10000,
+      value: (b) => b * 0.2,                         fmt: (b) => (b * 0.2).toFixed(1) + '/s',
+      gold: curve(20, 1.6),    core: curve(5, 1.0018) },
+    { id: 'dodge',        tab: 'defense', icon: 'dodge', label: 'Dodge', max: 1100, // 1100·0.09% = 99%
+      value: (b) => Math.min(0.99, b * 0.0009),      fmt: (b) => (Math.min(0.99, b * 0.0009) * 100).toFixed(1) + '%',
+      gold: curve(40, 1.6),    core: curve(20, 1.008) },
+
+    // ---- ECONOMIC (Tier 2+) ----
+    { id: 'coinsPerWave', tab: 'economic', icon: 'coin',  label: 'Coins / Wave', max: 10000, gated: true,
+      value: (b) => b,                               fmt: (b) => '+' + b,
+      gold: curve(30, 1.55),   core: curve(8, 1.0018) },
+    { id: 'coinsPerKill', tab: 'economic', icon: 'coin',  label: 'Coins / Kill', max: 10000, gated: true,
+      value: (b) => b * 0.1,                         fmt: (b) => '+' + (b * 0.1).toFixed(1) + '×',
+      gold: curve(50, 1.6),    core: curve(12, 1.0018) },
+    { id: 'coresPerWave', tab: 'economic', icon: 'cores', label: 'Cores / Wave', max: 10000, gated: true,
+      value: (b) => b,                               fmt: (b) => '+' + b,
+      gold: curve(50, 1.6),    core: curve(10, 1.0018) },
+    { id: 'coresPerKill', tab: 'economic', icon: 'cores', label: 'Cores / Kill', max: 10000, gated: true,
+      value: (b) => b * 0.001,                       fmt: (b) => '+' + (b * 0.001).toFixed(3),
+      gold: curve(60, 1.6),    core: curve(15, 1.0018) },
+  ];
+  A.UP_BY_ID = {};
+  for (const u of A.UPGRADES) A.UP_BY_ID[u.id] = u;
+  A.upgradesIn = (tab) => A.UPGRADES.filter((u) => u.tab === tab);
+
+  // economic tab opens once Tier 2 is reachable (wave 300 cleared in Tier 1)
+  A.economyUnlocked = (meta) => A.tierUnlocked(meta, 2);
+
+  // The scripted first run grants exactly enough cores to buy the tutorial's first upgrade.
+  A.FIRST_PERM_COST = A.UP_BY_ID.attackSpeed.core.cost(0);
+
+  // perm + run levels for an upgrade, capped at its max (the number the sim/stat uses).
+  function boughtOf(state, id) {
+    const up = A.UP_BY_ID[id];
+    const perm = (state.meta && state.meta.perm && state.meta.perm[id]) || 0;
+    const run = (state.run && state.run.levels && state.run.levels[id]) || 0;
+    return Math.min(up.max, perm + run);
+  }
+  A.boughtOf = boughtOf;
+  // perm-only level (used by the between-runs menu, which has no live run state)
+  A.permBought = (meta, id) => Math.min(A.UP_BY_ID[id].max, (meta && meta.perm && meta.perm[id]) || 0);
 
   // ---- CARDS (Pokemon-style; bought/upgraded with a separate active-play currency: TOKENS) ----
   // A card contributes one or more {stat, kind:'flat'|'mult'} effects; its magnitude is value(stars).
@@ -54,8 +110,6 @@
       desc: (v) => '+' + v + ' ranged damage',
     },
   };
-  // Card collection grid: CARD_SLOTS total slots; CARD_ORDER lists the defined cards in order.
-  // To add a card later: define it in A.CARDS and append its id here (bump CARD_SLOTS if needed).
   A.CARD_SLOTS = 20;
   A.CARD_ORDER = ['damage'];
   A.cardValue = (id, stars) => (A.CARDS[id] ? A.CARDS[id].value(stars) : 0);
@@ -64,7 +118,6 @@
     if (A.cardsUnlocked(meta) && !(meta.cards && meta.cards.length)) { meta.cards = [{ id: 'damage', stars: 1 }]; return true; }
     return false;
   };
-  // colour tier of star slot i (0-4) for a card at `stars` total: chromatic > gold > white > empty
   A.starSlot = (i, stars) => (stars >= i + 11 ? 'chroma' : stars >= i + 6 ? 'gold' : stars >= i + 1 ? 'white' : 'empty');
 
   A.buyCardCost = (meta) => 5 + 5 * (meta.cardBuys || 0);
@@ -103,29 +156,29 @@
     return 0;
   };
 
-  function permByStat(meta) {
-    const perm = (meta && meta.perm) || {};
-    const by = {};
-    for (const up of A.PERM_UPGRADES) by[up.stat] = (by[up.stat] || 0) + (perm[up.id] || 0);
-    return by;
-  }
-
   // Turn levels into the numbers the sim runs on, then apply card bonuses.
   // Stacking is resolved at calc time per-modifier: effective = (base + Σflat) × Π(1 + mult).
-  // Skill upgrades are flat levels today; cards declare flat/mult via their effect `kind`.
   const STAT2SIM = { rangedDamage: 'rangedDamage', attackSpeed: 'fireRate', health: 'maxHp', regen: 'regen' };
   A.computeStats = function (state) {
-    const by = permByStat(state.meta);
-    const run = (state.run && state.run.levels) || {};
-    const lvl = {};
-    for (const stat in A.CORE) lvl[stat] = A.CORE[stat].base + (by[stat] || 0) + (run[stat] || 0);
+    const b = (id) => boughtOf(state, id);
+    const U = A.UP_BY_ID;
+    const rangeM = U.range.value(b('range'));
     const out = {
-      lvl,
-      rangedDamage: lvl.rangedDamage * A.CORE.rangedDamage.unit,
-      fireRate:     lvl.attackSpeed * A.CORE.attackSpeed.unit,
-      maxHp:        lvl.health * A.CORE.health.unit,
-      regen:        lvl.regen * A.CORE.regen.unit,
-      range: 220, goldFind: 1, xpGain: 1,
+      rangedDamage: U.rangedDamage.value(b('rangedDamage')),
+      fireRate:     U.attackSpeed.value(b('attackSpeed')),
+      maxHp:        U.health.value(b('health')),
+      regen:        U.regen.value(b('regen')),
+      rangeM,
+      range:        rangeM * A.PX_PER_METER,
+      dmgPerMeter:  U.dmgPerMeter.value(b('dmgPerMeter')),  // ×/metre coefficient
+      critChance:   U.critChance.value(b('critChance')),
+      critMult:     U.critDamage.value(b('critDamage')),
+      dodge:        U.dodge.value(b('dodge')),
+      coinsPerWave: U.coinsPerWave.value(b('coinsPerWave')),
+      coresPerWave: U.coresPerWave.value(b('coresPerWave')),
+      coresPerKill: U.coresPerKill.value(b('coresPerKill')),
+      goldFind:     1 + U.coinsPerKill.value(b('coinsPerKill')),
+      xpGain: 1,
     };
     const cards = (state.meta && state.meta.cards) || [];
     if (cards.length) {
@@ -146,35 +199,39 @@
     return out;
   };
 
-  // ---- run upgrades (gold) ----
-  function runDef(stat) { for (const t of A.TABS) for (const u of t.ups) if (u.stat === stat) return u; return null; }
-  A.runUpgradeCost = function (state, stat) { const d = runDef(stat); return d ? d.cost(state.run.levels[stat] || 0) : 0; };
-  A.buyRunUpgrade = function (state, stat) {
-    const d = runDef(stat); if (!d) return false;
-    const n = state.run.levels[stat] || 0, cost = d.cost(n);
+  // ---- run upgrades (gold; price driven by run levels only) ----
+  A.runUpgradeCost = function (state, id) {
+    const up = A.UP_BY_ID[id]; if (!up) return 0;
+    return up.gold.cost((state.run.levels[id] || 0));
+  };
+  A.runAtMax = function (state, id) {
+    const up = A.UP_BY_ID[id];
+    const perm = (state.meta.perm && state.meta.perm[id]) || 0;
+    return perm + (state.run.levels[id] || 0) >= up.max;
+  };
+  A.buyRunUpgrade = function (state, id) {
+    const up = A.UP_BY_ID[id]; if (!up) return false;
+    if (up.gated && !A.economyUnlocked(state.meta)) return false;
+    if (A.runAtMax(state, id)) return false;
+    const n = state.run.levels[id] || 0, cost = up.gold.cost(n);
     if (state.econ.gold < cost) return false;
-    state.econ.gold -= cost; state.run.levels[stat] = n + 1; return true;
+    state.econ.gold -= cost; state.run.levels[id] = n + 1; return true;
   };
 
-  // ---- permanent upgrades (cores) ----
-  A.permVisible = function (meta) {
-    const perm = (meta && meta.perm) || {};
-    const out = [];
-    for (let i = 0; i < A.PERM_UPGRADES.length; i++) {
-      const visible = i === 0 || (perm[A.PERM_UPGRADES[i - 1].id] || 0) >= 1;
-      if (!visible) break;
-      out.push(A.PERM_UPGRADES[i]);
-    }
-    return out;
-  };
+  // ---- permanent upgrades (cores; price driven by perm levels only) ----
   A.permCost = function (meta, id) {
-    const up = A.PERM_UPGRADES.find((u) => u.id === id);
-    const n = (meta && meta.perm && meta.perm[id]) || 0;
-    return up ? up.cost(n) : 0;
+    const up = A.UP_BY_ID[id]; const n = (meta && meta.perm && meta.perm[id]) || 0;
+    return up ? up.core.cost(n) : 0;
+  };
+  A.permAtMax = function (meta, id) {
+    const up = A.UP_BY_ID[id]; return ((meta && meta.perm && meta.perm[id]) || 0) >= up.max;
   };
   A.buyPerm = function (meta, id) {
-    const up = A.PERM_UPGRADES.find((u) => u.id === id); if (!up) return false;
-    const n = (meta.perm && meta.perm[id]) || 0, cost = up.cost(n);
+    const up = A.UP_BY_ID[id]; if (!up) return false;
+    if (up.gated && !A.economyUnlocked(meta)) return false;
+    const n = (meta.perm && meta.perm[id]) || 0;
+    if (n >= up.max) return false;
+    const cost = up.core.cost(n);
     if ((meta.cores || 0) < cost) return false;
     meta.cores -= cost; meta.perm = meta.perm || {}; meta.perm[id] = n + 1; return true;
   };

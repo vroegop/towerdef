@@ -6,14 +6,15 @@
   A.BULLET_R = 4;
 
   // Spawn one bullet from the hero toward a target's CURRENT position (fire-and-forget,
-  // so fast/strafing enemies can dodge). Damage is locked in now, not at impact.
-  A.fireProjectile = function (state, hero, target, stats) {
+  // so fast/strafing enemies can dodge). Damage is locked in now (crit + range bonus
+  // already folded in by the sim and passed as `dmg`), not at impact.
+  A.fireProjectile = function (state, hero, target, stats, dmg) {
     const dx = target.x - hero.x, dy = target.y - hero.y, d = Math.hypot(dx, dy) || 1;
     state.projectiles.push({
       id: state.nextId++,
       x: hero.x, y: hero.y,
       vx: dx / d * A.BULLET_SPEED, vy: dy / d * A.BULLET_SPEED,
-      r: A.BULLET_R, dmg: stats.rangedDamage,
+      r: A.BULLET_R, dmg: dmg == null ? stats.rangedDamage : dmg,
       traveled: 0, maxDist: stats.range * 1.2,
     });
   };
@@ -39,7 +40,7 @@
         p.x += p.vx * sdt; p.y += p.vy * sdt; p.traveled += A.BULLET_SPEED * sdt;
         const e = hitEnemy(state, p);
         if (e) {
-          e.hp -= p.dmg; e.hitFlash = 0.12; e.hitDmg = p.dmg; // hitDmg: damage just dealt (renderer shows it)
+          e.hp -= p.dmg; e.hitFlash = 0.12; e.hitDmg = Math.round(p.dmg); // hitDmg: damage just dealt (renderer shows it)
           if (e.behavior === 'bounce') e.kb = Math.max(e.kb, 0.25); // same knockback the old hitscan applied
           dead = true; break;
         }

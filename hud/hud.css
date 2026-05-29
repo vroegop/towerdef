@@ -70,6 +70,12 @@
 .hud .tabs button { flex: 1; pointer-events: auto; background: transparent; border: 0; border-top: 2px solid transparent;
   color: #8b93a7; padding: 10px 4px; font: inherit; font-weight: 600; cursor: pointer; }
 .hud .tabs button.on { color: #fff; border-top-color: #4aa8ff; background: rgba(74,168,255,.08); }
+.hud .tabs button .ic { vertical-align: middle; }
+.hud .up .nm .ic { vertical-align: -0.2em; margin-right: 4px; color: #8b93a7; }
+/* in-run locked tab (economic before Tier 2) */
+.hud .tablock { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 8px;
+  color: #6b7488; padding: 14px 8px; font-size: 13px; }
+.hud .tablock .ic { color: #6b7488; }
 
 /* ---- between-games MENU ---- */
 .hud .menu { position: absolute; inset: 0; display: none; flex-direction: column; pointer-events: auto;
@@ -163,6 +169,15 @@
 .hud .card.locked { border: 2px dashed #2a3550; background: #0d1019; opacity: .7; display: flex; flex-direction: column; justify-content: center; }
 .hud .card.locked .card-art { color: #4a5168; background: none; }
 .hud .card.locked .card-val { color: #4a5168; }
+
+/* upgrade subtabs (attack / defense / economic) inside the Upgrades menu */
+.hud .subtabs { display: flex; gap: 6px; justify-content: center; margin: 0 auto 14px; max-width: 640px; }
+.hud .subtabs .subtab { position: relative; flex: 1; max-width: 120px; display: flex; align-items: center; justify-content: center;
+  background: #151823; border: 1px solid #262c3d; border-radius: 4px; color: #8b93a7; padding: 9px 0; cursor: pointer; }
+.hud .subtabs .subtab:hover { color: #d8deea; border-color: #3a445f; }
+.hud .subtabs .subtab.on { color: #fff; border-color: #4aa8ff; background: rgba(74,168,255,.10); }
+.hud .subtabs .subtab.locked { color: #434a60; }
+.hud .subtabs .subtab .ic.lk { position: absolute; top: 3px; right: 4px; color: #434a60; }
 
 /* permanent upgrades list */
 .hud .permlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 8px; }
