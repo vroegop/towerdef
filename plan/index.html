@@ -100,7 +100,7 @@
     <div>
       <h3 style="color:var(--green);margin:0 0 4px">▶ Playable skeleton scaffolded</h3>
       <p>The real M0/M1 vertical slice is live: deterministic sim core (<code>sim/</code>), swappable renderers
-        (<code>renderers/</code>), virtual joystick (<code>input/</code>), HTML HUD (<code>hud/</code>), wave system,
+        (<code>renderers/</code>), HTML HUD (<code>hud/</code>), wave system,
         hybrid enemy aging, run + permanent (cores) upgrades, save &amp; offline catch-up.</p>
     </div>
     <a class="btn" href="../index.html" style="border-color:var(--green);white-space:nowrap">Open the game →</a>
@@ -282,7 +282,7 @@ class Sim{
   constructor(seed=1){
     this.t=0; this.tick=0; this.seedState=seed>>>0;
     this.W=760; this.H=440;
-    this.hero={x:380,y:220,r:16,hp:100,hpMax:100,speed:55,attackRange:80,attackCd:0};
+    this.hero={x:380,y:220,r:16,hp:100,hpMax:100,attackRange:80,attackCd:0};
     this.enemies=[]; this.spawnCd=0; this.nextId=1; this.kills=0;
   }
   rand(){ // deterministic LCG — same seed => same fight => offline sim matches live

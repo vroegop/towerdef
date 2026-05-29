@@ -71,21 +71,21 @@
     <div class="box state"><div class="t" style="color:var(--gold)">STATE</div>
       <div class="d">A plain serializable snapshot. The only thing the two layers share. Saveable to disk verbatim.</div></div>
     <div class="box ui"><div class="t" style="color:var(--blue)">UI (render)</div>
-      <div class="d">Reads snapshots, draws shapes, owns decorative-only effects, captures input → feeds intents back to sim.</div></div>
+      <div class="d">Reads snapshots, draws shapes, owns decorative-only effects. The HUD calls upgrade actions straight into the sim.</div></div>
   </div>
-  <p>Data flows <b>SIM → STATE → UI</b> for rendering, and <b>UI → intents → SIM</b> for input. The UI's
-     decorative particles are a dead-end branch off STATE that never flows back — which is exactly why they
-     can be thrown away on reload with no consequence.</p>
+  <p>Data flows <b>SIM → STATE → UI</b> for rendering; the only thing flowing back is the HUD's upgrade
+     actions. The UI's decorative particles are a dead-end branch off STATE that never flows back — which is
+     exactly why they can be thrown away on reload with no consequence.</p>
 
   <div class="note good"><b>Concrete file shape.</b> Keep <code>sim/</code> with zero browser imports
      (<code>sim/core.js</code>, <code>sim/enemies.js</code>, <code>sim/skills.js</code>, <code>sim/rng.js</code>) and
-     <code>ui/</code> on the other side (<code>ui/renderer.js</code>, <code>ui/effects.js</code>, <code>ui/input.js</code>).
+     <code>ui/</code> on the other side (<code>ui/renderer.js</code>, <code>ui/effects.js</code>, <code>ui/hud.js</code>).
      A lint rule "<code>sim/</code> may not import from <code>ui/</code>" enforces the boundary mechanically.</p></div>
 
   <h2>Folder structure (scaffolded)</h2>
   <p>The split above is now real on disk. <code>sim/</code> has zero browser imports; everything else depends on it, never the reverse.</p>
   <pre>towerdef/
-  index.html            <span class="c">// the game: wires sim + renderer + HUD + input + the loop</span>
+  index.html            <span class="c">// the game: wires sim + renderer + HUD + the loop</span>
   sim/                  <span class="c">// deterministic core — no DOM, portable to a Worker/tests</span>
     rng.js              <span class="c">// seeded PRNG (state is one uint32, saved with the game)</span>
     registries.js       <span class="c">// TYPES (shape+behavior) + TIERS (color+multiplier)</span>
@@ -99,7 +99,6 @@
   renderers/            <span class="c">// swappable graphics prototypes (your separate folder)</span>
     README.md           <span class="c">// the renderer contract</span>
     canvas2d/renderer.js<span class="c">// simple-shapes renderer (M0/M1)</span>
-  input/joystick.js     <span class="c">// dynamic virtual joystick → movement intent</span>
   hud/                  <span class="c">// HTML HUD: stats, upgrades, offline/death modals</span>
     hud.css  hud.js
   plan/                 <span class="c">// these planning docs</span></pre>
@@ -205,7 +204,7 @@
   <h2 id="roadmap">Suggested build order</h2>
   <div class="rm">
     <div class="m" style="color:var(--green)">M0 ✓</div><div><b>Skeleton split.</b> <code>sim/core.js</code> + <code>renderers/canvas2d</code> + the loop above. Circle survives, shapes approach. Boundary holds. <b>Done.</b></div>
-    <div class="m" style="color:var(--green)">M1 ✓</div><div><b>Combat feel.</b> Melee stick vs ranged bounce, hero auto-attack, hp/death, hit-flash → UI sparks, tier colors, virtual joystick. <b>Done.</b></div>
+    <div class="m" style="color:var(--green)">M1 ✓</div><div><b>Combat feel.</b> Melee stick vs ranged bounce, hero auto-attack, hp/death, hit-flash → UI sparks, tier colors. <b>Done.</b></div>
     <div class="m" style="color:var(--green)">M2 ✓</div><div><b>Save + offline.</b> Serialize state, <code>visibilitychange</code> persistence, <code>catchUp()</code> + "while you were away" recap, death stops replay. <b>Done.</b></div>
     <div class="m" style="color:var(--gold)">M3 ~</div><div><b>Skills &amp; economy.</b> Stat block, stacking, gold/xp, run-upgrade panel — all wired. <b>Next:</b> meta (cores) spend screen &amp; more skills. See <a href="skills.html">Skills</a>.</div>
     <div class="m">M4</div><div><b>Abilities &amp; weapons.</b> Cooldown effects: black hole, meteor, golden-hero window (seam stubbed in <code>sim/abilities.js</code>). See <a href="abilities.html">Abilities</a>.</div>

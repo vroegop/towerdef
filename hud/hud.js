@@ -29,7 +29,6 @@
       rate: '<circle cx="12" cy="13" r="7"/><path d="M12 13V9.5"/><path d="M10 3h4M12 3v3"/>',
       heart: '<path d="M12 20s-6.5-4.3-6.5-9.3A3.7 3.7 0 0 1 12 8a3.7 3.7 0 0 1 6.5 2.7c0 5-6.5 9.3-6.5 9.3z"/>',
       regen: '<path d="M10 19s-4.8-3.2-4.8-6.7A2.6 2.6 0 0 1 10 10 2.6 2.6 0 0 1 14.8 12.3C14.8 15.8 10 19 10 19z"/><path d="M14 8.4A2.6 2.6 0 0 1 19 10.7c0 2.4-1.9 4.3-3.2 5.5"/>',
-      dash: '<path d="M4 6l7 6-7 6z"/><path d="M13 6l7 6-7 6z"/>',
     };
     function icon(name, size, cls) {
       size = size || 16;
@@ -87,8 +86,8 @@
     root.querySelector('#h-cardmodal').addEventListener('click', () => root.querySelector('#h-cardmodal').classList.add('hide'));
 
     const STARP = 'M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6z';
-    const STAT_ICON = { rangedDamage: 'bow', attackSpeed: 'rate', health: 'heart', regen: 'regen', moveSpeed: 'dash' };
-    const STAT_LABEL = { rangedDamage: 'Ranged', attackSpeed: 'Speed', health: 'Health', regen: 'Regen', moveSpeed: 'Move' };
+    const STAT_ICON = { rangedDamage: 'bow', attackSpeed: 'rate', health: 'heart', regen: 'regen' };
+    const STAT_LABEL = { rangedDamage: 'Ranged', attackSpeed: 'Speed', health: 'Health', regen: 'Regen' };
     // currencies shown on the Hero screen — add a row here (+ a meta field) for future currencies
     const CURRENCIES = [{ key: 'cores', icon: 'cores', cls: 'gold' }, { key: 'tokens', icon: 'token', cls: 'token' }];
     function starSvg(kind) {

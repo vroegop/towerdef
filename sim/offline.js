@@ -12,7 +12,6 @@
       gold: sim.s.econ.goldEarned, kills: sim.s.econ.kills,
       wave: sim.s.wave.n, level: sim.s.econ.level,
     };
-    sim.s.hero.intent.x = 0; sim.s.hero.intent.y = 0; // no input while away
     const t0 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
     let ran = 0;
     for (let i = 0; i < ticks; i++) {

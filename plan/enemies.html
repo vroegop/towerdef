@@ -85,7 +85,7 @@
   <span class="k">const</span> dx=hero.x-e.x, dy=hero.y-e.y, d=Math.hypot(dx,dy)||<span class="n">1</span>;
   e.facing = Math.atan2(dy,dx);
   <span class="k">switch</span>(e.behavior){
-    <span class="k">case</span> <span class="s">'stick'</span>:   <span class="c">// melee: walk in, stay on hero unless out-sped</span>
+    <span class="k">case</span> <span class="s">'stick'</span>:   <span class="c">// melee: walk in and stay on the hero</span>
       <span class="k">if</span> (d &gt; hero.r+e.r) <span class="f">moveToward</span>(e, dx,dy,d, dt);
       <span class="k">else</span> e.state=<span class="s">'stuck'</span>; <span class="k">break</span>;
     <span class="k">case</span> <span class="s">'bounce'</span>:  <span class="c">// ranged: hold at range, knocked back when hit</span>
@@ -94,10 +94,9 @@
     <span class="c">// case 'orbit': ... case 'charger': ... add freely</span>
   }
 }</pre>
-  <div class="note"><b>The "stick unless out-sped" rule falls out for free.</b> Melee re-evaluates
-     <code>moveToward</code> every tick. If the hero's speed &gt; enemy speed, the hero simply opens distance faster
-     than the enemy closes it, so it never reaches <code>stuck</code>. No special "can the hero escape?" code needed —
-     it's emergent from the movement math.</div>
+  <div class="note"><b>Melee always closes the gap.</b> The hero holds a fixed spot, so melee re-evaluates
+     <code>moveToward</code> every tick and reliably reaches <code>stuck</code>. The whole challenge is out-damaging
+     the horde before it overwhelms that spot — no special-case logic, just emergent pressure from the spawn math.</div>
 
   <h2>Interactive · the whole art system in one function</h2>
   <div class="lab">

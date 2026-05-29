@@ -12,12 +12,10 @@
       nextId: 1,
       atkMode: 'bullet',         // 'bullet' (travelling projectile) | 'lightning' (instant beam, dev toggle)
       firstRun: !!firstRun,      // scripted lethal intro run
-      movedThisRun: false,       // for the run-2 movement tutorial
       arena: { w: A.ARENA_W, h: A.ARENA_H },
       hero: {
-        x: A.ARENA_W / 2, y: A.ARENA_H / 2, r: 16, vx: 0, vy: 0, facing: 0,
+        x: A.ARENA_W / 2, y: A.ARENA_H / 2, r: 16,
         hp: 1, hpMax: 1, shield: 0, shieldMax: 0, sinceHit: 99, atkCd: 0,
-        intent: { x: 0, y: 0 },
       },
       enemies: [],
       projectiles: [],

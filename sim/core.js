@@ -1,8 +1,6 @@
 /* sim/core.js — the Sim. ONE step() drives both live play and offline catch-up.
    No DOM, no canvas, no Date.now() inside a step. Time = the tick counter only. */
 (function (A) {
-  const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
-
   function Sim(state) {
     this.s = state;
     this.rng = A.makeRng(0);
@@ -53,8 +51,8 @@
     s.enemies.push(A.makeEnemy(s.nextId++, type, tier, s.wave.n, this.rng, s.arena));
   };
 
-  // First run only: a scripted, deliberately lethal trickle of weak melee so a no-input
-  // 1/1/1/1 hero dies at ~10s (tuned via A.FIRST_RUN). Moving delays it.
+  // First run only: a scripted, deliberately lethal trickle of weak melee so a
+  // 1/1/1 hero dies at ~10s (tuned via A.FIRST_RUN).
   Sim.prototype._firstRunWaves = function (dt) {
     const s = this.s, w = s.wave, F = A.FIRST_RUN;
     if (w.n === 0) { w.n = 1; w.maxWave = 1; s.firstSpawned = 0; s.firstTimer = 0; }
@@ -95,14 +93,7 @@
 
   Sim.prototype._hero = function (dt) {
     const h = this.s.hero, st = this.stats, s = this.s;
-    // movement from intent (joystick/keys live; zeroed during offline catch-up)
-    const ix = clamp(h.intent.x, -1, 1), iy = clamp(h.intent.y, -1, 1);
-    if (ix || iy) {
-      h.x += ix * st.move * dt; h.y += iy * st.move * dt; h.facing = Math.atan2(iy, ix);
-      s.movedThisRun = true; // for the run-2 movement tutorial
-    }
-    h.x = clamp(h.x, h.r, s.arena.w - h.r);
-    h.y = clamp(h.y, h.r, s.arena.h - h.r);
+    // hero is stationary at its spawn point — combat is positioning-free
     // derived max + regen
     h.hpMax = st.maxHp; if (h.hp > h.hpMax) h.hp = h.hpMax;
     h.sinceHit += dt;
