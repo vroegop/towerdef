@@ -155,8 +155,11 @@
 .hud .perm .pcur { font-size: 17px; font-weight: 800; color: #fff; }
 .hud .perm .pcost { color: #ffd24a; font-size: 11px; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
 
-.hud .tutcallout { display: inline-block; background: rgba(255,210,74,.12); border: 1px solid #4a3d14;
-  color: #ffe9a8; border-radius: 4px; padding: 7px 16px; font-size: 13px; margin: 0 auto 12px; }
+.hud .tutcallout { position: relative; display: block; width: fit-content; max-width: 90%;
+  background: #2a2310; border: 1px solid #6b5618; color: #ffe9a8; border-radius: 4px;
+  padding: 8px 16px; font-size: 13px; margin: 10px auto 12px; }
+.hud .tutcallout:before { content: ''; position: absolute; left: 50%; top: -7px; transform: translateX(-50%);
+  border: 7px solid transparent; border-bottom-color: #2a2310; border-top: 0; }
 
 .hud .locked-tab { text-align: center; color: #4a5168; padding-top: 70px; }
 .hud .lockbig { font-size: 46px; }

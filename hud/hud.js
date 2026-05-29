@@ -376,8 +376,8 @@
         html += '<button class="startsq" id="h-start">' + icon('play', 46, 'green') + '</button>';
       } else if (menuTab === 'upgrades') {
         html += '<div class="cores-chip">' + cores(15) + ' <b>' + (meta.cores || 0) + '</b></div>';
-        if (tutoring) html += '<div class="tutcallout">Buy this to grow stronger, more unlock after</div>';
         html += '<div class="permlist">' + permRowsHtml(meta, tutoring) + '</div>';
+        if (tutoring) html += '<div class="tutcallout">Buy this to grow stronger, more unlock after</div>';
       } else if (menuTab === 'cards') {
         if (!A.cardsUnlocked(meta)) {
           html += '<div class="locked-tab">' + icon('lock', 46) + '<div class="lockmsg">Reach wave 30 to unlock cards</div></div>';
