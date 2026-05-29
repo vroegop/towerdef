@@ -31,9 +31,8 @@
   <script src="sim/state.js"></script>
   <script src="sim/core.js"></script>
   <script src="sim/offline.js"></script>
-  <!-- RENDER / INPUT / HUD -->
+  <!-- RENDER / HUD -->
   <script src="renderers/canvas2d/renderer.js"></script>
-  <script src="input/joystick.js"></script>
   <script src="hud/hud.js"></script>
 
   <script>
@@ -44,7 +43,7 @@
     function loadMeta() {
       let m = {}; try { m = JSON.parse(localStorage.getItem(METAK)) || {}; } catch (e) {}
       return {
-        cores: m.cores || 0, perm: m.perm || {}, hasPlayed: !!m.hasPlayed, movedRun1: !!m.movedRun1,
+        cores: m.cores || 0, perm: m.perm || {}, hasPlayed: !!m.hasPlayed,
         bestWave: m.bestWave || 0, claimedMilestones: m.claimedMilestones || {}, tier: m.tier || 1, coreMult: m.coreMult || 1,
         tokens: m.tokens || 0, cards: m.cards || [], cardBuys: m.cardBuys || 0, starBuys: m.starBuys || 0,
       };
@@ -56,7 +55,6 @@
     const meta = loadMeta();
     const canvas = document.getElementById('game');
     const renderer = A.Canvas2DRenderer(canvas);
-    const stick = A.Joystick(canvas); // canvas-only so HUD buttons/menu don't start a drag
     const hud = A.Hud(document.getElementById('hud'), {
       onBuyRun: (stat) => { if (sim) A.buyRunUpgrade(sim.s, stat); },
       onBuyPerm: (id) => { const ok = A.buyPerm(meta, id); if (ok) saveMeta(); return ok; },
@@ -115,21 +113,9 @@
     }
 
     // ---- input ----
-    const keys = {};
     window.addEventListener('keydown', (e) => {
-      if (e.key === ' ') { e.preventDefault(); togglePause(); return; } // dev: spacebar pauses a run
-      keys[e.key.toLowerCase()] = true;
+      if (e.key === ' ') { e.preventDefault(); togglePause(); } // dev: spacebar pauses a run
     });
-    window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
-    function inputVec() {
-      let x = stick.x, y = stick.y;
-      if (!stick.active) {
-        const kx = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0);
-        const ky = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0);
-        const m = Math.hypot(kx, ky); if (m > 0) { x = kx / m; y = ky / m; }
-      }
-      return { x, y };
-    }
 
     // ---- states ----
     function startRun(firstRun) {
@@ -137,9 +123,7 @@
       sim = new A.Sim(A.createState(seed, meta, firstRun));
       mode = 'playing';
       hud.hideMenu(); hud.hideOverview();
-      // movement tutorial from the 2nd game onward, until the player actually moves
-      if (meta.hasPlayed && !meta.movedRun1) hud.showHint('Move with <span class="k">drag</span> &nbsp;or&nbsp; <span class="k">WASD</span>/arrows');
-      else hud.hideHint();
+      hud.hideHint();
       acc = 0; last = performance.now(); running = true; togglePause(false);
       requestAnimationFrame(frame);
     }
@@ -160,8 +144,7 @@
         : Math.max(1, Math.floor(sim.s.econ.kills / 10) + (sim.s.wave.maxWave || 0));
       meta.cores = (meta.cores || 0) + cores;
       meta.bestWave = Math.max(meta.bestWave || 0, wave);
-      if (firstRunJustEnded) { meta.hasPlayed = true; meta.movedRun1 = !!sim.s.movedThisRun; }
-      else if (sim.s.movedThisRun) meta.movedRun1 = true;
+      if (firstRunJustEnded) meta.hasPlayed = true;
       saveMeta();
       return { cores, kills: sim.s.econ.kills, wave };
     }
@@ -181,10 +164,8 @@
       }
       if (paused) { renderer.draw(sim.s, true); hud.update(sim.s); requestAnimationFrame(frame); return; }
       acc += dt;
-      const v = inputVec();
       let g = 0;
-      while (acc >= DT && g++ < 8) { sim.s.hero.intent.x = v.x; sim.s.hero.intent.y = v.y; sim.step(DT); acc -= DT; }
-      if (sim.s.movedThisRun && !meta.movedRun1) { meta.movedRun1 = true; saveMeta(); hud.hideHint(); }
+      while (acc >= DT && g++ < 8) { sim.step(DT); acc -= DT; }
       renderer.draw(sim.s, false);
       hud.update(sim.s);
       if (!sim.s.alive) { startDying(); return; }

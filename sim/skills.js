@@ -1,19 +1,16 @@
 /* sim/skills.js — LITERAL integer stat model.
-   Five core stats start at 1 (regen at 0). The number you see IS the value:
+   Four core stats start at 1 (regen at 0). The number you see IS the value:
    damage 1 = 1 dmg/shot, attackSpeed 1 = 1 shot/sec, health 1 = 1 HP.
-   moveSpeed is the one abstraction — 1 level = MOVE_UNIT px/s so it's playable.
 
-   Effective level = base + permanent levels (cores) + run levels (gold, the 3 tabs).
+   Effective level = base + permanent levels (cores) + run levels (gold, the tabs).
    Run levels reset every game; permanent levels persist in meta. */
 (function (A) {
-  // `unit` = value the sim runs on per level. `disp` = number shown to the player per level
-  // (moveSpeed is the only one where they differ: the player sees 1,2,3..., the sim sees px/s).
+  // `unit` = value the sim runs on per level. `disp` = number shown to the player per level.
   A.CORE = {
     rangedDamage: { base: 1, unit: 1,   disp: 1,   label: 'Ranged Damage' }, // dmg per shot
     attackSpeed:  { base: 1, unit: 1,   disp: 1,   label: 'Attack Speed' },  // shots per second
     health:       { base: 1, unit: 1,   disp: 1,   label: 'Health' },        // max HP
     regen:        { base: 0, unit: 0.2, disp: 0.2, label: 'Health Regen' },  // HP/sec
-    moveSpeed:    { base: 1, unit: 110, disp: 1,   label: 'Move Speed' },    // px/sec per level
   };
 
   // The number the player reads for a stat at a given LEVEL.
@@ -32,9 +29,6 @@
       { stat: 'health', label: 'Health', cost: (n) => Math.round(10 * 1.5 ** n) },
       { stat: 'regen',  label: 'Regen',  cost: (n) => Math.round(20 * 1.6 ** n) },
     ] },
-    { id: 'mobility', label: 'Mobility', ups: [
-      { stat: 'moveSpeed', label: 'Move Speed', cost: (n) => Math.round(25 * 1.7 ** n) },
-    ] },
   ];
 
   // Permanent upgrades (cores), ORDERED. Progressive reveal: skill[i] is only visible
@@ -44,7 +38,6 @@
     { id: 'rangedDamage', stat: 'rangedDamage', label: 'Ranged Damage', cost: (n) => Math.round(4 * 2 ** n) },
     { id: 'health',       stat: 'health',       label: 'Health',        cost: (n) => Math.round(4 * 2 ** n) },
     { id: 'regen',        stat: 'regen',        label: 'Health Regen',  cost: (n) => Math.round(5 * 2 ** n) },
-    { id: 'moveSpeed',    stat: 'moveSpeed',    label: 'Move Speed',    cost: (n) => Math.round(5 * 2 ** n) },
   ];
 
   A.FIRST_PERM_COST = A.PERM_UPGRADES[0].cost(0); // cores the scripted first run grants
@@ -120,7 +113,7 @@
   // Turn levels into the numbers the sim runs on, then apply card bonuses.
   // Stacking is resolved at calc time per-modifier: effective = (base + Σflat) × Π(1 + mult).
   // Skill upgrades are flat levels today; cards declare flat/mult via their effect `kind`.
-  const STAT2SIM = { rangedDamage: 'rangedDamage', attackSpeed: 'fireRate', health: 'maxHp', regen: 'regen', moveSpeed: 'move' };
+  const STAT2SIM = { rangedDamage: 'rangedDamage', attackSpeed: 'fireRate', health: 'maxHp', regen: 'regen' };
   A.computeStats = function (state) {
     const by = permByStat(state.meta);
     const run = (state.run && state.run.levels) || {};
@@ -132,7 +125,6 @@
       fireRate:     lvl.attackSpeed * A.CORE.attackSpeed.unit,
       maxHp:        lvl.health * A.CORE.health.unit,
       regen:        lvl.regen * A.CORE.regen.unit,
-      move:         lvl.moveSpeed * A.CORE.moveSpeed.unit,
       range: 220, goldFind: 1, xpGain: 1,
     };
     const cards = (state.meta && state.meta.cards) || [];
