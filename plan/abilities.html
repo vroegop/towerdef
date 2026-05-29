@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Abilities &amp; Weapons · Arena</title>
+<style>
+  :root{--bg:#0c0e14;--panel:#151823;--panel2:#1c2030;--line:#262c3d;--tx:#d8deea;--mut:#8b93a7;
+    --blue:#4aa8ff;--green:#3ddc84;--pink:#e64cff;--gold:#ffd24a;--red:#ff5d6c;--r:14px;}
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:radial-gradient(1200px 700px at 70% -10%,#161b2e 0%,var(--bg) 60%);color:var(--tx);
+    font:15px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding-bottom:60px}
+  a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+  code,.mono,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+  header.top{position:sticky;top:0;z-index:20;backdrop-filter:blur(8px);background:rgba(12,14,20,.78);border-bottom:1px solid var(--line)}
+  .nav{display:flex;align-items:center;gap:18px;height:56px;flex-wrap:wrap}
+  .brand{font-weight:800}.brand .dot{color:var(--pink)}
+  .nav a{color:var(--mut);font-size:14px}.nav a:hover{color:var(--tx);text-decoration:none}.nav a.active{color:var(--tx)}
+  h1{font-size:34px;margin:40px 0 6px}.lede{color:var(--mut);font-size:18px;margin:0 0 8px}
+  h2{font-size:22px;margin:42px 0 12px;padding-top:10px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:20px 0 8px}p{color:#c3cad8}
+  pre{background:#0a0c12;border:1px solid var(--line);border-radius:10px;padding:14px;overflow:auto;font-size:12.8px;line-height:1.55;color:#cdd6e6}
+  pre .c{color:#5d6680}pre .k{color:var(--pink)}pre .s{color:var(--green)}pre .n{color:var(--gold)}pre .f{color:var(--blue)}
+  .note{border-left:3px solid var(--blue);background:var(--panel);padding:12px 16px;border-radius:0 10px 10px 0;margin:16px 0}
+  .good{border-left:3px solid var(--green)}.warn{border-left:3px solid var(--gold)}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+  @media(max-width:760px){.cards{grid-template-columns:1fr}}
+  .ab{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .ab h3{margin:0 0 4px;display:flex;align-items:center;gap:8px}
+  .ab .ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;border:1px solid var(--line)}
+  .ab .meta{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+  .chip{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--mut)}
+  .ab p{font-size:13.5px;margin:6px 0 0;color:#c3cad8}
+  .demo{display:grid;grid-template-columns:1fr 240px;gap:18px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin:18px 0}
+  @media(max-width:760px){.demo{grid-template-columns:1fr}}
+  canvas{width:100%;background:#070910;border:1px solid var(--line);border-radius:10px;touch-action:none}
+  .btn{display:inline-block;margin-top:8px;padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--tx);cursor:pointer;font-size:13px}
+  .btn:hover{border-color:var(--blue)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin:14px 0}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:1px}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap nav">
+  <span class="brand">ARENA<span class="dot">.</span></span>
+  <a href="index.html">Dashboard</a><a href="architecture.html">Architecture</a>
+  <a href="enemies.html">Enemies</a><a href="skills.html">Skills</a>
+  <a href="abilities.html" class="active">Abilities</a><a href="ideas.html">Ideas</a>
+</div></header>
+
+<div class="wrap">
+  <h1>Abilities &amp; Special Weapons</h1>
+  <p class="lede">Every dramatic weapon is the same boring thing under the hood: a cooldown that spawns a timed <b>effect</b> the sim ticks.</p>
+
+  <h2>The effect model</h2>
+  <p>Abilities don't get bespoke engines. They push an entry into <code>state.effects[]</code>; the sim ticks each
+     effect every step (apply pull/damage, count down <code>ttl</code>); the UI just <i>draws</i> what's in the list.
+     Because effects live in the authoritative state, they replay correctly in the offline sim too.</p>
+  <pre><span class="c">// sim/abilities.js</span>
+<span class="k">const</span> ABILITIES = {
+  blackhole:{ cd:<span class="n">22</span>, dur:<span class="n">4</span>,  cost:<span class="n">0</span>, mk:(x,y,L)=&gt;({kind:<span class="s">'blackhole'</span>,x,y,ttl:<span class="n">4</span>,r:<span class="n">90</span>,pull:<span class="n">160</span>,dps:<span class="n">18</span>*L}) },
+  meteor:   { cd:<span class="n">15</span>, dur:<span class="n">0</span>,  cost:<span class="n">0</span>, mk:(x,y,L)=&gt;({kind:<span class="s">'meteor'</span>,x,y,ttl:<span class="n">1.2</span>,r:<span class="n">70</span>,dmg:<span class="n">120</span>*L,fuse:<span class="n">1.0</span>}) },
+  golden:   { cd:<span class="n">90</span>, dur:<span class="n">8</span>,  cost:<span class="n">0</span>, mk:(x,y,L)=&gt;({kind:<span class="s">'golden'</span>,ttl:<span class="n">8</span>,rewardMult:<span class="n">3</span>+L}) },
+};
+
+<span class="k">function</span> <span class="f">tickEffects</span>(state, dt){
+  <span class="k">for</span>(<span class="k">const</span> e <span class="k">of</span> state.effects){
+    e.ttl -= dt;
+    <span class="k">if</span>(e.kind===<span class="s">'blackhole'</span>) <span class="f">applyBlackhole</span>(state, e, dt);
+    <span class="k">if</span>(e.kind===<span class="s">'meteor'</span>)   <span class="f">applyMeteor</span>(state, e, dt);
+    <span class="k">if</span>(e.kind===<span class="s">'golden'</span>)   state.rewardMult = e.rewardMult;
+  }
+  state.effects = state.effects.filter(e =&gt; e.ttl &gt; <span class="n">0</span>);
+}</pre>
+  <div class="note good"><b>UI vs sim, again.</b> The black hole's <i>swirling accretion disk and screen warp</i> are UI-only —
+     invented from <code>{x,y,r,ttl}</code> and discarded on reload. The <i>pull force and damage</i> are sim-side, so a
+     black hole that fired while you were offline still cleared the wave.</div>
+
+  <h2>Live · black hole pulling the horde</h2>
+  <div class="demo">
+    <div>
+      <canvas id="cv" width="640" height="360"></canvas>
+      <div>
+        <button class="btn" id="cast">Cast black hole (center)</button>
+        <button class="btn" id="spawn">Spawn 15 enemies</button>
+      </div>
+    </div>
+    <div>
+      <p style="font-size:13.5px;color:var(--mut)">Click the arena to drop a black hole anywhere. Enemies inside
+        <code>r</code> are pulled toward the core (<code>pull</code> px/s, scaled by closeness) and take
+        <code>dps·dt</code> damage. The warp ring and pulse are pure UI.</p>
+    </div>
+  </div>
+
+  <h2>Example weapons (long upgrades, big payoffs — "The Tower" style)</h2>
+  <div class="cards">
+    <div class="ab"><h3><span class="ic" style="color:var(--pink)">◉</span> Black Hole</h3>
+      <div class="meta"><span class="chip">cd 22s</span><span class="chip">dur 4s</span><span class="chip">AoE pull+dot</span></div>
+      <p>Spawns a singularity that drags enemies inward and shreds them. Upgrades: radius, pull strength, dps, duration, –cooldown. A late "Event Horizon" tier instakills weak/avg tiers caught at the core.</p></div>
+    <div class="ab"><h3><span class="ic" style="color:var(--gold)">☄</span> Meteor</h3>
+      <div class="meta"><span class="chip">cd 15s</span><span class="chip">fused 1s</span><span class="chip">burst AoE</span></div>
+      <p>Telegraphed impact after a 1s fuse — big upfront damage, rewards positioning the horde first (synergy with Black Hole). Upgrades: count (multi-strike), radius, damage, shorter fuse.</p></div>
+    <div class="ab"><h3><span class="ic" style="color:var(--gold)">★</span> Golden Hero</h3>
+      <div class="meta"><span class="chip">cd 90s</span><span class="chip">dur 8s</span><span class="chip">eco buff</span></div>
+      <p>For a few seconds, every kill is worth far more gold/xp. Very long, expensive upgrade path (more duration, higher multiplier, lower cooldown). Defines a greed playstyle.</p></div>
+    <div class="ab"><h3><span class="ic" style="color:var(--blue)">⟲</span> Chain Lightning</h3>
+      <div class="meta"><span class="chip">cd 6s</span><span class="chip">bounces</span><span class="chip">single→multi</span></div>
+      <p>Arcs between nearby enemies, falloff per jump. Upgrades: jumps, falloff, damage. (Note: the visible bolt is UI; the damage events are sim.)</p></div>
+    <div class="ab"><h3><span class="ic" style="color:var(--green)">⬡</span> Frost Nova</h3>
+      <div class="meta"><span class="chip">cd 10s</span><span class="chip">slow</span><span class="chip">defensive</span></div>
+      <p>Pulses out, slowing nearby enemies — buys breathing room and sets up Meteor. Upgrades: radius, slow %, duration. Synergy keystone "Juggernaut" ignores the self-immobility risk.</p></div>
+    <div class="ab"><h3><span class="ic" style="color:var(--red)">⟡</span> Turret Drone</h3>
+      <div class="meta"><span class="chip">summon</span><span class="chip">persistent</span><span class="chip">auto-fire</span></div>
+      <p>Deploys an autonomous shooter that adds DPS without your input — great for offline gains. Upgrades: count, fire rate, drone hp.</p></div>
+  </div>
+
+  <h2>Ability state &amp; the offline question</h2>
+  <table>
+    <tr><th>Field (in sim state)</th><th>Purpose</th></tr>
+    <tr><td class="mono">cooldowns[id]</td><td>seconds remaining; ticks down in <code>step()</code>, so it keeps cycling offline</td></tr>
+    <tr><td class="mono">autoCast[id]</td><td>player toggle — abilities self-fire when off-screen if enabled</td></tr>
+    <tr><td class="mono">levels[id]</td><td>upgrade level → feeds the <code>mk()</code> scaling</td></tr>
+    <tr><td class="mono">effects[]</td><td>live effects; ticked authoritatively, drawn decoratively</td></tr>
+  </table>
+  <div class="note warn"><b>Design decision worth making early:</b> do abilities auto-cast while offline? If yes,
+     the offline sim must include an <i>auto-cast policy</i> ("fire Black Hole when ≥6 enemies within radius"). Keep the
+     policy simple and conservative so offline never out-earns active play — otherwise players optimize for being away.</div>
+
+  <p style="margin-top:30px"><a href="index.html">← Back to dashboard</a></p>
+</div>
+
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+let enemies=[], holes=[], pulses=[];
+const COLORS=['#3ddc84','#4aa8ff','#e64cff','#ffd24a'];
+function spawn(n){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,d=140+Math.random()*120;
+  enemies.push({x:320+Math.cos(a)*d,y:180+Math.sin(a)*d,vx:0,vy:0,hp:60,hpMax:60,r:10,c:COLORS[i%4],flash:0});}}
+function cast(x,y){holes.push({x,y,ttl:4,r:90,pull:170,dps:40}); pulses.push({x,y,r:0,life:1});}
+spawn(15);
+cv.addEventListener('pointerdown',ev=>{const b=cv.getBoundingClientRect();
+  cast((ev.clientX-b.left)*cv.width/b.width,(ev.clientY-b.top)*cv.height/b.height);});
+document.getElementById('cast').onclick=()=>cast(320,180);
+document.getElementById('spawn').onclick=()=>spawn(15);
+let last=performance.now();
+function loop(now){const dt=Math.min((now-last)/1000,0.05);last=now;
+  // sim-side: holes pull + damage
+  for(const h of holes){h.ttl-=dt;
+    for(const e of enemies){const dx=h.x-e.x,dy=h.y-e.y,d=Math.hypot(dx,dy)||1;
+      if(d<h.r){const f=h.pull*(1-d/h.r)*dt; e.x+=dx/d*f; e.y+=dy/d*f; e.hp-=h.dps*dt; e.flash=0.1;}}}
+  holes=holes.filter(h=>h.ttl>0);
+  enemies=enemies.filter(e=>e.hp>0);
+  for(const e of enemies)if(e.flash>0)e.flash-=dt;
+  // ui-side: pulses
+  for(const p of pulses){p.r+=180*dt;p.life-=dt;}
+  pulses=pulses.filter(p=>p.life>0);
+  // draw
+  ctx.clearRect(0,0,cv.width,cv.height);
+  for(const h of holes){const g=ctx.createRadialGradient(h.x,h.y,0,h.x,h.y,h.r);
+    g.addColorStop(0,'rgba(230,76,255,.45)');g.addColorStop(.6,'rgba(80,20,120,.25)');g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(h.x,h.y,h.r,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='rgba(230,76,255,.8)';ctx.lineWidth=2;ctx.beginPath();
+    ctx.arc(h.x,h.y,8+Math.sin(now/80)*3,0,Math.PI*2);ctx.stroke();}
+  for(const p of pulses){ctx.globalAlpha=Math.max(0,p.life);ctx.strokeStyle='#e64cff';ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1;}
+  for(const e of enemies){ctx.fillStyle=e.flash>0?'#fff':e.c+'33';ctx.strokeStyle=e.c;ctx.lineWidth=2;
+    ctx.beginPath();ctx.rect(e.x-e.r,e.y-e.r,e.r*2,e.r*2);ctx.fill();ctx.stroke();}
+  ctx.fillStyle='#9aa3b8';ctx.font='12px ui-monospace';ctx.fillText('enemies: '+enemies.length,12,20);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

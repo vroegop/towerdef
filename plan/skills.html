@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skills &amp; Stats · Arena</title>
+<style>
+  :root{--bg:#0c0e14;--panel:#151823;--panel2:#1c2030;--line:#262c3d;--tx:#d8deea;--mut:#8b93a7;
+    --blue:#4aa8ff;--green:#3ddc84;--pink:#e64cff;--gold:#ffd24a;--red:#ff5d6c;--r:14px;}
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:radial-gradient(1200px 700px at 70% -10%,#161b2e 0%,var(--bg) 60%);color:var(--tx);
+    font:15px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding-bottom:60px}
+  a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+  code,.mono,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+  header.top{position:sticky;top:0;z-index:20;backdrop-filter:blur(8px);background:rgba(12,14,20,.78);border-bottom:1px solid var(--line)}
+  .nav{display:flex;align-items:center;gap:18px;height:56px;flex-wrap:wrap}
+  .brand{font-weight:800}.brand .dot{color:var(--pink)}
+  .nav a{color:var(--mut);font-size:14px}.nav a:hover{color:var(--tx);text-decoration:none}.nav a.active{color:var(--tx)}
+  h1{font-size:34px;margin:40px 0 6px}.lede{color:var(--mut);font-size:18px;margin:0 0 8px}
+  h2{font-size:22px;margin:42px 0 12px;padding-top:10px;border-top:1px solid var(--line)}
+  h3{font-size:16px;margin:20px 0 8px}p{color:#c3cad8}
+  pre{background:#0a0c12;border:1px solid var(--line);border-radius:10px;padding:14px;overflow:auto;font-size:12.8px;line-height:1.55;color:#cdd6e6}
+  pre .c{color:#5d6680}pre .k{color:var(--pink)}pre .s{color:var(--green)}pre .n{color:var(--gold)}pre .f{color:var(--blue)}
+  .note{border-left:3px solid var(--blue);background:var(--panel);padding:12px 16px;border-radius:0 10px 10px 0;margin:16px 0}
+  .good{border-left:3px solid var(--green)}.warn{border-left:3px solid var(--gold)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin:14px 0}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:1px}
+  td .mono{color:var(--green)}
+  .tag{display:inline-block;padding:1px 7px;border-radius:6px;font-size:11px;border:1px solid var(--line)}
+  .t-off{color:var(--red);border-color:#43222a}.t-def{color:var(--blue);border-color:#1f3350}
+  .t-sus{color:var(--green);border-color:#1f4030}.t-util{color:var(--gold);border-color:#4a3d14}
+  .calc{display:grid;grid-template-columns:300px 1fr;gap:18px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin:18px 0}
+  @media(max-width:760px){.calc{grid-template-columns:1fr}}
+  .calc label{display:block;font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:1px;margin:12px 0 4px}
+  .calc select,.calc input{width:100%;background:var(--panel2);color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:8px}
+  .calc canvas{width:100%;background:#090b11;border:1px solid var(--line);border-radius:10px}
+  .big{font-size:26px;font-weight:800}
+  .kv{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:6px 0;font-size:14px}
+  .kv .mono{color:var(--green)}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap nav">
+  <span class="brand">ARENA<span class="dot">.</span></span>
+  <a href="index.html">Dashboard</a><a href="architecture.html">Architecture</a>
+  <a href="enemies.html">Enemies</a><a href="skills.html" class="active">Skills</a>
+  <a href="abilities.html">Abilities</a><a href="ideas.html">Ideas</a>
+</div></header>
+
+<div class="wrap">
+  <h1>Skills &amp; Stats</h1>
+  <p class="lede">A flat stat block, a single well-defined stacking formula, and upgrade curves expressed purely as data.</p>
+
+  <h2>The hero stat block</h2>
+  <p>Every skill ultimately edits one of these base numbers. Keeping them in one flat object means the sim reads
+     them directly and saves/serializes them trivially.</p>
+  <pre><span class="k">const</span> baseStats = {
+  <span class="c">// survival</span>
+  health:<span class="n">100</span>, healthRegen:<span class="n">1.0</span>,        <span class="c">// hp, hp/sec</span>
+  shield:<span class="n">0</span>,   shieldRegen:<span class="n">0</span>, shieldDelay:<span class="n">3</span>, <span class="c">// hp, hp/sec, sec after hit</span>
+  armor:<span class="n">0</span>,                              <span class="c">// % damage reduction (diminishing)</span>
+  <span class="c">// offense</span>
+  meleePower:<span class="n">14</span>, meleeRate:<span class="n">4</span>,          <span class="c">// dmg, attacks/sec</span>
+  rangedPower:<span class="n">10</span>,rangedRate:<span class="n">2</span>,range:<span class="n">90</span>,  <span class="c">// dmg, shots/sec, px</span>
+  critChance:<span class="n">0.05</span>, critMult:<span class="n">1.5</span>,
+  <span class="c">// mobility &amp; economy</span>
+  moveSpeed:<span class="n">55</span>, pickupRange:<span class="n">40</span>,
+  goldFind:<span class="n">1.0</span>, xpGain:<span class="n">1.0</span>,
+};</pre>
+
+  <h2>One stacking formula for everything</h2>
+  <p>Mixing flat and percentage bonuses naively creates balance chaos. Use one explicit order so every source
+     is predictable and the offline sim computes the same effective value the live game shows.</p>
+  <pre><span class="c">// effective = (base + Σ flat) × (1 + Σ additive%) × Π (1 + mult%)</span>
+<span class="k">function</span> <span class="f">effective</span>(base, mods){
+  <span class="k">let</span> flat=<span class="n">0</span>, add=<span class="n">0</span>, mul=<span class="n">1</span>;
+  <span class="k">for</span>(<span class="k">const</span> m <span class="k">of</span> mods){
+    <span class="k">if</span>(m.kind===<span class="s">'flat'</span>) flat += m.v;
+    <span class="k">else if</span>(m.kind===<span class="s">'add'</span>)  add  += m.v;   <span class="c">// stack additively (e.g. +10% +10% = +20%)</span>
+    <span class="k">else</span>                     mul  *= (<span class="n">1</span>+m.v); <span class="c">// stack multiplicatively (rarer, stronger)</span>
+  }
+  <span class="k">return</span> (base+flat) * (<span class="n">1</span>+add) * mul;
+}</pre>
+  <div class="note good"><b>Why three buckets?</b> Flat = early-game meaningful, late-game irrelevant (self-balancing).
+     Additive% = the bread-and-butter upgrades that stack linearly so they're easy to reason about. Multiplicative% =
+     reserved for rare/prestige sources so they feel special and don't trivialize balance when combined.</div>
+
+  <div class="note warn"><b>Armor uses diminishing returns, not raw subtraction.</b> A common, exploit-proof curve:
+     <code>reduction = armor / (armor + K)</code> (e.g. K=100). 100 armor = 50% reduction, 300 = 75% — it asymptotes,
+     so armor never reaches 100% and stacking stays meaningful without ever becoming invincibility.</div>
+
+  <h2>Example skills (data-driven, costs are formulas)</h2>
+  <table>
+    <tr><th>Skill</th><th>Type</th><th>Edits</th><th>Per level</th><th>Cost curve</th><th>Max</th></tr>
+    <tr><td>Vitality</td><td><span class="tag t-sus">sustain</span></td><td>health</td><td>+12 flat</td><td class="mono">25·1.15ⁿ</td><td>∞</td></tr>
+    <tr><td>Regeneration</td><td><span class="tag t-sus">sustain</span></td><td>healthRegen</td><td>+0.4/s flat</td><td class="mono">40·1.16ⁿ</td><td>∞</td></tr>
+    <tr><td>Plating</td><td><span class="tag t-def">defense</span></td><td>armor</td><td>+8 flat</td><td class="mono">60·1.18ⁿ</td><td>—</td></tr>
+    <tr><td>Energy Shield</td><td><span class="tag t-def">defense</span></td><td>shield</td><td>+15 flat</td><td class="mono">80·1.17ⁿ</td><td>∞</td></tr>
+    <tr><td>Shield Recharge</td><td><span class="tag t-def">defense</span></td><td>shieldRegen</td><td>+1.5/s flat</td><td class="mono">90·1.18ⁿ</td><td>∞</td></tr>
+    <tr><td>Melee Mastery</td><td><span class="tag t-off">offense</span></td><td>meleePower</td><td>+6% add</td><td class="mono">50·1.16ⁿ</td><td>∞</td></tr>
+    <tr><td>Marksmanship</td><td><span class="tag t-off">offense</span></td><td>rangedPower</td><td>+6% add</td><td class="mono">50·1.16ⁿ</td><td>∞</td></tr>
+    <tr><td>Attack Speed</td><td><span class="tag t-off">offense</span></td><td>melee/rangedRate</td><td>+4% add</td><td class="mono">75·1.19ⁿ</td><td>—</td></tr>
+    <tr><td>Critical Strike</td><td><span class="tag t-off">offense</span></td><td>critChance</td><td>+1% flat</td><td class="mono">120·1.2ⁿ</td><td>+50%</td></tr>
+    <tr><td>Fleet Foot</td><td><span class="tag t-util">utility</span></td><td>moveSpeed</td><td>+3% add</td><td class="mono">100·1.2ⁿ</td><td>—</td></tr>
+    <tr><td>Greed</td><td><span class="tag t-util">utility</span></td><td>goldFind</td><td>+5% add</td><td class="mono">150·1.22ⁿ</td><td>∞</td></tr>
+    <tr><td>Magnet</td><td><span class="tag t-util">utility</span></td><td>pickupRange</td><td>+10% add</td><td class="mono">60·1.15ⁿ</td><td>—</td></tr>
+  </table>
+  <p class="note">Costs as <code>base · growthⁿ</code> keep the upgrade screen pure data — and let the offline sim
+     auto-spend gold on a player-chosen priority list ("max Vitality, then Armor") while you're away.</p>
+
+  <h2>Interactive · upgrade curve &amp; total cost calculator</h2>
+  <div class="calc">
+    <div>
+      <label>Skill</label>
+      <select id="skill">
+        <option value="vitality">Vitality (+12 flat health, 25·1.15ⁿ)</option>
+        <option value="armor">Plating (+8 flat armor, 60·1.18ⁿ)</option>
+        <option value="melee">Melee Mastery (+6% add, 50·1.16ⁿ)</option>
+        <option value="speed">Fleet Foot (+3% add, 100·1.2ⁿ)</option>
+      </select>
+      <label>Levels purchased: <span id="lvlOut" class="mono"></span></label>
+      <input id="lvl" type="range" min="0" max="60" value="20">
+      <div style="margin-top:14px">
+        <div class="kv"><span>Effective value</span><span class="mono big" id="eff"></span></div>
+        <div class="kv"><span>This level costs</span><span class="mono" id="next"></span></div>
+        <div class="kv"><span>Total spent</span><span class="mono" id="total"></span></div>
+      </div>
+    </div>
+    <canvas id="cv" width="560" height="320"></canvas>
+  </div>
+
+  <h2>Passives &amp; keystones (build identity)</h2>
+  <p>Beyond linear stat skills, occasional <b>keystone passives</b> bend the rules and define a build:</p>
+  <table>
+    <tr><th>Passive</th><th>Effect</th><th>Trade-off</th></tr>
+    <tr><td>Glass Cannon</td><td>+60% all damage (mult)</td><td>−40% max health</td></tr>
+    <tr><td>Juggernaut</td><td>Cannot be slowed; +30% armor</td><td>−20% move speed</td></tr>
+    <tr><td>Vampirism</td><td>Heal 4% of melee damage dealt</td><td>shield regen disabled</td></tr>
+    <tr><td>Sharpshooter</td><td>+50% range &amp; ranged power</td><td>melee power halved</td></tr>
+    <tr><td>Bulwark</td><td>Shield can exceed health; reflects 15%</td><td>shield regen delay doubled</td></tr>
+    <tr><td>Momentum</td><td>Damage scales with move speed</td><td>standing still = −25% damage</td></tr>
+  </table>
+  <div class="note good"><b>Keystones are just modifiers with a <code>mult</code> bucket entry plus a flag the sim reads.</b>
+     They live in the same <code>effective()</code> pipeline — no special casing, so they're safe in the offline sim too.</div>
+
+  <p style="margin-top:30px"><a href="index.html">← Back to dashboard</a></p>
+</div>
+
+<script>
+const SKILLS={
+  vitality:{base:100,per:12,kind:'flat',cb:25,cg:1.15,unit:''},
+  armor:{base:0,per:8,kind:'flat',cb:60,cg:1.18,unit:''},
+  melee:{base:14,per:0.06,kind:'add',cb:50,cg:1.16,unit:''},
+  speed:{base:55,per:0.03,kind:'add',cb:100,cg:1.2,unit:''},
+};
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+function valueAt(s,n){return s.kind==='flat'? s.base+s.per*n : s.base*(1+s.per*n);}
+function costAt(s,n){return Math.round(s.cb*Math.pow(s.cg,n));}
+function totalCost(s,n){let t=0;for(let i=0;i<n;i++)t+=costAt(s,i);return t;}
+function fmt(n){return n>=1000?(n/1000).toFixed(n>=100000?0:1)+'k':Math.round(n*10)/10;}
+function render(){
+  const s=SKILLS[document.getElementById('skill').value];
+  const n=+document.getElementById('lvl').value;
+  document.getElementById('lvlOut').textContent=n;
+  document.getElementById('eff').textContent=fmt(valueAt(s,n));
+  document.getElementById('next').textContent=fmt(costAt(s,n))+' g';
+  document.getElementById('total').textContent=fmt(totalCost(s,n))+' g';
+  // chart: value (green) and cumulative cost (gold), normalized
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const W=cv.width,H=cv.height,pad=30,maxN=60;
+  ctx.strokeStyle='#1f2740';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){const y=pad+(H-2*pad)*i/4;ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(W-pad,y);ctx.stroke();}
+  let maxV=valueAt(s,maxN),maxC=totalCost(s,maxN);
+  const px=i=>pad+(W-2*pad)*i/maxN;
+  function plot(fn,max,color){ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.beginPath();
+    for(let i=0;i<=maxN;i++){const x=px(i),y=H-pad-(H-2*pad)*fn(i)/max;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();}
+  plot(i=>valueAt(s,i),maxV,'#3ddc84');     // value
+  plot(i=>totalCost(s,i),maxC,'#ffd24a');    // cumulative cost (exponential)
+  // marker at n
+  const mx=px(n);ctx.strokeStyle='#4aa8ff';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(mx,pad);ctx.lineTo(mx,H-pad);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#3ddc84';ctx.font='12px ui-monospace';ctx.fillText('value (linear)',pad+6,pad+14);
+  ctx.fillStyle='#ffd24a';ctx.fillText('total cost (exponential)',pad+6,pad+30);
+}
+document.getElementById('skill').onchange=render;
+document.getElementById('lvl').oninput=render;
+render();
+</script>
+</body>
+</html>

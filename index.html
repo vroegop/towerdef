@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Arena - Hero vs Horde</title>
+<link rel="stylesheet" href="hud/hud.css">
+<style>
+  html,body{margin:0;height:100%;background:#070910;overflow:hidden;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    -webkit-user-select:none;user-select:none;touch-action:none}
+  #game{position:fixed;inset:0;width:100%;height:100%;display:block}
+  #hud{}
+  a.plan{position:fixed;bottom:10px;right:12px;z-index:25;color:#5d6680;font-size:12px;text-decoration:none}
+  a.plan:hover{color:#8b93a7}
+</style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="hud"></div>
+  <a class="plan" href="plan/index.html">plan</a>
+
+  <!-- SIM (no browser deps) -->
+  <script src="sim/rng.js"></script>
+  <script src="sim/registries.js"></script>
+  <script src="sim/waves.js"></script>
+  <script src="sim/skills.js"></script>
+  <script src="sim/enemies.js"></script>
+  <script src="sim/abilities.js"></script>
+  <script src="sim/projectiles.js"></script>
+  <script src="sim/state.js"></script>
+  <script src="sim/core.js"></script>
+  <script src="sim/offline.js"></script>
+  <!-- RENDER / INPUT / HUD -->
+  <script src="renderers/canvas2d/renderer.js"></script>
+  <script src="input/joystick.js"></script>
+  <script src="hud/hud.js"></script>
+
+  <script>
+  (function () {
+    const A = window.ARENA;
+    const DT = A.DT, SAVE = 'arena.save', METAK = 'arena.meta', OFFLINE_CAP = 12 * 3600;
+
+    function loadMeta() {
+      let m = {}; try { m = JSON.parse(localStorage.getItem(METAK)) || {}; } catch (e) {}
+      return {
+        cores: m.cores || 0, perm: m.perm || {}, hasPlayed: !!m.hasPlayed, movedRun1: !!m.movedRun1,
+        bestWave: m.bestWave || 0, claimedMilestones: m.claimedMilestones || {}, tier: m.tier || 1, coreMult: m.coreMult || 1,
+        tokens: m.tokens || 0, cards: m.cards || [], cardBuys: m.cardBuys || 0, starBuys: m.starBuys || 0,
+      };
+    }
+    function saveMeta() { localStorage.setItem(METAK, JSON.stringify(meta)); }
+    function loadSave() { try { return JSON.parse(localStorage.getItem(SAVE)); } catch (e) { return null; } }
+    function clearSave() { localStorage.removeItem(SAVE); }
+
+    const meta = loadMeta();
+    const canvas = document.getElementById('game');
+    const renderer = A.Canvas2DRenderer(canvas);
+    const stick = A.Joystick(canvas); // canvas-only so HUD buttons/menu don't start a drag
+    const hud = A.Hud(document.getElementById('hud'), {
+      onBuyRun: (stat) => { if (sim) A.buyRunUpgrade(sim.s, stat); },
+      onBuyPerm: (id) => { const ok = A.buyPerm(meta, id); if (ok) saveMeta(); return ok; },
+      onClaimMilestone: (wave) => { const r = A.claimMilestone(meta, wave); if (r) saveMeta(); return r; },
+      onBuyCard: () => { const r = A.buyCard(meta); if (r) saveMeta(); return r; },
+      onUpgradeCard: () => { const r = A.upgradeRandomCard(meta); if (r) saveMeta(); return r; },
+      onStartRun: () => startRun(false),
+      onExitRun: () => { if (mode === 'playing' || mode === 'dying') enterOverview(bankRun()); }, // bank + skip the death anim
+      onToWorkshop: () => { hud.hideOverview(); goToMenu({}); },
+      onDev: (kind) => {
+        if (kind === 'reset') { localStorage.clear(); location.reload(); }
+        else if (kind === 'cores') { meta.cores = 999999; saveMeta(); hud.refreshMenu(meta); }
+        else if (kind === 'gold') { if (sim) sim.s.econ.gold = 999999; }
+        else if (kind === 'tokens') { meta.tokens = 999999; saveMeta(); hud.refreshMenu(meta); }
+        else if (kind === 'lightning') {
+          if (sim) {
+            sim.s.atkMode = sim.s.atkMode === 'lightning' ? 'bullet' : 'lightning';
+            hud.setDevToggle('lightning', sim.s.atkMode === 'lightning');
+          }
+        }
+        else if (kind === 'pause') { togglePause(); }
+        else if (kind === 'testbullet') { setupTestBullet(); }
+      },
+      onFF: (sec) => {
+        if (mode !== 'playing' || !sim || !sim.s.alive || paused) return;
+        const r = A.catchUp(sim, sec, 24 * 3600);
+        if (!sim.s.alive) { enterOverview(bankRun()); return; }
+        hud.showHint('Fast-forwarded ' + (sec >= 60 ? (sec / 60) + 'm' : sec + 's') + ': +' + r.gold + ' gold / +' + r.kills + ' kills');
+        setTimeout(() => hud.hideHint(), 2500);
+      },
+    });
+
+    hud.setMeta(meta);
+    let sim = null, mode = 'menu', acc = 0, last = 0, running = false, hiddenAt = 0, paused = false, dyingT = 0;
+
+    // dev pause: freezes the sim loop AND the render clock (renderer uses rdt=0), so every
+    // effect — bullets, sparks, shatter, lightning — holds still for inspection.
+    function togglePause(on) {
+      if (mode !== 'playing' || !sim) return;
+      paused = (on === undefined) ? !paused : !!on;
+      hud.setDevToggle('pause', paused);
+    }
+
+    // dev: overwrite the live state with a deterministic 1-enemy + 1-bullet frame, then pause,
+    // so the bullet renders at a known spot every time.
+    function setupTestBullet() {
+      if (!sim) return;
+      const s = sim.s, hx = s.hero.x, hy = s.hero.y;
+      s.atkMode = 'bullet';
+      const e = A.makeEnemy(s.nextId++, 'melee', 'average', Math.max(1, s.wave.n), sim.rng, s.arena);
+      e.x = hx + 140; e.y = hy; e.hitFlash = 0; e.kb = 0; // fixed in-range target to the right
+      s.enemies = [e];
+      s.projectiles = [{ id: s.nextId++, x: hx + 70, y: hy, vx: A.BULLET_SPEED, vy: 0, r: A.BULLET_R, dmg: 1, traveled: 70, maxDist: 1000 }];
+      togglePause(true);
+      renderer.draw(s, true);
+    }
+
+    // ---- input ----
+    const keys = {};
+    window.addEventListener('keydown', (e) => {
+      if (e.key === ' ') { e.preventDefault(); togglePause(); return; } // dev: spacebar pauses a run
+      keys[e.key.toLowerCase()] = true;
+    });
+    window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+    function inputVec() {
+      let x = stick.x, y = stick.y;
+      if (!stick.active) {
+        const kx = (keys['d'] || keys['arrowright'] ? 1 : 0) - (keys['a'] || keys['arrowleft'] ? 1 : 0);
+        const ky = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0);
+        const m = Math.hypot(kx, ky); if (m > 0) { x = kx / m; y = ky / m; }
+      }
+      return { x, y };
+    }
+
+    // ---- states ----
+    function startRun(firstRun) {
+      const seed = (Math.random() * 4294967296) >>> 0;
+      sim = new A.Sim(A.createState(seed, meta, firstRun));
+      mode = 'playing';
+      hud.hideMenu(); hud.hideOverview();
+      // movement tutorial from the 2nd game onward, until the player actually moves
+      if (meta.hasPlayed && !meta.movedRun1) hud.showHint('Move with <span class="k">drag</span> &nbsp;or&nbsp; <span class="k">WASD</span>/arrows');
+      else hud.hideHint();
+      acc = 0; last = performance.now(); running = true; togglePause(false);
+      requestAnimationFrame(frame);
+    }
+
+    function goToMenu(opts) {
+      mode = 'menu'; running = false; clearSave();
+      if (A.grantInitialCard(meta)) saveMeta(); // first card unlocks on reaching wave 30
+      hud.hideHint();
+      hud.showMenu(meta, opts || {});
+    }
+
+    // Bank end-of-run rewards into meta; returns the earn summary the overview shows.
+    function bankRun() {
+      const firstRunJustEnded = !meta.hasPlayed;
+      const wave = sim.s.wave.maxWave || sim.s.wave.n;
+      const cores = firstRunJustEnded
+        ? A.FIRST_PERM_COST // exactly enough to raise attack speed
+        : Math.max(1, Math.floor(sim.s.econ.kills / 10) + (sim.s.wave.maxWave || 0));
+      meta.cores = (meta.cores || 0) + cores;
+      meta.bestWave = Math.max(meta.bestWave || 0, wave);
+      if (firstRunJustEnded) { meta.hasPlayed = true; meta.movedRun1 = !!sim.s.movedThisRun; }
+      else if (sim.s.movedThisRun) meta.movedRun1 = true;
+      saveMeta();
+      return { cores, kills: sim.s.econ.kills, wave };
+    }
+
+    // Live death: explode (renderer detects it), let enemies drift in for ~1s, then overview.
+    function startDying() { mode = 'dying'; dyingT = 0; running = true; hud.hideOverview(); hud.hideHint(); last = performance.now(); requestAnimationFrame(frame); }
+    function enterOverview(earn) { mode = 'overview'; running = false; clearSave(); hud.hideHint(); hud.showOverview(meta, earn); }
+
+    // ---- main loop: fixed-step sim, free-rate render ----
+    function frame(now) {
+      if (!running || (mode !== 'playing' && mode !== 'dying')) return;
+      const dt = Math.min((now - last) / 1000, 0.25); last = now;
+      if (mode === 'dying') { // ~1s post-death flourish: enemies drift in, hero shatter plays out
+        dyingT += dt; A.tickDying(sim.s, dt); renderer.draw(sim.s, false);
+        if (dyingT >= 1) { enterOverview(bankRun()); return; }
+        requestAnimationFrame(frame); return;
+      }
+      if (paused) { renderer.draw(sim.s, true); hud.update(sim.s); requestAnimationFrame(frame); return; }
+      acc += dt;
+      const v = inputVec();
+      let g = 0;
+      while (acc >= DT && g++ < 8) { sim.s.hero.intent.x = v.x; sim.s.hero.intent.y = v.y; sim.step(DT); acc -= DT; }
+      if (sim.s.movedThisRun && !meta.movedRun1) { meta.movedRun1 = true; saveMeta(); hud.hideHint(); }
+      renderer.draw(sim.s, false);
+      hud.update(sim.s);
+      if (!sim.s.alive) { startDying(); return; }
+      requestAnimationFrame(frame);
+    }
+
+    // ---- persistence (only a mid-run is ever saved) ----
+    function persist() { if (sim) localStorage.setItem(SAVE, JSON.stringify({ savedAt: Date.now(), state: sim.serialize() })); }
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        if (mode === 'playing' && sim && sim.s.alive) { hiddenAt = Date.now(); persist(); }
+        running = false;
+      } else if (mode === 'playing' && sim && sim.s.alive) {
+        const el = hiddenAt ? (Date.now() - hiddenAt) / 1000 : 0;
+        if (el > 2 && !paused) {
+          const r = A.catchUp(sim, el, OFFLINE_CAP);
+          if (!sim.s.alive) { enterOverview(bankRun()); return; } // died while away: no animation, straight to overview
+          if (el > 20) { hud.showHint('While away: +' + r.gold + ' gold / +' + r.kills + ' kills'); setTimeout(() => hud.hideHint(), 2500); }
+        }
+        last = performance.now(); running = true; requestAnimationFrame(frame);
+      }
+    });
+    window.addEventListener('pagehide', () => { if (mode === 'playing' && sim && sim.s.alive) persist(); });
+    setInterval(() => { if (mode === 'playing' && running && sim && sim.s.alive) persist(); }, 10000);
+
+    // ---- boot ----
+    const saved = loadSave();
+    if (saved && saved.state) {
+      // resume an interrupted run + catch up the gap
+      saved.state.meta = meta;
+      sim = new A.Sim(saved.state); mode = 'playing';
+      const elapsed = (Date.now() - saved.savedAt) / 1000;
+      if (elapsed > 2) { const r = A.catchUp(sim, elapsed, OFFLINE_CAP); if (elapsed > 20 && sim.s.alive) { hud.showHint('While away: +' + r.gold + ' gold / +' + r.kills + ' kills'); setTimeout(() => hud.hideHint(), 2500); } }
+      if (!sim.s.alive) { enterOverview(bankRun()); }
+      else { hud.hideMenu(); last = performance.now(); running = true; requestAnimationFrame(frame); }
+    } else if (!meta.hasPlayed) {
+      startRun(true); // the scripted ~10s first run
+    } else {
+      goToMenu({});
+    }
+  })();
+  </script>
+</body>
+</html>

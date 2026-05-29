@@ -1,0 +1,271 @@
+/* hud/hud.css — in-game HUD (top stats + bottom 3-tab bar) and the between-games MENU
+   (5 mobile bottom tabs + framed Hero avatar). */
+.hud { position: fixed; inset: 0; pointer-events: none; font: 14px system-ui, sans-serif; color: #d8deea; z-index: 20; }
+
+/* ---- in-game top stats ---- */
+.hud .topbar { position: absolute; top: 10px; left: 12px; right: 12px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.hud .stat { background: rgba(21,24,35,.82); border: 1px solid #262c3d; border-radius: 4px; padding: 6px 12px; backdrop-filter: blur(6px); }
+.hud .stat b { color: #fff; }
+.hud .stat .lbl { color: #8b93a7; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-right: 6px; }
+.hud .gold b { color: #ffd24a; }
+.hud .wave b { color: #e64cff; }
+.hud .iconbtn { margin-left: auto; pointer-events: auto; background: rgba(21,24,35,.82); border: 1px solid #262c3d;
+  color: #d8deea; border-radius: 4px; padding: 6px; cursor: pointer; display: flex; align-items: center; }
+.hud .iconbtn:hover { border-color: #4aa8ff; color: #fff; }
+
+/* in-game stats panel */
+.hud .statswrap { position: absolute; inset: 0; z-index: 45; display: flex; align-items: flex-start; justify-content: center;
+  background: rgba(6,8,14,.6); pointer-events: auto; }
+.hud .statswrap.hide { display: none; }
+/* padding lives on the inner zones so the Exit-run button can sit flush to the card edges */
+.hud .statscard { margin-top: 64px; width: min(360px, 90vw); background: #11151f; border: 1px solid #2a3550; border-radius: 6px; padding: 0; overflow: hidden; }
+/* shared header (title left, icon-only close right) used by stats panel + overview */
+.hud .statshead { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #1f2740; }
+.hud .statshead h2 { margin: 0; font-size: 18px; }
+.hud .iconclose { display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 0; color: #8b93a7; cursor: pointer; padding: 4px; margin: -4px -4px -4px 0; border-radius: 4px; }
+.hud .iconclose:hover { color: #fff; }
+.hud .statsbody { padding: 6px 16px 14px; }
+.hud .exitrun { display: block; width: 100%; margin: 0; border: 0; border-top: 1px solid #5a2330; border-radius: 0; padding: 13px; font: inherit; font-weight: 700; cursor: pointer;
+  background: #3a1620; color: #ff8a98; }
+.hud .exitrun:hover { background: #4d1c2a; color: #ffb3bd; }
+.hud .strow { display: flex; justify-content: space-between; padding: 9px 2px; border-bottom: 1px solid #1f2740; }
+.hud .strow:last-child { border-bottom: 0; }
+.hud .strow span { color: #8b93a7; }
+.hud .strow b { color: #fff; font-variant-numeric: tabular-nums; }
+
+/* game-over overview (below the stats panel so Run Stats opens on top) */
+.hud .over { position: absolute; inset: 0; z-index: 40; display: flex; align-items: flex-start; justify-content: center; pointer-events: auto;
+  background: radial-gradient(700px 500px at 50% 0%, rgba(20,27,46,.7) 0%, rgba(6,8,14,.82) 70%); }
+.hud .over.hide { display: none; }
+.hud .over-card { margin-top: 64px; width: min(360px, 90vw); background: #11151f; border: 1px solid #2a3550; border-radius: 6px; padding: 0; overflow: hidden; }
+.hud .over-rewards { padding: 14px 16px 4px; }
+.hud .over-rewards .rew { display: flex; justify-content: space-between; align-items: center; padding: 8px 2px; border-bottom: 1px solid #1f2740; }
+.hud .over-rewards .rew:last-child { border-bottom: 0; }
+.hud .over-rewards .rew span { color: #8b93a7; }
+.hud .over-rewards .rew b { color: #ffd24a; font-size: 18px; display: inline-flex; align-items: center; gap: 4px; }
+.hud .over-sub { text-align: center; color: #8b93a7; font-size: 13px; padding: 4px 16px 14px; }
+.hud .over-stats { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin: 0; border: 0; border-top: 1px solid #2a3550; border-radius: 0;
+  padding: 13px; font: inherit; font-weight: 700; cursor: pointer; background: #1c2030; color: #d8deea; }
+.hud .over-stats:hover { background: #232838; color: #fff; }
+
+/* ---- in-game bottom 3-tab bar ---- */
+.hud .tabbar { position: absolute; left: 0; right: 0; bottom: 0; pointer-events: auto;
+  background: rgba(15,18,27,.94); border-top: 1px solid #262c3d; backdrop-filter: blur(8px); }
+.hud .tabcontent { padding: 10px 12px 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 640px; margin: 0 auto; }
+.hud .tabcontent.collapsed { display: none; }
+.hud .up { display: flex; justify-content: space-between; align-items: center; gap: 6px;
+  background: #1c2030; border: 1px solid #262c3d; color: #d8deea; border-radius: 4px; padding: 9px 12px; cursor: pointer; font: inherit; }
+.hud .up:hover:not(:disabled) { border-color: #4aa8ff; }
+.hud .up:disabled { opacity: .4; cursor: default; }
+.hud .up .nm { font-weight: 600; flex: 1; }
+.hud .up .delta, .hud .perm .delta { color: #8b93a7; font-size: 12.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hud .up .cost { color: #ffd24a; font-variant-numeric: tabular-nums; }
+.hud .tabs { display: flex; max-width: 640px; margin: 0 auto; }
+.hud .tabs button { flex: 1; pointer-events: auto; background: transparent; border: 0; border-top: 2px solid transparent;
+  color: #8b93a7; padding: 10px 4px; font: inherit; font-weight: 600; cursor: pointer; }
+.hud .tabs button.on { color: #fff; border-top-color: #4aa8ff; background: rgba(74,168,255,.08); }
+
+/* ---- between-games MENU ---- */
+.hud .menu { position: absolute; inset: 0; display: none; flex-direction: column; pointer-events: auto;
+  background: radial-gradient(900px 600px at 50% -10%, #141b2e 0%, #07090f 70%); }
+.hud .menu.show { display: flex; }
+.hud .menu-content { flex: 1; overflow: auto; padding: 22px 18px 16px; }
+.hud .menu-content > * { max-width: 640px; margin-left: auto; margin-right: auto; }
+.hud .menu-content.tab-hero { text-align: center; }
+
+/* compact earnings card (not a full-width snackbar) */
+.hud .earncard { display: inline-block; background: #11151f; border: 1px solid #2a3550; border-radius: 5px;
+  padding: 10px 22px; margin: 0 auto 14px; }
+.hud .earncard .el { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: #8b93a7; }
+.hud .earncard .ev { font-size: 24px; font-weight: 800; color: #ffd24a; line-height: 1.1; }
+.hud .earncard .ev span { font-size: 13px; color: #8b93a7; font-weight: 600; }
+.hud .earncard .es { font-size: 12px; color: #8b93a7; }
+
+/* info chips */
+.hud .chips { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 0 auto 14px; }
+.hud .chip { background: rgba(21,24,35,.8); border: 1px solid #262c3d; border-radius: 4px; padding: 5px 12px; font-size: 12px; color: #8b93a7; }
+.hud .chip b { color: #d8deea; margin-left: 3px; }
+
+.hud .cores-chip { display: inline-block; background: rgba(21,24,35,.8); border: 1px solid #262c3d; border-radius: 4px;
+  padding: 6px 14px; color: #8b93a7; margin: 0 auto 14px; }
+.hud .cores-chip b { color: #ffd24a; font-size: 17px; margin-left: 4px; }
+
+/* framed avatar — vertical gradient, more intense at the middle than top/bottom */
+.hud .avatar-frame { width: 200px; height: 200px; margin: 4px auto 0; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, #0b0f17 0%, #1d3056 50%, #0b0f17 100%);
+  border: 1px solid #31466e; box-shadow: inset 0 0 40px rgba(74,168,255,.20), 0 0 26px rgba(74,168,255,.08); }
+.hud .avatar-frame canvas { width: 176px; height: 176px; background: transparent; }
+.hud .hero-name { font-weight: 800; font-size: 18px; margin: 12px auto 6px; }
+
+/* milestones button + claimable badge */
+.hud .msbtn { position: relative; background: #171b27; border: 1px solid #2a3550; color: #d8deea; border-radius: 4px;
+  padding: 11px 20px; font: inherit; font-weight: 700; cursor: pointer; margin: 6px auto 0; }
+.hud .msbtn:hover { border-color: #4aa8ff; }
+.hud .msbtn .badge { position: absolute; top: -8px; right: -8px; background: #3ddc84; color: #06210f; border-radius: 4px;
+  min-width: 20px; height: 20px; padding: 0 5px; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+
+/* square, glowing, intense-green Start button */
+.hud .startsq { width: 150px; height: 150px; margin: 18px auto 0; border-radius: 5px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px; cursor: pointer; color: #eafff2; font: inherit;
+  background: radial-gradient(circle at 50% 38%, rgba(45,255,140,.20), rgba(16,26,20,.65));
+  border: 2px solid #2dff8c; box-shadow: 0 0 28px rgba(45,255,140,.45), inset 0 0 26px rgba(45,255,140,.12); }
+.hud .startsq:hover { box-shadow: 0 0 40px rgba(45,255,140,.75), inset 0 0 32px rgba(45,255,140,.20); }
+
+/* inline SVG icons */
+.hud .ic { display: inline-block; vertical-align: -0.18em; flex: 0 0 auto; }
+.hud .ic.gold { color: #ffd24a; }
+.hud .ic.green { color: #2dff8c; }
+.hud .ic.token { color: #5fd0ff; }
+.hud .startsq .ic { vertical-align: middle; }
+
+/* ---- cards tab ---- */
+.hud .cardbtns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 0 auto 16px; }
+.hud .cardbtn { display: inline-flex; align-items: center; gap: 8px; background: #1c2030; border: 1px solid #2a3550;
+  color: #d8deea; border-radius: 4px; padding: 11px 16px; font: inherit; font-weight: 700; cursor: pointer; }
+.hud .cardbtn:hover:not(:disabled) { border-color: #5fd0ff; }
+.hud .cardbtn:disabled { opacity: .4; cursor: default; }
+.hud .cardbtn .ct { color: #5fd0ff; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; }
+.hud .cardgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.hud .card { background: linear-gradient(180deg, #161b2a, #0e1119); border: 2px solid #3a445f;
+  border-radius: 6px; padding: 12px; text-align: center; }
+.hud .card.tier-gold { border-color: #ffd24a; box-shadow: 0 0 14px rgba(255,210,74,.18); }
+.hud .card.tier-chroma { border-color: #9b8cff; box-shadow: 0 0 16px rgba(120,160,255,.28); }
+.hud .card .card-name { font-weight: 800; letter-spacing: .5px; }
+.hud .card .card-art { margin: 10px auto 8px; height: 84px; display: flex; align-items: center; justify-content: center;
+  border-radius: 5px; background: radial-gradient(circle at 50% 40%, rgba(255,255,255,.06), rgba(0,0,0,.25)); }
+.hud .card .card-art .ic { vertical-align: middle; }
+.hud .card .card-val { color: #c3cad8; font-size: 12.5px; min-height: 16px; }
+.hud .card .stars { display: flex; justify-content: center; gap: 2px; margin-top: 8px; flex-wrap: wrap; }
+.hud .star { display: inline-block; }
+.hud .card.locked { border: 2px dashed #2a3550; background: #0d1019; opacity: .7; display: flex; flex-direction: column; justify-content: center; }
+.hud .card.locked .card-art { color: #4a5168; background: none; }
+.hud .card.locked .card-val { color: #4a5168; }
+
+/* permanent upgrades list */
+.hud .permlist { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.hud .perm { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  gap: 4px; background: #151823; border: 1px solid #262c3d; border-radius: 4px; padding: 8px 5px; margin: 0;
+  cursor: pointer; font: inherit; color: #d8deea; text-align: center; }
+.hud .perm:hover:not(:disabled) { border-color: #ffd24a; }
+.hud .perm:disabled { opacity: .4; cursor: default; }
+.hud .perm.tut { border-color: #ffd24a; box-shadow: 0 0 0 3px rgba(255,210,74,.15); }
+.hud .perm .ptop { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.hud .perm .pname { font-size: 10px; line-height: 1.1; font-weight: 700; }
+.hud .perm .pcur { font-size: 17px; font-weight: 800; color: #fff; }
+.hud .perm .pcost { color: #ffd24a; font-size: 11px; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+
+.hud .tutcallout { display: inline-block; background: rgba(255,210,74,.12); border: 1px solid #4a3d14;
+  color: #ffe9a8; border-radius: 4px; padding: 7px 16px; font-size: 13px; margin: 0 auto 12px; }
+
+.hud .locked-tab { text-align: center; color: #4a5168; padding-top: 70px; }
+.hud .lockbig { font-size: 46px; }
+.hud .lockmsg { margin-top: 8px; font-size: 14px; }
+
+/* menu bottom tab strip */
+.hud .menutabs { flex: 0 0 auto; display: flex; background: rgba(15,18,27,.96); border-top: 1px solid #262c3d; }
+.hud .menutabs button { flex: 1; background: transparent; border: 0; border-top: 2px solid transparent; color: #8b93a7;
+  padding: 9px 2px; font: 600 11px system-ui; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.hud .menutabs button.on { color: #fff; border-top-color: #4aa8ff; background: rgba(74,168,255,.08); }
+.hud .menutabs button.locked { color: #434a60; cursor: default; }
+.hud .menutabs button.tut { color: #ffd24a; border-top-color: #ffd24a; animation: tutpulse 1.2s ease-in-out infinite; }
+@keyframes tutpulse { 0%,100% { background: rgba(255,210,74,.05); } 50% { background: rgba(255,210,74,.18); } }
+.hud .menutabs .lk { font-size: 14px; }
+.hud .menutabs .ml { font-size: 11px; }
+
+/* ---- milestones modal ---- */
+.hud .modal { position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column;
+  background: radial-gradient(900px 600px at 50% -10%, #141b2e 0%, #07090f 75%); }
+.hud .modal.hide { display: none; }
+.hud .modal-inner { flex: 1; overflow: auto; padding: 20px 18px 28px; }
+.hud .modal-inner > * { max-width: 560px; margin-left: auto; margin-right: auto; }
+.hud .modal h2 { margin: 4px auto 4px; }
+.hud .modal .msnote { color: #8b93a7; font-size: 13px; margin: 0 auto 12px; }
+.hud .modal .close { display: block; background: transparent; border: 0; color: #8b93a7; font: inherit; cursor: pointer; padding: 0 0 8px; }
+.hud .modal .close:hover { color: #fff; }
+.hud .ms { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: #151823; border: 1px solid #262c3d; border-radius: 4px; padding: 12px 14px; margin: 8px 0; }
+.hud .ms.locked { opacity: .5; }
+.hud .ms.claimed { opacity: .6; }
+.hud .ms.can { border-color: #3ddc84; }
+.hud .ms .mw { font-weight: 700; flex: 1; }
+.hud .ms .mr { color: #ffd24a; font-size: 13px; }
+.hud .ms .tag { font-size: 12px; color: #8b93a7; }
+.hud .ms.claimed .tag { color: #3ddc84; }
+.hud .ms button { background: #16291d; border: 1px solid #3ddc84; color: #caffd9; border-radius: 3px;
+  padding: 8px 16px; font: inherit; font-weight: 700; cursor: pointer; }
+.hud .ms button:hover { box-shadow: 0 0 14px rgba(61,220,132,.4); }
+
+/* ---- spotlight tutorial (flashlight) ---- */
+.hud .tut-dim { position: fixed; border-radius: 4px; pointer-events: none; z-index: 60;
+  box-shadow: 0 0 0 9999px rgba(6,8,14,.86), 0 0 22px 4px rgba(255,210,74,.45) inset;
+  border: 2px solid rgba(255,210,74,.7); transition: left .15s, top .15s, width .15s, height .15s; }
+.hud .tut-dim.hide { display: none; }
+.hud .tut-thought { position: fixed; transform: translate(-50%, -100%); z-index: 61; pointer-events: none;
+  background: #fbfdff; color: #1a1f2b; border-radius: 5px; padding: 10px 16px; font-size: 13px; font-weight: 700;
+  max-width: 220px; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,.55); }
+.hud .tut-thought.hide { display: none; }
+.hud .tut-thought:after { content: ''; position: absolute; left: 50%; bottom: -9px; transform: translateX(-50%);
+  border: 9px solid transparent; border-top-color: #fbfdff; border-bottom: 0; }
+
+/* ---- DEV panel ---- */
+.hud .dev { position: fixed; left: 10px; bottom: 110px; z-index: 40; pointer-events: auto; }
+.hud .devtoggle { background: rgba(21,24,35,.85); border: 1px solid #43223f; color: #e66; border-radius: 3px; padding: 5px 9px; font: 11px ui-monospace, monospace; cursor: pointer; opacity: .65; }
+.hud .devtoggle:hover { opacity: 1; }
+.hud .devpanel { margin-top: 6px; background: rgba(15,18,27,.97); border: 1px solid #43223f; border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 6px; width: 150px; }
+.hud .devpanel.hide { display: none; }
+.hud .devpanel button { background: #1c2030; border: 1px solid #262c3d; color: #d8deea; border-radius: 3px; padding: 7px; font: 12px system-ui; cursor: pointer; }
+.hud .devpanel button:hover { border-color: #e64cff; }
+.hud .devpanel button.on { background: #2a3550; border-color: #4aa8ff; color: #dff0ff; }
+.hud .ffrow { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+/* ---- in-game transient hint (e.g. movement tutorial) ---- */
+.hud .ghint { position: absolute; left: 50%; top: 38%; transform: translateX(-50%); text-align: center;
+  background: rgba(21,24,35,.9); border: 1px solid #4aa8ff; border-radius: 4px; padding: 12px 18px; color: #fff;
+  pointer-events: none; max-width: 280px; }
+.hud .ghint.hide { display: none; }
+.hud .ghint .k { background: #1c2030; border: 1px solid #262c3d; border-radius: 3px; padding: 1px 7px; font-family: ui-monospace, monospace; font-size: 12px; }
+
+/* ---- cards v2: square icon buttons, taller pokemon cards, arced glowing stars ---- */
+.hud .ic.cyan { color: #37d7ff; }
+.hud .cardbtns { display: flex; gap: 12px; justify-content: center; margin: 8px auto 18px; }
+.hud .cardbtn { width: 92px; height: 92px; display: flex; align-items: center; justify-content: space-between;
+  background: #1c2030; border: 1px solid #2a3550; border-radius: 4px; padding: 12px; cursor: pointer; font: inherit; }
+.hud .cardbtn:hover:not(:disabled) { border-color: #5fd0ff; }
+.hud .cardbtn:disabled { opacity: .4; cursor: default; }
+.hud .cardbtn .ct { color: #5fd0ff; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; gap: 3px; }
+.hud .cardgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 14px; }
+.hud .card { background: linear-gradient(180deg, #161b2a, #0e1119); border: 2px solid #3a445f; border-radius: 6px;
+  padding: 10px; text-align: center; display: flex; flex-direction: column; gap: 8px; }
+.hud .card.tier-gold { border-color: #ffd24a; box-shadow: 0 0 14px rgba(255,210,74,.18); }
+.hud .card.tier-chroma { border-color: #9b8cff; box-shadow: 0 0 16px rgba(120,160,255,.28); }
+.hud .card-img { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 4px;
+  background: radial-gradient(circle at 50% 42%, rgba(255,255,255,.07), rgba(0,0,0,.3)); }
+.hud .card .stars { display: flex; justify-content: center; align-items: flex-start; gap: 3px; min-height: 24px; }
+.hud .starwrap { display: inline-flex; }
+.hud .star { display: block; }
+.hud .star.white { filter: drop-shadow(0 0 1.5px rgba(255,255,255,.7)); }
+.hud .star.gold { filter: drop-shadow(0 0 2px rgba(255,210,74,.85)); }
+.hud .star.chroma { filter: drop-shadow(0 0 2.5px rgba(150,150,255,.9)); }
+.hud .card-stats { display: flex; flex-direction: column; gap: 2px; align-items: center; font-size: 13px; color: #c3cad8; }
+.hud .cstat { display: inline-flex; align-items: center; gap: 4px; }
+.hud .cstat .cl { color: #8b93a7; }
+.hud .cstat b { color: #fff; }
+.hud .card-name { font-weight: 800; letter-spacing: .4px; text-align: left; font-size: 13px; }
+.hud .card.locked { border: 2px dashed #2a3550; background: #0d1019; opacity: .65; justify-content: center; }
+.hud .card.locked .card-img { background: none; color: #4a5168; }
+.hud .card.locked .card-name { color: #4a5168; font-weight: 600; text-align: center; }
+
+/* per-star card modal (click anywhere to close; dark overlay behind) */
+.hud .cardmodal { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center;
+  background: rgba(6,8,14,.6); pointer-events: auto; }
+.hud .cardmodal.hide { display: none; }
+.hud .cardmodal-inner { background: #11151f; border: 1px solid #2a3550; border-radius: 6px; padding: 14px 16px;
+  width: min(290px, 86vw); max-height: 80vh; overflow: auto; }
+.hud .cmhead { display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+.hud .cmhead .ic { width: 34px; height: 34px; }
+.hud .csr { display: flex; align-items: center; gap: 10px; padding: 5px 4px; border-bottom: 1px solid #1f2740; opacity: .4; }
+.hud .csr:last-child { border-bottom: 0; }
+.hud .csr.have { opacity: 1; }
+.hud .csr .csv { display: inline-flex; align-items: center; gap: 5px; color: #c3cad8; font-variant-numeric: tabular-nums; }
+.hud .csr .csv b { color: #fff; }
