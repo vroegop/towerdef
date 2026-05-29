@@ -111,7 +111,7 @@
       for (const e of s.enemies) { const d = Math.hypot(e.x - h.x, e.y - h.y); if (d < bd) { bd = d; best = e; } }
       if (best) {
         if (s.atkMode === 'lightning') { // dev: original instant hitscan, drawn as a beam
-          best.hp -= st.rangedDamage; best.hitFlash = 0.12;
+          best.hp -= st.rangedDamage; best.hitFlash = 0.12; best.hitDmg = st.rangedDamage;
           if (best.behavior === 'bounce') best.kb = Math.max(best.kb, 0.25);
         } else {
           A.fireProjectile(s, h, best, st); // travelling bullet: damage lands on impact
@@ -160,6 +160,12 @@
         const g = Math.round(tg.reward * this.stats.goldFind * e.strMult * (s.rewardMult || 1));
         s.econ.gold += g; s.econ.goldEarned += g;
         s.econ.xp += Math.round(2 * tg.reward * e.strMult * this.stats.xpGain);
+        // UI-facing transient kill events (consumed by the renderer). cores accrue at the
+        // banked rate of 1 per 10 kills, surfaced here as a per-kill drop. Capped so a
+        // render-free offline replay can't grow it unbounded.
+        const core = (s.econ.kills % 10 === 0) ? 1 : 0;
+        s.fx.push({ seq: ++s.fxSeq, x: e.x, y: e.y, gold: g, core });
+        if (s.fx.length > 32) s.fx.shift();
       } else keep.push(e);
     }
     s.enemies = keep;

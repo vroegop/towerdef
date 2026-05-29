@@ -29,8 +29,8 @@
   A.MAX_TIER = 5;
   A.TIER_UNLOCK_WAVE = 300; // reach this wave in a tier to unlock the next one
   A.tierDifficulty = function (tier) { return Math.pow(2, ((tier || 1) - 1)); };
-  // Core reward multiplier per tier: 1 + 0.8 * tier (higher tiers pay out more cores).
-  A.coreMult = function (tier) { return 1 + 0.8 * (tier || 1); };
+  // Core reward multiplier per tier: tier 1 is the 1x baseline; each higher tier adds +0.8x.
+  A.coreMult = function (tier) { return 1 + 0.8 * ((tier || 1) - 1); };
   // Tier 1 is always open; tier N>1 needs TIER_UNLOCK_WAVE reached in the tier below.
   A.tierUnlocked = function (meta, tier) {
     if (tier <= 1) return true;

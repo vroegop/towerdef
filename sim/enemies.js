@@ -33,7 +33,7 @@
       id, type, tier, shape: def.shape, behavior: def.behavior, r: def.r,
       x, y, vx: 0, vy: 0, facing: 0,
       strMult, hpMax: hp, hp, dmg,
-      speed, range: def.range, state: 'approach', atkCd: 0, kb: 0, hitFlash: 0,
+      speed, range: def.range, state: 'approach', atkCd: 0, kb: 0, hitFlash: 0, hitDmg: 0,
       bornWave: waveN, veteran: false,
     };
   };

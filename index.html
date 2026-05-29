@@ -35,7 +35,14 @@
   <script>
   (function () {
     const A = window.ARENA;
-    const DT = A.DT, SAVE = 'arena.save', METAK = 'arena.meta', OFFLINE_CAP = 12 * 3600;
+    const DT = A.DT, SAVE = 'arena.save', METAK = 'arena.meta', SETK = 'arena.settings', OFFLINE_CAP = 12 * 3600;
+
+    // visual-indicator settings (default ON); shared by reference with the renderer + HUD
+    function loadSettings() {
+      let s = {}; try { s = JSON.parse(localStorage.getItem(SETK)) || {}; } catch (e) {}
+      return { goldOnKill: s.goldOnKill !== false, coreOnKill: s.coreOnKill !== false, enemyHp: s.enemyHp !== false, damageNumbers: s.damageNumbers !== false };
+    }
+    function saveSettings() { localStorage.setItem(SETK, JSON.stringify(settings)); }
 
     function loadMeta() {
       let m = {}; try { m = JSON.parse(localStorage.getItem(METAK)) || {}; } catch (e) {}
@@ -51,9 +58,11 @@
     function clearSave() { localStorage.removeItem(SAVE); }
 
     const meta = loadMeta();
+    const settings = loadSettings();
     const canvas = document.getElementById('game');
-    const renderer = A.Canvas2DRenderer(canvas);
+    const renderer = A.Canvas2DRenderer(canvas, settings);
     const hud = A.Hud(document.getElementById('hud'), {
+      settings, onSaveSettings: saveSettings,
       onBuyRun: (stat) => { if (sim) A.buyRunUpgrade(sim.s, stat); },
       onBuyPerm: (id) => { const ok = A.buyPerm(meta, id); if (ok) saveMeta(); return ok; },
       onClaimMilestone: (wave) => { const r = A.claimMilestone(meta, wave); if (r) saveMeta(); return r; },

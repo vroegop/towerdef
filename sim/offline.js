@@ -19,6 +19,7 @@
       sim.step(A.DT); ran++;
     }
     const ms = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0;
+    if (sim.s.fx) sim.s.fx.length = 0; // drop the render-free replay's kill-event backlog
     return {
       ranTicks: ran,
       simSeconds: ran * A.DT,

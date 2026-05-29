@@ -23,11 +23,14 @@
     ctx.restore();
   }
 
-  A.Canvas2DRenderer = function (canvas) {
+  A.Canvas2DRenderer = function (canvas, settings) {
     const ctx = canvas.getContext('2d');
+    settings = settings || {};     // shared by reference with the settings modal; toggles take effect live
     let sparks = [];               // UI-only particle pool (hits)
     let shards = [];               // UI-only fragment pool (kills)
     let bolts = [];                // UI-only lightning bolts (dev lightning mode)
+    let floats = [];               // UI-only floating text (damage / gold / core on-kill)
+    let lastFxSeq = -1;            // highest sim fx seq already consumed
     const seen = new Map();        // track hitFlash edges → fire sparks/bolts once per hit
     const prevEnemies = new Map(); // id → last-seen {screenX, screenY, color}; a vanished id = a kill
     let prevPos = new Map();       // id → world {x,y} at the END of the previous sim tick (for interpolation)
@@ -56,6 +59,11 @@
         const a = Math.random() * Math.PI * 2, sp = 90 + Math.random() * 150, life = 0.5 + Math.random() * 0.3;
         shards.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, rot: Math.random() * Math.PI * 2, vr: (Math.random() - 0.5) * 12, size: 3 + Math.random() * 4, life, max: life, color });
       }
+    }
+
+    // floating text that rises and fades (damage numbers, gold/core on-kill)
+    function spawnFloat(x, y, text, color, size) {
+      floats.push({ x, y, text, color, size: size || 13, life: 0.9, max: 0.9, vy: -42 + (Math.random() - 0.5) * 14, vx: (Math.random() - 0.5) * 16 });
     }
 
     function spawnBolt(x1, y1, x2, y2) {
@@ -132,8 +140,15 @@
         if (e.hitFlash > 0 && prev <= 0) {
           spawnSparks(esx, esy, col);
           if (s.atkMode === 'lightning') spawnBolt(hsx, hsy, esx, esy);
+          if (settings.damageNumbers && e.hitDmg) spawnFloat(esx, esy - e.r * scale - 4, '' + e.hitDmg, '#ffffff', 13);
         }
         seen.set(e.id, e.hitFlash);
+        // enemy health bar (only once damaged)
+        if (settings.enemyHp && e.hp < e.hpMax && e.hp > 0) {
+          const bw = Math.max(14, e.r * scale * 2), bh = 3, bx = esx - bw / 2, by = esy - e.r * scale - 7;
+          ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(bx, by, bw, bh);
+          ctx.fillStyle = col; ctx.fillRect(bx, by, bw * Math.max(0, e.hp / e.hpMax), bh);
+        }
       }
 
       // travelling bullets — small white dots, no trail (empty in lightning mode)
@@ -155,6 +170,18 @@
       }
       prevEnemies.clear();
       for (const e of s.enemies) { const ep = ipos(e.id, e.x, e.y); prevEnemies.set(e.id, { x: tx(ep.x), y: ty(ep.y), color: A.TIERS[e.tier].color }); }
+
+      // per-kill drop indicators (gold / core) from the sim's transient fx channel
+      if (resync) lastFxSeq = s.fxSeq || 0; // skip the offline/restart backlog
+      else if (s.fx && s.fx.length) {
+        for (const f of s.fx) {
+          if (f.seq <= lastFxSeq) continue;
+          const fx = tx(f.x), fy = ty(f.y);
+          if (settings.goldOnKill && f.gold) spawnFloat(fx, fy, '+' + f.gold, '#ffd24a', 12);
+          if (settings.coreOnKill && f.core) spawnFloat(fx, fy - 12, '+' + f.core, '#ff2e4e', 13);
+        }
+        lastFxSeq = s.fxSeq;
+      }
 
       const h = s.hero;
       if (s.alive) {
@@ -202,6 +229,19 @@
       }
       ctx.globalAlpha = 1; ctx.shadowBlur = 0;
       bolts = bolts.filter((b) => b.life > 0);
+
+      // floating text (damage numbers, gold/core on-kill) — rises and fades on the UI clock
+      if (floats.length) {
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        for (const f of floats) {
+          f.x += f.vx * rdt; f.y += f.vy * rdt; f.life -= rdt;
+          ctx.globalAlpha = Math.max(0, f.life / f.max);
+          ctx.font = '700 ' + f.size + 'px system-ui, sans-serif'; ctx.fillStyle = f.color;
+          ctx.fillText(f.text, f.x, f.y);
+        }
+        ctx.globalAlpha = 1; ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
+        floats = floats.filter((f) => f.life > 0);
+      }
 
       // ---- red damage vignette (drawn in screen space, unaffected by shake) ----
       if (hurt > 0) {

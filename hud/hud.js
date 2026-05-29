@@ -22,6 +22,7 @@
       close: '<path d="M6 6l12 12M18 6L6 18"/>',
       cards: '<rect x="3" y="7" width="12" height="14" rx="1"/><path d="M8 7V5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2"/>',
       token: '<path d="M12 2.5l2.5 6.5 6.5 2.5-6.5 2.5L12 20.5 9.5 14 3 11.5 9.5 9z"/>',
+      coin: '<circle cx="12" cy="12" r="9"/><path d="M14.5 9.2a3 3 0 0 0-2.5-1.2c-1.7 0-2.6 1-2.6 2 0 2.6 5.2 1.3 5.2 4 0 1.1-1 2-2.6 2a3 3 0 0 1-2.5-1.2M12 6.3v11.4"/>',
       burst: '<path d="M12 2v5M12 17v5M2 12h5M17 12h5M5.2 5.2l3.4 3.4M18.8 5.2l-3.4 3.4M5.2 18.8l3.4-3.4M18.8 18.8l-3.4-3.4"/>',
       bow: '<path d="M8 3a10 10 0 0 1 0 18"/><path d="M8 3v18"/><path d="M5 12h13"/><path d="M15 9l3 3-3 3"/><path d="M5 12l2.5-2M5 12l2.5 2"/>',
       bullseye: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.6"/>',
@@ -33,6 +34,7 @@
       prestige: '<path d="M5 18h14"/><path d="M5 18l-1-9 4 3 4-7 4 7 4-3-1 9z"/>',
       tier: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
       fwd: '<path d="M9 5l7 7-7 7"/>',
+      gear: '<circle cx="12" cy="12" r="3.2"/><path d="M19.4 13a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.7 8.6a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     };
     function icon(name, size, cls) {
       size = size || 16;
@@ -45,19 +47,22 @@
     root.innerHTML =
       '<div class="topbar" id="h-top">' +
       '  <div class="stat wave"><span class="lbl">Wave</span><b id="h-wave">1</b></div>' +
-      '  <div class="stat hp"><span class="lbl">HP</span><b id="h-hp">1</b><span class="hpbar"><i id="h-hpfill"></i></span></div>' +
-      '  <div class="stat gold"><span class="lbl">Gold</span><b id="h-gold">0</b></div>' +
+      '  <div class="stat hp">' + icon('heart', 15, 'hp') + '<b id="h-hp">1</b><span class="hpbar"><i id="h-hpfill"></i></span></div>' +
+      '  <div class="stat gold">' + icon('coin', 15, 'gold') + '<b id="h-gold">0</b></div>' +
       '  <button class="iconbtn" id="h-chart" title="Stats">' + icon('chart', 20) + '</button>' +
+      '  <button class="iconbtn" id="h-settings-btn" title="Settings">' + icon('gear', 20) + '</button>' +
       '</div>' +
       '<div class="wavebar" id="h-wavebar" title="Next wave"><i id="h-wavefill"></i></div>' +
       '<div class="statswrap hide" id="h-stats"><div class="statscard" id="h-statscard"></div></div>' +
       '<div class="ghint hide" id="h-ghint"></div>' +
       '<div class="tabbar" id="h-tabbar"><div id="h-tabcontent"></div><div class="tabs" id="h-tabs"></div></div>' +
       '<div class="menu" id="h-menu">' +
+      '  <button class="menugear" id="h-menugear" title="Settings">' + icon('gear', 22) + '</button>' +
       '  <div class="menu-content" id="h-menu-content"></div>' +
       '  <div class="menutabs" id="h-menu-tabs"></div>' +
       '  <div class="modal hide" id="h-modal"><div class="modal-inner" id="h-modal-inner"></div></div>' +
       '</div>' +
+      '<div class="setmodal hide" id="h-setmodal"><div class="setmodal-inner" id="h-setmodal-inner"></div></div>' +
       '<div class="over hide" id="h-over"><div class="over-card" id="h-over-card"></div></div>' +
       '<div class="tut-dim hide" id="h-spot"></div><div class="tut-thought hide" id="h-thought"></div>' +
       '<div class="lk-tip hide" id="h-lktip"></div>' +
@@ -77,6 +82,17 @@
 
     const $ = (id) => root.querySelector(id);
     const fmt = (n) => (typeof n === 'number' ? n.toLocaleString() : n);
+    // Compact readout that stays within ~7 chars: full dotted thousands under 1e6,
+    // then a suffix per 1000x (m, b, t, q ...). e.g. 937983 → "937.983", 1.423e6 → "1.423m".
+    const SUF = [[1e15, 'q'], [1e12, 't'], [1e9, 'b'], [1e6, 'm']];
+    const abbr = (n) => {
+      n = Math.floor(n || 0);
+      if (n < 1000) return String(n);
+      if (n < 1e6) return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      for (const [v, s] of SUF) {
+        if (n >= v) { const m = n / v; return (m < 10 ? m.toFixed(3) : m < 100 ? m.toFixed(2) : m.toFixed(1)) + s; }
+      }
+    };
     const sumPerm = (meta) => Object.values((meta && meta.perm) || {}).reduce((a, b) => a + b, 0);
 
     // gradient used to fill chromatic (max-tier) stars
@@ -198,8 +214,8 @@
     function update(s) {
       lastS = s;
       $('#h-wave').textContent = s.wave.n;
-      $('#h-hp').textContent = Math.ceil(s.hero.hp) + ' / ' + Math.ceil(s.hero.hpMax);
-      $('#h-gold').textContent = fmt(s.econ.gold);
+      $('#h-hp').textContent = abbr(Math.ceil(s.hero.hp)) + '/' + abbr(Math.ceil(s.hero.hpMax));
+      $('#h-gold').textContent = abbr(s.econ.gold);
       // HP bar (mirrors the hero's hp ring colour)
       const hpf = s.hero.hpMax > 0 ? Math.max(0, Math.min(1, s.hero.hp / s.hero.hpMax)) : 0;
       const hpfill = $('#h-hpfill');
@@ -273,6 +289,35 @@
       b.addEventListener('click', () => handlers.onDev && handlers.onDev(b.dataset.dev)));
     $('#h-devpanel').querySelectorAll('[data-ff]').forEach((b) =>
       b.addEventListener('click', () => handlers.onFF && handlers.onFF(+b.dataset.ff)));
+
+    // ---------- settings modal (visual indicators; the object is shared with the renderer) ----------
+    const settings = handlers.settings || {};
+    const SETTINGS_DEF = [
+      { key: 'goldOnKill', label: 'Gold on kill', icon: 'coin', cls: 'gold' },
+      { key: 'coreOnKill', label: 'Cores on kill', icon: 'cores', cls: 'core' },
+      { key: 'enemyHp', label: 'Enemy health bars', icon: 'heart', cls: 'hp' },
+      { key: 'damageNumbers', label: 'Damage numbers', icon: 'burst' },
+    ];
+    const setmodal = $('#h-setmodal'), setmodalInner = $('#h-setmodal-inner');
+    function openSettings() {
+      let h = '<div class="statshead"><h2>Settings</h2><button class="iconclose" id="h-set-close" title="Close">' + icon('close', 18) + '</button></div><div class="setbody">';
+      for (const o of SETTINGS_DEF) {
+        h += '<button class="setrow' + (settings[o.key] ? ' on' : '') + '" data-set="' + o.key + '">' +
+          '<span class="sl">' + icon(o.icon, 16, o.cls || '') + '<span>' + o.label + '</span></span>' +
+          '<span class="switch"><i></i></span></button>';
+      }
+      setmodalInner.innerHTML = h + '</div>';
+      $('#h-set-close').addEventListener('click', () => setmodal.classList.add('hide'));
+      setmodalInner.querySelectorAll('[data-set]').forEach((b) => b.addEventListener('click', () => {
+        const k = b.dataset.set; settings[k] = !settings[k];
+        b.classList.toggle('on', settings[k]);
+        handlers.onSaveSettings && handlers.onSaveSettings();
+      }));
+      setmodal.classList.remove('hide');
+    }
+    setmodal.addEventListener('click', (e) => { if (e.target === setmodal) setmodal.classList.add('hide'); });
+    $('#h-settings-btn').addEventListener('click', openSettings);
+    $('#h-menugear').addEventListener('click', openSettings);
 
     // ---------- MENU ----------
     const menuEl = $('#h-menu'), menuContent = $('#h-menu-content'), menuTabsEl = $('#h-menu-tabs');

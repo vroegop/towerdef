@@ -39,7 +39,7 @@
         p.x += p.vx * sdt; p.y += p.vy * sdt; p.traveled += A.BULLET_SPEED * sdt;
         const e = hitEnemy(state, p);
         if (e) {
-          e.hp -= p.dmg; e.hitFlash = 0.12;
+          e.hp -= p.dmg; e.hitFlash = 0.12; e.hitDmg = p.dmg; // hitDmg: damage just dealt (renderer shows it)
           if (e.behavior === 'bounce') e.kb = Math.max(e.kb, 0.25); // same knockback the old hitscan applied
           dead = true; break;
         }
