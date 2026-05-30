@@ -68,6 +68,9 @@
     { id: 'armor',        tab: 'defense', icon: 'shield', label: 'Armor', max: 10000, // flat damage soak per hit
       value: (b) => b,                               fmt: (b) => '-' + b,
       gold: curve(30, 1.55),   core: curve(6, 1.0018) },
+    { id: 'defPct',       tab: 'defense', icon: 'shield', label: 'Defense %', max: 900, // multiplicative DR, caps at 90%
+      value: (b) => Math.min(0.9, b * 0.001),        fmt: (b) => (Math.min(0.9, b * 0.001) * 100).toFixed(1) + '%',
+      gold: curve(50, 1.6),    core: curve(20, 1.008) },
 
     // ---- ECONOMIC (Tier 2+) ----
     { id: 'coinsPerWave', tab: 'economic', icon: 'coin',  label: 'Coins / Wave', max: 10000, gated: true,
@@ -246,6 +249,7 @@
 
       dodge:        U.dodge.value(b('dodge')),
       armor:        U.armor.value(b('armor')),          // flat damage soaked per hit
+      defPct:       U.defPct.value(b('defPct')),        // multiplicative DR applied after armor
       cashMult:     U.cashBonus.value(b('cashBonus')),  // global × on all gold income
       coinsPerWave: U.coinsPerWave.value(b('coinsPerWave')),
       coresPerWave: U.coresPerWave.value(b('coresPerWave')),

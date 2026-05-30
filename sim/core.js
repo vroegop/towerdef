@@ -100,8 +100,8 @@
       if (this.s.fx.length > 32) this.s.fx.shift();
       return;
     }
-    // Armor: a flat soak applied per hit. A hit fully absorbed deals no damage at all.
-    const amt = amount - (st.armor || 0);
+    // Armor: a flat soak applied per hit, then Defense % scales the remainder (caps at 90%).
+    let amt = (amount - (st.armor || 0)) * (1 - (st.defPct || 0));
     if (amt <= 0) return;
     h.sinceHit = 0;
     h.hp -= amt;
