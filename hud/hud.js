@@ -74,20 +74,8 @@
       '<div class="setmodal hide" id="h-setmodal"><div class="setmodal-inner" id="h-setmodal-inner"></div></div>' +
       '<div class="over hide" id="h-over"><div class="over-card" id="h-over-card"></div></div>' +
       '<div class="tut-dim hide" id="h-spot"></div><div class="tut-thought hide" id="h-thought"></div>' +
-      '<div class="lk-tip hide" id="h-lktip"></div>' +
-      '<div class="dev" id="h-dev">' +
-      '  <button class="devtoggle" id="h-devtoggle">DEV</button>' +
-      '  <div class="devpanel hide" id="h-devpanel">' +
-      '    <button data-dev="reset">Reset progress</button>' +
-      '    <button data-dev="cores">Max Cores</button>' +
-      '    <button data-dev="gold">Max Gold</button>' +
-      '    <button data-dev="tokens">Max Tokens</button>' +
-      '    <button data-dev="lightning" id="h-dev-lightning">Lightning: off</button>' +
-      '    <button data-dev="pause" id="h-dev-pause">Pause: off</button>' +
-      '    <button data-dev="testbullet">Test bullet</button>' +
-      '    <div class="ffrow"><button data-ff="30">+30s</button><button data-ff="60">+1m</button>' +
-      '      <button data-ff="300">+5m</button><button data-ff="3600">+60m</button></div>' +
-      '  </div></div>';
+      '<div class="lk-tip hide" id="h-lktip"></div>';
+    // NOTE: the DEV panel was lifted out to hud/devmenu.js (host-level) so it survives HUD swaps.
 
     const $ = (id) => root.querySelector(id);
     const fmt = (n) => (typeof n === 'number' ? n.toLocaleString() : n);
@@ -310,13 +298,6 @@
     function showHint(html) { const g = $('#h-ghint'); g.innerHTML = html; g.classList.remove('hide'); }
     function hideHint() { $('#h-ghint').classList.add('hide'); }
 
-    // ---------- DEV panel ----------
-    $('#h-devtoggle').addEventListener('click', () => $('#h-devpanel').classList.toggle('hide'));
-    $('#h-devpanel').querySelectorAll('[data-dev]').forEach((b) =>
-      b.addEventListener('click', () => handlers.onDev && handlers.onDev(b.dataset.dev)));
-    $('#h-devpanel').querySelectorAll('[data-ff]').forEach((b) =>
-      b.addEventListener('click', () => handlers.onFF && handlers.onFF(+b.dataset.ff)));
-
     // ---------- settings modal (visual indicators; the object is shared with the renderer) ----------
     const settings = handlers.settings || {};
     const SETTINGS_DEF = [
@@ -441,6 +422,7 @@
       return html;
     }
 
+    const mmss = (ms) => { const s = Math.ceil(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
     // compact wall-clock duration: 45s / 12m / 3.2h / 1.4d
     function fmtTime(sec) {
       sec = Math.ceil(sec);
@@ -537,6 +519,14 @@
         html += '<div class="chips">' +
           curChips +
           '<span class="chip">' + icon('best', 13) + ' <b>wave ' + (meta.bestWave || 0) + '</b></span></div>';
+        // 15-minute check-in: the sole source of cells & card currency
+        const pend = A.checkInPending(meta, Date.now());
+        if (pend > 0) {
+          html += '<button class="checkin ready" id="h-checkin">' + icon('cell', 14, 'cell') + ' Check In  +' + (pend * A.CHECKIN_CELLS) +
+            ' ' + icon('cell', 12, 'cell') + '  +' + (pend * A.CHECKIN_TOKENS) + ' ' + icon('token', 12, 'token') + '</button>';
+        } else {
+          html += '<button class="checkin" id="h-checkin" disabled>Next reward in ' + mmss(A.checkInNextMs(meta, Date.now())) + '</button>';
+        }
         html += '<div class="avatar-frame"><canvas id="h-avatar" width="200" height="200"></canvas></div>';
         const claim = A.claimableCount(meta);
         html += '<button class="msbtn" id="h-ms">Milestones' + (claim > 0 ? '<span class="badge">' + claim + '</span>' : '') + '</button>';
@@ -604,6 +594,8 @@
           else showUnlockTip(e.currentTarget, 'Reach wave ' + A.TIER_UNLOCK_WAVE + ' in Tier ' + cur + ' to unlock Tier ' + (cur + 1));
         });
         $('#h-start').addEventListener('click', () => handlers.onStartRun && handlers.onStartRun());
+        const cib = $('#h-checkin');
+        if (cib && !cib.disabled) cib.addEventListener('click', () => { if (handlers.onCheckIn && handlers.onCheckIn()) renderMenu(); });
       } else if (menuTab === 'upgrades') {
         menuContent.querySelectorAll('[data-uptab]').forEach((b) =>
           b.addEventListener('click', () => {
@@ -675,22 +667,18 @@
     }
     function hideOverview() { overEl.classList.add('hide'); $('#h-stats').classList.add('hide'); }
 
-    // reflect a dev toggle's state on its button label/active style
-    function setDevToggle(kind, on) {
-      const b = $('#h-dev-' + kind);
-      if (!b) return;
-      b.textContent = kind.charAt(0).toUpperCase() + kind.slice(1) + ': ' + (on ? 'on' : 'off');
-      b.classList.toggle('on', !!on);
-    }
-
-    // tick the research progress bars (and promptly complete finished labs) while the Lab tab is open
+    // 1s tick: advance research bars on the Lab tab; tick the check-in countdown on the Hero tab.
     setInterval(() => {
-      if (!menuEl.classList.contains('show') || menuTab !== 'labs' || !lastMeta) return;
-      const had = (lastMeta.research || []).length;
-      if (handlers.onReconcileLabs) handlers.onReconcileLabs();
-      if (had) renderMenu();
+      if (!menuEl.classList.contains('show') || !lastMeta) return;
+      if (menuTab === 'labs') {
+        const had = (lastMeta.research || []).length;
+        if (handlers.onReconcileLabs) handlers.onReconcileLabs();
+        if (had) renderMenu();
+      } else if (menuTab === 'hero') {
+        renderMenu(); // keeps the "Next reward in mm:ss" countdown live
+      }
     }, 1000);
 
-    return { update, showMenu, refreshMenu, hideMenu, showOverview, hideOverview, showHint, hideHint, setMeta, setDevToggle, root };
+    return { update, showMenu, refreshMenu, hideMenu, showOverview, hideOverview, showHint, hideHint, setMeta, root };
   };
 })(window.ARENA = window.ARENA || {});

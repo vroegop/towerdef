@@ -237,10 +237,6 @@
         const g = Math.round(tg.reward * this.stats.goldFind * e.strMult * (s.rewardMult || 1) * (this.stats.cashMult || 1) * decay);
         s.econ.gold += g; s.econ.goldEarned += g;
         if (this.stats.coresPerKill) s.econ.bonusCores += this.stats.coresPerKill; // economic per-kill cores
-        // Cells (farmed lab-fuel currency) faucet: bosses/vampires/splitters/elites drop the most.
-        if (e.type === 'boss') { s.econ.bonusCells += 3; s.econ.bossKills++; }
-        else if (e.type === 'vampire') s.econ.bonusCells += 2;
-        else if (e.type === 'splitter' || e.tier === 'elite') s.econ.bonusCells += 1;
         // Splitter: spawn weaker children on death (capped so a mass-death can't explode the arena).
         if (e.splits > 0 && s.enemies.length + spawned.length < A.WAVE.screenCap) {
           for (let i = 0; i < e.splits; i++) {

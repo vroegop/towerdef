@@ -194,6 +194,15 @@
 .hud .perm .pcost { color: #ff2e4e; font-size: 11px; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
 
 
+/* ---- 15-minute check-in button (Hero screen) ---- */
+.hud .checkin { display: inline-flex; align-items: center; justify-content: center; gap: 5px; margin: 2px auto 0;
+  background: #11151f; border: 1px solid #2d3344; border-radius: 8px; color: #8b93a7;
+  font: 600 13px system-ui; padding: 8px 14px; cursor: default; }
+.hud .checkin.ready { color: #0c0e14; background: linear-gradient(90deg, #37d7ff, #3ddc84); border-color: #37d7ff; cursor: pointer;
+  box-shadow: 0 0 14px rgba(55,215,255,.35); animation: checkinpulse 1.6s ease-in-out infinite; }
+.hud .checkin.ready .ic { color: #0c0e14; }
+@keyframes checkinpulse { 0%,100% { box-shadow: 0 0 10px rgba(55,215,255,.25); } 50% { box-shadow: 0 0 18px rgba(55,215,255,.5); } }
+
 /* ---- LAB tab (research rows + progress bars) ---- */
 .hud .cores-chip .slotchip { margin-left: 10px; color: #8b93a7; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
 .hud .lablist { display: flex; flex-direction: column; gap: 7px; }
@@ -293,16 +302,37 @@
 .hud .lk-tip:after { content: ''; position: absolute; left: var(--arrow-x, 50%); bottom: -8px; transform: translateX(-50%);
   border: 8px solid transparent; border-top-color: #1c2030; border-bottom: 0; }
 
-/* ---- DEV panel ---- */
-.hud .dev { position: fixed; left: 10px; bottom: 110px; z-index: 40; pointer-events: auto; }
-.hud .devtoggle { background: rgba(21,24,35,.85); border: 1px solid #43223f; color: #e66; border-radius: 3px; padding: 5px 9px; font: 11px ui-monospace, monospace; cursor: pointer; opacity: .65; }
-.hud .devtoggle:hover { opacity: 1; }
-.hud .devpanel { margin-top: 6px; background: rgba(15,18,27,.97); border: 1px solid #43223f; border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 6px; width: 150px; }
-.hud .devpanel.hide { display: none; }
-.hud .devpanel button { background: #1c2030; border: 1px solid #262c3d; color: #d8deea; border-radius: 3px; padding: 7px; font: 12px system-ui; cursor: pointer; }
-.hud .devpanel button:hover { border-color: #e64cff; }
-.hud .devpanel button.on { background: #2a3550; border-color: #4aa8ff; color: #dff0ff; }
-.hud .ffrow { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+/* ---- DEV overlay (hud/devmenu.js) — appended to <body>, OUTSIDE the swappable .hud root,
+       so it survives HUD swaps. Selectors are top-level (not under .hud) for that reason. ---- */
+.dev { position: fixed; left: 10px; bottom: 110px; z-index: 60; pointer-events: auto;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+.dev .devtoggle { background: rgba(21,24,35,.85); border: 1px solid #43223f; color: #e66; border-radius: 3px; padding: 5px 9px; font: 11px ui-monospace, monospace; cursor: pointer; opacity: .65; }
+.dev .devtoggle:hover { opacity: 1; }
+.dev .devpanel { margin-top: 6px; background: rgba(15,18,27,.97); border: 1px solid #43223f; border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 6px; width: 168px; max-height: 70vh; overflow: auto; }
+.dev .devpanel.hide { display: none; }
+.dev .devpanel button { background: #1c2030; border: 1px solid #262c3d; color: #d8deea; border-radius: 3px; padding: 7px; font: 12px system-ui; cursor: pointer; }
+.dev .devpanel button:hover { border-color: #e64cff; }
+.dev .devpanel button.on { background: #2a3550; border-color: #4aa8ff; color: #dff0ff; }
+.dev .ffrow { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+/* collapsible submenus */
+.dev .devsec { border-top: 1px solid #2a2030; padding-top: 6px; display: flex; flex-direction: column; gap: 6px; }
+.dev .devsec:first-child { border-top: 0; padding-top: 0; }
+.dev .devsec-h { display: flex; align-items: center; justify-content: space-between; background: transparent !important;
+  border: 0 !important; color: #b48ad6 !important; font: 700 11px ui-monospace, monospace !important; letter-spacing: 1px;
+  text-transform: uppercase; padding: 3px 2px !important; cursor: pointer; }
+.dev .devsec-h:hover { color: #e8c6ff !important; }
+.dev .devsec-h .caret { transition: transform .12s; opacity: .7; }
+.dev .devsec.open .devsec-h .caret { transform: rotate(90deg); }
+.dev .devsec-b { display: none; flex-direction: column; gap: 6px; }
+.dev .devsec.open .devsec-b { display: flex; }
+/* HUD switcher list */
+.dev .hudlist { display: flex; flex-direction: column; gap: 5px; }
+.dev .hudpick { display: flex; align-items: center; gap: 8px; text-align: left; }
+.dev .hudpick .dot { width: 8px; height: 8px; border-radius: 50%; border: 1px solid #4a5570; flex: 0 0 auto; }
+.dev .hudpick.active { background: #2a3550; border-color: #4aa8ff; color: #dff0ff; }
+.dev .hudpick.active .dot { background: #4aa8ff; border-color: #4aa8ff; }
+.dev .devstatus { font: 11px ui-monospace, monospace; color: #8b93a7; min-height: 14px; word-break: break-word; }
+.dev .devstatus.err { color: #ff6b7d; }
 
 /* ---- in-game transient hint (e.g. movement tutorial) ---- */
 .hud .ghint { position: absolute; left: 50%; top: 38%; transform: translateX(-50%); text-align: center;

@@ -32,6 +32,10 @@
   <!-- RENDER / HUD -->
   <script src="renderers/canvas2d/renderer.js"></script>
   <script src="hud/hud.js"></script>
+  <!-- swappable-HUD infrastructure: registry + host (error boundary) + plug-and-play dev menu -->
+  <script src="hud/registry.js"></script>
+  <script src="hud/host.js"></script>
+  <script src="hud/devmenu.js"></script>
 
   <script>
   (function () {
@@ -54,6 +58,7 @@
         tokens: m.tokens || 0, cards: m.cards || [], cardBuys: m.cardBuys || 0, starBuys: m.starBuys || 0,
         totalWaves: m.totalWaves || 0, waveTokensGranted: m.waveTokensGranted || 0, // 1 token per 100 cumulative waves
         labs: m.labs || {}, research: Array.isArray(m.research) ? m.research : [], labSlots: m.labSlots || 1, cells: m.cells || 0,
+        lastCheckIn: m.lastCheckIn || Date.now(), // 15-min check-in timer (starts now for new players)
         ultimates: m.ultimates || {}, ver: m.ver || 0,
       };
       return A.migrateMeta ? A.migrateMeta(meta) : meta;
@@ -66,7 +71,7 @@
     const settings = loadSettings();
     const canvas = document.getElementById('game');
     const renderer = A.Canvas2DRenderer(canvas, settings);
-    const hud = A.Hud(document.getElementById('hud'), {
+    const handlers = {
       settings, onSaveSettings: saveSettings,
       onBuyRun: (stat) => { if (sim) A.buyRunUpgrade(sim.s, stat, sim.rng); },
       onBuyPerm: (id) => { const ok = A.buyPerm(meta, id); if (ok) saveMeta(); return ok; },
@@ -79,6 +84,7 @@
       onRushResearch: (id) => { const ok = A.rushResearch(meta, id, Date.now()); if (ok) saveMeta(); return ok; },
       onBuyLabSlot: () => { const ok = A.buyLabSlot(meta); if (ok) saveMeta(); return ok; },
       onReconcileLabs: () => reconcileLabs(),
+      onCheckIn: () => { const r = A.claimCheckIn(meta, Date.now()); if (r) saveMeta(); return r; },
       onStartRun: () => startRun(false),
       onExitRun: () => { if (mode === 'playing' || mode === 'dying') enterOverview(bankRun()); }, // bank + skip the death anim
       onToWorkshop: () => { hud.hideOverview(); goToMenu({}); },
@@ -103,10 +109,32 @@
         hud.showHint('Fast-forwarded ' + (sec >= 60 ? (sec / 60) + 'm' : sec + 's') + ': +' + r.gold + ' gold / +' + r.kills + ' kills');
         setTimeout(() => hud.hideHint(), 2500);
       },
-    });
+    };
 
+    let sim = null, mode = 'menu', acc = 0, last = 0, running = false, hiddenAt = 0, paused = false, dyingT = 0, lastEarn = null;
+
+    // Re-apply the CURRENT view to a freshly-swapped HUD, so switching HUDs mid-game (via the dev
+    // menu) instantly shows the right screen. The frame loop repaints a 'playing' run via update().
+    function reenter(hud) {
+      hud.setMeta(meta);
+      if (mode === 'menu') hud.showMenu(meta, {});
+      else if (mode === 'overview') hud.showOverview(meta, lastEarn || {});
+      else { hud.hideMenu(); hud.hideOverview(); } // playing/dying
+    }
+
+    // The HUD host: a swap-capable proxy + error boundary. Everything below keeps calling `hud.*`
+    // exactly as before — the facade mirrors the old A.Hud() surface, so a throwing/missing HUD
+    // can never crash the game loop.
+    const hud = A.createHudHost(document.getElementById('hud'), handlers, { reenter });
     hud.setMeta(meta);
-    let sim = null, mode = 'menu', acc = 0, last = 0, running = false, hiddenAt = 0, paused = false, dyingT = 0;
+
+    // Host-level DEV overlay — plug-and-play: append `?dev=0` to the URL to remove it entirely.
+    if (!/[?&]dev=0\b/.test(location.search) && A.createDevMenu) {
+      const devMenu = A.createDevMenu({ handlers, hudHost: hud });
+      hud.attachDevMenu(devMenu);
+      const savedHud = A.savedHud && A.savedHud(); // re-apply a previously-selected prototype HUD
+      if (savedHud && savedHud !== A.DEFAULT_HUD && A.HUDS[savedHud]) hud.switchTo(savedHud);
+    }
 
     // Labs advance on the wall clock, outside the deterministic run sim. Reconcile finished
     // research on boot, on focus, and on a periodic tick; persist + refresh the menu if anything
@@ -173,28 +201,20 @@
         ? A.FIRST_PERM_COST // exactly enough to raise attack speed (tutorial grant, not tier-scaled)
         : Math.max(1, Math.round(((Math.floor(sim.s.econ.kills / 10) + (sim.s.wave.maxWave || 0)) + (sim.s.econ.bonusCores || 0)) * A.coreMult(meta.tier || 1)));
       meta.cores = (meta.cores || 0) + cores;
-      meta.cells = (meta.cells || 0) + (sim.s.econ.bonusCells || 0); // farmed lab-fuel currency
       meta.bestWave = Math.max(meta.bestWave || 0, wave);
       const runTier = meta.tier || 1; // this run played at the selected tier; credit its furthest wave
       meta.tierBest = meta.tierBest || {};
       meta.tierBest[runTier] = Math.max(meta.tierBest[runTier] || 0, wave);
-      // card tokens: 1 per 100 waves, accumulated across separate runs (remainder carries over)
-      meta.totalWaves = (meta.totalWaves || 0) + wave;
-      const tokensDue = Math.floor(meta.totalWaves / 100) - (meta.waveTokensGranted || 0);
-      let tokens = 0;
-      if (tokensDue > 0) { tokens = tokensDue; meta.tokens = (meta.tokens || 0) + tokens; meta.waveTokensGranted = (meta.waveTokensGranted || 0) + tokens; }
-      // premium tokens also come from combat: one per boss slain this run.
-      const bossTokens = sim.s.econ.bossKills || 0;
-      if (bossTokens > 0) { meta.tokens = (meta.tokens || 0) + bossTokens; tokens += bossTokens; }
-      const cells = sim.s.econ.bonusCells || 0;
+      meta.totalWaves = (meta.totalWaves || 0) + wave; // lifetime stat
+      // cells & tokens now come only from the 15-minute check-in, not from runs.
       if (firstRunJustEnded) meta.hasPlayed = true;
       saveMeta();
-      return { cores, kills: sim.s.econ.kills, wave, tokens, cells };
+      return { cores, kills: sim.s.econ.kills, wave };
     }
 
     // Live death: explode (renderer detects it), let enemies drift in for ~1s, then overview.
     function startDying() { mode = 'dying'; dyingT = 0; running = true; hud.hideOverview(); hud.hideHint(); last = performance.now(); requestAnimationFrame(frame); }
-    function enterOverview(earn) { mode = 'overview'; running = false; clearSave(); hud.hideHint(); hud.showOverview(meta, earn); }
+    function enterOverview(earn) { mode = 'overview'; lastEarn = earn; running = false; clearSave(); hud.hideHint(); hud.showOverview(meta, earn); }
 
     // ---- main loop: fixed-step sim, free-rate render ----
     function frame(now) {

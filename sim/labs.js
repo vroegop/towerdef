@@ -158,6 +158,31 @@
     meta.tokens -= cost; meta.labSlots = (meta.labSlots || 1) + 1; return true;
   };
 
+  // ---- 15-minute check-in: the SOLE source of cells & card currency (rewards coming back) ----
+  // Claims accrue on the wall clock and bank up to a cap; claiming grants all pending and resets
+  // the timer (overflow past the cap is intentionally lost, so you check in before it fills).
+  A.CHECKIN_MS = 15 * 60 * 1000; // one claim every 15 minutes
+  A.CHECKIN_CAP = 8;             // bank up to 8 claims (~2 hours) while away
+  A.CHECKIN_CELLS = 5;           // cells per claim
+  A.CHECKIN_TOKENS = 5;          // card currency (tokens) per claim
+  A.checkInPending = function (meta, nowMs) {
+    const last = meta.lastCheckIn || nowMs;
+    return Math.max(0, Math.min(A.CHECKIN_CAP, Math.floor((nowMs - last) / A.CHECKIN_MS)));
+  };
+  A.checkInNextMs = function (meta, nowMs) { // ms until the next claim becomes available
+    const last = meta.lastCheckIn || nowMs;
+    if (A.checkInPending(meta, nowMs) >= A.CHECKIN_CAP) return 0;
+    return Math.max(0, A.CHECKIN_MS - ((nowMs - last) % A.CHECKIN_MS));
+  };
+  A.claimCheckIn = function (meta, nowMs) {
+    const n = A.checkInPending(meta, nowMs); if (n <= 0) return null;
+    const cells = n * A.CHECKIN_CELLS, tokens = n * A.CHECKIN_TOKENS;
+    meta.cells = (meta.cells || 0) + cells;
+    meta.tokens = (meta.tokens || 0) + tokens;
+    meta.lastCheckIn = nowMs; // reset the timer (overflow past the cap is forfeit by design)
+    return { claims: n, cells, tokens };
+  };
+
   // ---- meta defaults / migration (idempotent; additive only, never destructive) ----
   A.META_VER = 2;
   A.migrateMeta = function (meta) {
