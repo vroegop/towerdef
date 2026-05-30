@@ -93,16 +93,24 @@
   // The scripted first run grants exactly enough cores to buy the tutorial's first upgrade.
   A.FIRST_PERM_COST = A.UP_BY_ID.attackSpeed.core.cost(0);
 
-  // perm + run levels for an upgrade, capped at its max (the number the sim/stat uses).
-  function boughtOf(state, id) {
+  // The effective cap for an upgrade: its base `max` PLUS any cap raised by labs.
+  // Labs are the only thing that can lift this leash (see sim/labs.js). When labs.js
+  // isn't loaded this collapses to the constant base max.
+  function capOf(meta, id) {
     const up = A.UP_BY_ID[id];
+    return up.max + (A.labCapBonus ? A.labCapBonus(meta, id) : 0);
+  }
+  A.upgradeCap = (meta, id) => capOf(meta, id);
+
+  // perm + run levels for an upgrade, capped at its (lab-liftable) cap.
+  function boughtOf(state, id) {
     const perm = (state.meta && state.meta.perm && state.meta.perm[id]) || 0;
     const run = (state.run && state.run.levels && state.run.levels[id]) || 0;
-    return Math.min(up.max, perm + run);
+    return Math.min(capOf(state.meta, id), perm + run);
   }
   A.boughtOf = boughtOf;
   // perm-only level (used by the between-runs menu, which has no live run state)
-  A.permBought = (meta, id) => Math.min(A.UP_BY_ID[id].max, (meta && meta.perm && meta.perm[id]) || 0);
+  A.permBought = (meta, id) => Math.min(capOf(meta, id), (meta && meta.perm && meta.perm[id]) || 0);
 
   // ---- CARDS (Pokemon-style; bought/upgraded with a separate active-play currency: TOKENS) ----
   // A card contributes one or more {stat, kind:'flat'|'mult'} effects; its magnitude is value(stars).
@@ -240,21 +248,25 @@
       goldFind:     1 + U.coinsPerKill.value(b('coinsPerKill')),
       xpGain: 1,
     };
+    // Resolve cards + labs into the final stats, keyed by SIM stat. The formula is
+    //   effective = (base + Σ card.flat) × labSlope × Π(1 + card.mult)
+    // where labSlope (1 + Σ scale-lab per·level) is the labs' multiplicative contribution.
+    const flat = {}, mult = {};
     const cards = (state.meta && state.meta.cards) || [];
-    if (cards.length) {
-      const flat = {}, mult = {};
-      for (const c of cards) {
-        const def = A.CARDS[c.id]; if (!def) continue;
-        const v = def.value(c.stars || 0);
-        for (const e of def.effects) {
-          if (e.kind === 'mult') mult[e.stat] = (mult[e.stat] || 1) * (1 + v);
-          else flat[e.stat] = (flat[e.stat] || 0) + v;
-        }
+    for (const c of cards) {
+      const def = A.CARDS[c.id]; if (!def) continue;
+      const v = def.value(c.stars || 0);
+      for (const e of def.effects) {
+        const k = STAT2SIM[e.stat] || e.stat;
+        if (e.kind === 'mult') mult[k] = (mult[k] || 1) * (1 + v);
+        else flat[k] = (flat[k] || 0) + v;
       }
-      for (const stat in STAT2SIM) {
-        const k = STAT2SIM[stat];
-        out[k] = (out[k] + (flat[stat] || 0)) * (mult[stat] || 1);
-      }
+    }
+    const labMult = (A.labScaleMults && A.labScaleMults(state.meta)) || {};
+    const touched = new Set([...Object.keys(flat), ...Object.keys(mult), ...Object.keys(labMult)]);
+    for (const k of touched) {
+      if (typeof out[k] !== 'number') continue;
+      out[k] = (out[k] + (flat[k] || 0)) * (labMult[k] || 1) * (mult[k] || 1);
     }
     // safety clamp: dodge must stay below 1 so the hero can never become un-hittable
     if (out.dodge > 0.99) out.dodge = 0.99;
@@ -267,9 +279,8 @@
     return up.gold.cost((state.run.levels[id] || 0));
   };
   A.runAtMax = function (state, id) {
-    const up = A.UP_BY_ID[id];
     const perm = (state.meta.perm && state.meta.perm[id]) || 0;
-    return perm + (state.run.levels[id] || 0) >= up.max;
+    return perm + (state.run.levels[id] || 0) >= capOf(state.meta, id);
   };
   A.buyRunUpgrade = function (state, id) {
     const up = A.UP_BY_ID[id]; if (!up) return false;
@@ -286,13 +297,13 @@
     return up ? up.core.cost(n) : 0;
   };
   A.permAtMax = function (meta, id) {
-    const up = A.UP_BY_ID[id]; return ((meta && meta.perm && meta.perm[id]) || 0) >= up.max;
+    return ((meta && meta.perm && meta.perm[id]) || 0) >= capOf(meta, id);
   };
   A.buyPerm = function (meta, id) {
     const up = A.UP_BY_ID[id]; if (!up) return false;
     if (up.gated && !A.economyUnlocked(meta)) return false;
     const n = (meta.perm && meta.perm[id]) || 0;
-    if (n >= up.max) return false;
+    if (n >= capOf(meta, id)) return false;
     const cost = up.core.cost(n);
     if ((meta.cores || 0) < cost) return false;
     meta.cores -= cost; meta.perm = meta.perm || {}; meta.perm[id] = n + 1; return true;

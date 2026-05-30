@@ -22,6 +22,7 @@
   <script src="sim/registries.js"></script>
   <script src="sim/waves.js"></script>
   <script src="sim/skills.js"></script>
+  <script src="sim/labs.js"></script>
   <script src="sim/enemies.js"></script>
   <script src="sim/abilities.js"></script>
   <script src="sim/projectiles.js"></script>
@@ -46,13 +47,16 @@
 
     function loadMeta() {
       let m = {}; try { m = JSON.parse(localStorage.getItem(METAK)) || {}; } catch (e) {}
-      return {
+      const meta = {
         cores: m.cores || 0, perm: m.perm || {}, hasPlayed: !!m.hasPlayed,
         bestWave: m.bestWave || 0, claimedMilestones: m.claimedMilestones || {}, tier: m.tier || 1, coreMult: m.coreMult || 1,
         tierBest: m.tierBest || {}, // furthest wave reached per tier (gates tier unlocks)
         tokens: m.tokens || 0, cards: m.cards || [], cardBuys: m.cardBuys || 0, starBuys: m.starBuys || 0,
         totalWaves: m.totalWaves || 0, waveTokensGranted: m.waveTokensGranted || 0, // 1 token per 100 cumulative waves
+        labs: m.labs || {}, research: Array.isArray(m.research) ? m.research : [], labSlots: m.labSlots || 1, cells: m.cells || 0,
+        ultimates: m.ultimates || {}, ver: m.ver || 0,
       };
+      return A.migrateMeta ? A.migrateMeta(meta) : meta;
     }
     function saveMeta() { localStorage.setItem(METAK, JSON.stringify(meta)); }
     function loadSave() { try { return JSON.parse(localStorage.getItem(SAVE)); } catch (e) { return null; } }
@@ -89,7 +93,7 @@
       },
       onFF: (sec) => {
         if (mode !== 'playing' || !sim || !sim.s.alive || paused) return;
-        const r = A.catchUp(sim, sec, 24 * 3600);
+        const r = gsCatchUp(sec, 24 * 3600);
         if (!sim.s.alive) { enterOverview(bankRun()); return; }
         hud.showHint('Fast-forwarded ' + (sec >= 60 ? (sec / 60) + 'm' : sec + 's') + ': +' + r.gold + ' gold / +' + r.kills + ' kills');
         setTimeout(() => hud.hideHint(), 2500);
@@ -98,6 +102,18 @@
 
     hud.setMeta(meta);
     let sim = null, mode = 'menu', acc = 0, last = 0, running = false, hiddenAt = 0, paused = false, dyingT = 0;
+
+    // Labs advance on the wall clock, outside the deterministic run sim. Reconcile finished
+    // research on boot, on focus, and on a periodic tick; persist + refresh the menu if anything
+    // completed so a returning player sees their research already done.
+    function reconcileLabs() {
+      if (!A.reconcileResearch) return;
+      const done = A.reconcileResearch(meta, Date.now());
+      if (done.length) { saveMeta(); hud.refreshMenu(meta); }
+      return done;
+    }
+    // offline catch-up scaled by the game-speed lab (more sim seconds per real second).
+    function gsCatchUp(elapsedSec, capSec) { const gs = A.gameSpeed ? A.gameSpeed(meta) : 1; return A.catchUp(sim, elapsedSec * gs, capSec * gs); }
 
     // dev pause: freezes the sim loop AND the render clock (renderer uses rdt=0), so every
     // effect — bullets, sparks, shatter, lightning — holds still for inspection.
@@ -180,9 +196,12 @@
         requestAnimationFrame(frame); return;
       }
       if (paused) { renderer.draw(sim.s, 0, true); hud.update(sim.s); requestAnimationFrame(frame); return; }
-      acc += dt;
-      let g = 0;
-      while (acc >= DT && g++ < 8) { sim.step(DT); acc -= DT; }
+      // game-speed lab folds into the STEP COUNT, never the DT — each step stays bit-identical,
+      // we just run more of them per real second (and raise the per-frame guard to match).
+      const gs = A.gameSpeed ? A.gameSpeed(meta) : 1;
+      acc += dt * gs;
+      let g = 0; const maxSteps = Math.ceil(8 * gs);
+      while (acc >= DT && g++ < maxSteps) { sim.step(DT); acc -= DT; }
       renderer.draw(sim.s, acc / DT, false); // alpha = how far we are toward the next tick
       hud.update(sim.s);
       if (!sim.s.alive) { startDying(); return; }
@@ -196,26 +215,32 @@
         if (mode === 'playing' && sim && sim.s.alive) { hiddenAt = Date.now(); persist(); }
         running = false;
       } else if (mode === 'playing' && sim && sim.s.alive) {
+        reconcileLabs();
         const el = hiddenAt ? (Date.now() - hiddenAt) / 1000 : 0;
         if (el > 2 && !paused) {
-          const r = A.catchUp(sim, el, OFFLINE_CAP);
+          const r = gsCatchUp(el, OFFLINE_CAP);
           if (!sim.s.alive) { enterOverview(bankRun()); return; } // died while away: no animation, straight to overview
           if (el > 20) { hud.showHint('While away: +' + r.gold + ' gold / +' + r.kills + ' kills'); setTimeout(() => hud.hideHint(), 2500); }
         }
         last = performance.now(); running = true; requestAnimationFrame(frame);
+      } else {
+        reconcileLabs(); // finished research while idling in a menu
       }
     });
     window.addEventListener('pagehide', () => { if (mode === 'playing' && sim && sim.s.alive) persist(); });
     setInterval(() => { if (mode === 'playing' && running && sim && sim.s.alive) persist(); }, 10000);
+    // complete finished research while the player sits in a menu (the menu polls this to update bars)
+    setInterval(reconcileLabs, 5000);
 
     // ---- boot ----
+    reconcileLabs(); // complete any research that finished while the game was closed
     const saved = loadSave();
     if (saved && saved.state) {
       // resume an interrupted run + catch up the gap
       saved.state.meta = meta;
       sim = new A.Sim(saved.state); mode = 'playing';
       const elapsed = (Date.now() - saved.savedAt) / 1000;
-      if (elapsed > 2) { const r = A.catchUp(sim, elapsed, OFFLINE_CAP); if (elapsed > 20 && sim.s.alive) { hud.showHint('While away: +' + r.gold + ' gold / +' + r.kills + ' kills'); setTimeout(() => hud.hideHint(), 2500); } }
+      if (elapsed > 2) { const r = gsCatchUp(elapsed, OFFLINE_CAP); if (elapsed > 20 && sim.s.alive) { hud.showHint('While away: +' + r.gold + ' gold / +' + r.kills + ' kills'); setTimeout(() => hud.hideHint(), 2500); } }
       if (!sim.s.alive) { enterOverview(bankRun()); }
       else { hud.hideMenu(); last = performance.now(); running = true; requestAnimationFrame(frame); }
     } else if (!meta.hasPlayed) {
