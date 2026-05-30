@@ -71,6 +71,9 @@
     { id: 'defPct',       tab: 'defense', icon: 'shield', label: 'Defense %', max: 900, // multiplicative DR, caps at 90%
       value: (b) => Math.min(0.9, b * 0.001),        fmt: (b) => (Math.min(0.9, b * 0.001) * 100).toFixed(1) + '%',
       gold: curve(50, 1.6),    core: curve(20, 1.008) },
+    { id: 'thorns',       tab: 'defense', icon: 'shield', label: 'Thorns', max: 10000, // reflect = thorns × hit damage
+      value: (b) => b * 0.05,                        fmt: (b) => '+' + (b * 0.05).toFixed(2) + '×',
+      gold: curve(35, 1.55),   core: curve(8, 1.0018) },
 
     // ---- ECONOMIC (Tier 2+) ----
     { id: 'coinsPerWave', tab: 'economic', icon: 'coin',  label: 'Coins / Wave', max: 10000, gated: true,
@@ -250,6 +253,7 @@
       dodge:        U.dodge.value(b('dodge')),
       armor:        U.armor.value(b('armor')),          // flat damage soaked per hit
       defPct:       U.defPct.value(b('defPct')),        // multiplicative DR applied after armor
+      thorns:       U.thorns.value(b('thorns')),        // fraction of a landed hit reflected to the attacker
       cashMult:     U.cashBonus.value(b('cashBonus')),  // global × on all gold income
       coinsPerWave: U.coinsPerWave.value(b('coinsPerWave')),
       coresPerWave: U.coresPerWave.value(b('coresPerWave')),

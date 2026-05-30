@@ -92,13 +92,19 @@
     }
   };
 
-  Sim.prototype._hurtHero = function (amount) {
+  Sim.prototype._hurtHero = function (amount, attacker) {
     const h = this.s.hero, st = this.stats;
     // Dodge: a successful roll voids the whole hit (deterministic rng → offline-replay safe).
     if (st.dodge > 0 && this.rng.next() < st.dodge) {
       this.s.fx.push({ seq: ++this.s.fxSeq, x: h.x, y: h.y, dodge: 1 });
       if (this.s.fx.length > 32) this.s.fx.shift();
       return;
+    }
+    // Thorns: reflect a share of the (landed) hit back at the attacker. Reflected kills die in
+    // _cleanup and pay out like any kill. Only hits that land reflect — a dodged hit does not.
+    if (st.thorns && attacker) {
+      attacker.hp -= amount * st.thorns;
+      attacker.hitFlash = 0.12;
     }
     // Armor: a flat soak applied per hit, then Defense % scales the remainder (caps at 90%).
     let amt = (amount - (st.armor || 0)) * (1 - (st.defPct || 0));
@@ -163,13 +169,13 @@
       if (e.behavior === 'bounce') {
         if (d < touch) { e.kb = 0.25; continue; }      // hero rammed into it → bounce next ticks
         if (d > e.range) { e.state = 'approach'; e.x += dx / d * e.speed * dt; e.y += dy / d * e.speed * dt; }
-        else { e.state = 'attack'; e.atkCd -= dt; if (e.atkCd <= 0) { this._hurtHero(e.dmg); e.atkCd = 1.2; } }
+        else { e.state = 'attack'; e.atkCd -= dt; if (e.atkCd <= 0) { this._hurtHero(e.dmg, e); e.atkCd = 1.2; } }
       } else { // stick
         if (d > touch) { e.state = 'approach'; e.x += dx / d * e.speed * dt; e.y += dy / d * e.speed * dt; }
         else { // resolve overlap, cling to hero, gnaw
           e.state = 'stuck';
           e.x = h.x - dx / d * touch; e.y = h.y - dy / d * touch;
-          e.atkCd -= dt; if (e.atkCd <= 0) { this._hurtHero(e.dmg); e.atkCd = 0.8; }
+          e.atkCd -= dt; if (e.atkCd <= 0) { this._hurtHero(e.dmg, e); e.atkCd = 0.8; }
         }
       }
     }
