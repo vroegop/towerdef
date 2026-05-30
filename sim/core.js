@@ -39,8 +39,11 @@
   Sim.prototype._effWave = function (n) { return n * (this.s.difficultyMult || 1); };
 
   Sim.prototype._startWave = function (n) {
-    const w = this.s.wave;
+    const w = this.s.wave, st = this.stats;
     w.n = n; w.maxWave = Math.max(w.maxWave, n);
+    // economic per-wave income (gold is immediate; cores are banked at run end)
+    if (st.coinsPerWave) { this.s.econ.gold += st.coinsPerWave; this.s.econ.goldEarned += st.coinsPerWave; }
+    if (st.coresPerWave) this.s.econ.bonusCores += st.coresPerWave;
     const eff = this._effWave(n);
     w.count = A.waveCount(eff);
     w.toSpawn = w.count;
@@ -90,10 +93,27 @@
   };
 
   Sim.prototype._hurtHero = function (amount) {
-    const h = this.s.hero;
+    const h = this.s.hero, st = this.stats;
+    // Dodge: a successful roll voids the whole hit (deterministic rng → offline-replay safe).
+    if (st.dodge > 0 && this.rng.next() < st.dodge) {
+      this.s.fx.push({ seq: ++this.s.fxSeq, x: h.x, y: h.y, dodge: 1 });
+      if (this.s.fx.length > 32) this.s.fx.shift();
+      return;
+    }
     h.sinceHit = 0;
     h.hp -= amount; // integer model: no armor/shield mitigation
     if (h.hp <= 0) { h.hp = 0; this.s.alive = false; }
+  };
+
+  // Roll the hero's outgoing damage for one shot at a target `dist` pixels away:
+  // base × (1 + dmg-per-metre × metres) × critMult^k, where k crits stack (k≥2 when crit
+  // chance is over 100% — the excess is the chance to multiply the crit by itself again).
+  Sim.prototype._rollDamage = function (st, dist) {
+    let dmg = st.rangedDamage * (1 + st.dmgPerMeter * (dist / A.PX_PER_METER));
+    let k = Math.floor(st.critChance);
+    if (this.rng.next() < st.critChance - k) k++;
+    if (k > 0) dmg *= Math.pow(st.critMult, k);
+    return dmg;
   };
 
   Sim.prototype._hero = function (dt) {
@@ -110,11 +130,12 @@
       let best = null, bd = st.range;
       for (const e of s.enemies) { const d = Math.hypot(e.x - h.x, e.y - h.y); if (d < bd) { bd = d; best = e; } }
       if (best) {
+        const dmg = this._rollDamage(st, Math.hypot(best.x - h.x, best.y - h.y));
         if (s.atkMode === 'lightning') { // dev: original instant hitscan, drawn as a beam
-          best.hp -= st.rangedDamage; best.hitFlash = 0.12; best.hitDmg = st.rangedDamage;
+          best.hp -= dmg; best.hitFlash = 0.12; best.hitDmg = Math.round(dmg);
           if (best.behavior === 'bounce') best.kb = Math.max(best.kb, 0.25);
         } else {
-          A.fireProjectile(s, h, best, st); // travelling bullet: damage lands on impact
+          A.fireProjectile(s, h, best, st, dmg); // travelling bullet: damage lands on impact
         }
         h.atkCd = 1 / Math.max(0.1, st.fireRate);
       }
@@ -159,6 +180,7 @@
         const tg = A.TIERS[e.tier];
         const g = Math.round(tg.reward * this.stats.goldFind * e.strMult * (s.rewardMult || 1));
         s.econ.gold += g; s.econ.goldEarned += g;
+        if (this.stats.coresPerKill) s.econ.bonusCores += this.stats.coresPerKill; // economic per-kill cores
         s.econ.xp += Math.round(2 * tg.reward * e.strMult * this.stats.xpGain);
         // UI-facing transient kill events (consumed by the renderer). cores accrue at the
         // banked rate of 1 per 10 kills, surfaced here as a per-kill drop. Capped so a

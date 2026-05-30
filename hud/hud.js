@@ -33,6 +33,13 @@
       powers: '<path d="M13 2L4 14h6l-1 8 9-12h-6z"/>',
       prestige: '<path d="M5 18h14"/><path d="M5 18l-1-9 4 3 4-7 4 7 4-3-1 9z"/>',
       tier: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+      sword: '<path d="M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2"/>',
+      shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+      coins: '<path d="M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2M18.09 10.37A6 6 0 1 1 10.34 18M7 6h1v4M16.71 13.88l.7.71-2.82 2.82"/>',
+      ruler: '<path d="M21.3 8.7 8.7 21.3a1 1 0 0 1-1.4 0l-4.6-4.6a1 1 0 0 1 0-1.4L15.3 2.7a1 1 0 0 1 1.4 0l4.6 4.6a1 1 0 0 1 0 1.4Z"/><path d="M7.5 10.5l2 2M10.5 7.5l2 2M13.5 4.5l2 2M4.5 13.5l2 2"/>',
+      range: '<path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="5"/>',
+      crit: '<path d="M12 3l1.6 5.4 5.4 1.6-5.4 1.6L12 21l-1.6-5.4L5 14l5.4-1.6z"/>',
+      dodge: '<path d="M3 8h11a3 3 0 1 1-3 3M3 12h15a3 3 0 1 0-3-3M3 16h9"/>',
       fwd: '<path d="M9 5l7 7-7 7"/>',
       gear: '<circle cx="12" cy="12" r="3.2"/><path d="M19.4 13a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.7 8.6a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     };
@@ -110,6 +117,7 @@
     const STARP = 'M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6z';
     const STAT_ICON = { rangedDamage: 'bow', attackSpeed: 'rate', health: 'heart', regen: 'regen' };
     const STAT_LABEL = { rangedDamage: 'Ranged', attackSpeed: 'Speed', health: 'Health', regen: 'Regen' };
+    const upIcon = (id) => (A.UP_BY_ID[id] && A.UP_BY_ID[id].icon) || 'burst';
     // currencies shown on the Hero screen — add a row here (+ a meta field) for future currencies
     const CURRENCIES = [{ key: 'cores', icon: 'cores', cls: 'core' }, { key: 'tokens', icon: 'token', cls: 'token' }];
     function starSvg(kind) {
@@ -173,13 +181,13 @@
       $('#h-cardmodal').classList.remove('hide');
     }
 
-    // ---------- in-game tab bar ----------
+    // ---------- in-game tab bar (3 icon subtabs: attack / defense / economic) ----------
     const tabsEl = $('#h-tabs'), contentEl = $('#h-tabcontent');
     const rowEls = {};
-    let activeTab = A.TABS[0].id, tabOpen = false, taughtTabs = false; // collapsed by default
-    A.TABS.forEach((tab) => {
+    let activeTab = A.TAB_DEFS[0].id, tabOpen = false, taughtTabs = false; // collapsed by default
+    A.TAB_DEFS.forEach((tab) => {
       const b = document.createElement('button');
-      b.textContent = tab.label; b.dataset.tab = tab.id;
+      b.innerHTML = icon(tab.icon, 22); b.dataset.tab = tab.id; b.title = tab.id;
       b.addEventListener('click', () => {
         if (tabOpen && activeTab === tab.id) tabOpen = false;        // click active = close
         else { activeTab = tab.id; tabOpen = true; }                 // open / switch
@@ -190,20 +198,24 @@
     });
     function renderTabButtons() { [...tabsEl.children].forEach((b) => b.classList.toggle('on', tabOpen && b.dataset.tab === activeTab)); }
     function renderTabContent() {
-      const tab = A.TABS.find((t) => t.id === activeTab);
-      contentEl.innerHTML = ''; contentEl.className = 'tabcontent' + (tabOpen ? '' : ' collapsed');
+      const tabDef = A.TAB_DEFS.find((t) => t.id === activeTab);
+      const locked = tabDef.gated && lastS && !A.economyUnlocked(lastS.meta);
+      contentEl.innerHTML = ''; for (const k in rowEls) delete rowEls[k];
+      contentEl.className = 'tabcontent' + (tabOpen ? '' : ' collapsed');
       if (!tabOpen) return;
-      for (const u of tab.ups) {
+      if (locked) { contentEl.innerHTML = '<div class="tablock">' + icon('lock', 18) + '<span>Economic upgrades unlock in Tier 2</span></div>'; return; }
+      for (const u of A.upgradesIn(activeTab)) {
         const btn = document.createElement('button');
         btn.className = 'up';
-        btn.innerHTML = '<span class="nm">' + u.label + '</span>' +
+        btn.innerHTML = '<span class="nm">' + icon(u.icon, 14) + ' ' + u.label + '</span>' +
           '<span class="delta"><span class="cur"></span> ' + icon('arrow', 12) + ' <span class="nxt"></span></span><span class="cost"></span>';
         btn.addEventListener('click', () => {
-          if (lastS && lastS.econ.gold < A.runUpgradeCost(lastS, u.stat)) { shake(root.querySelector('.stat.gold')); return; }
-          handlers.onBuyRun && handlers.onBuyRun(u.stat);
+          if (!lastS || A.runAtMax(lastS, u.id)) return;
+          if (lastS.econ.gold < A.runUpgradeCost(lastS, u.id)) { shake(root.querySelector('.stat.gold')); return; }
+          handlers.onBuyRun && handlers.onBuyRun(u.id);
         });
         contentEl.appendChild(btn);
-        rowEls[u.stat] = { btn, cur: btn.querySelector('.cur'), nxt: btn.querySelector('.nxt'), cost: btn.querySelector('.cost') };
+        rowEls[u.id] = { btn, cur: btn.querySelector('.cur'), nxt: btn.querySelector('.nxt'), cost: btn.querySelector('.cost') };
       }
     }
     renderTabContent();
@@ -228,19 +240,25 @@
       // teach mid-run upgrades: pulse the tab bar the first time gold can afford any upgrade
       if (!taughtTabs && !s.firstRun && !tabOpen) {
         let min = Infinity;
-        for (const t of A.TABS) for (const u of t.ups) min = Math.min(min, A.runUpgradeCost(s, u.stat));
+        for (const u of A.UPGRADES) {
+          if ((u.gated && !A.economyUnlocked(s.meta)) || A.runAtMax(s, u.id)) continue;
+          min = Math.min(min, A.runUpgradeCost(s, u.id));
+        }
         $('#h-tabbar').classList.toggle('pulse', s.econ.gold >= min);
       }
       if (tabOpen) {
-        const lvl = A.computeStats(s).lvl;
-        const tab = A.TABS.find((t) => t.id === activeTab);
-        for (const u of tab.ups) {
-          const r = rowEls[u.stat]; if (!r) continue;
-          r.cur.textContent = A.statDisplay(u.stat, lvl[u.stat]);
-          r.nxt.textContent = A.statDisplay(u.stat, lvl[u.stat] + 1);
-          const cost = A.runUpgradeCost(s, u.stat);
-          r.cost.textContent = fmt(cost) + ' g';
-          r.btn.classList.toggle('cant', s.econ.gold < cost);
+        for (const u of A.upgradesIn(activeTab)) {
+          const r = rowEls[u.id]; if (!r) continue;
+          const bought = A.boughtOf(s, u.id);
+          r.cur.textContent = u.fmt(bought);
+          if (A.runAtMax(s, u.id)) {
+            r.nxt.textContent = ''; r.cost.textContent = 'MAX'; r.btn.classList.add('cant');
+          } else {
+            r.nxt.textContent = u.fmt(Math.min(u.max, bought + 1));
+            const cost = A.runUpgradeCost(s, u.id);
+            r.cost.textContent = fmt(cost) + ' g';
+            r.btn.classList.toggle('cant', s.econ.gold < cost);
+          }
         }
       }
       if (!$('#h-stats').classList.contains('hide')) refreshStats(s);
@@ -251,7 +269,7 @@
     function setMeta(m) { boundMeta = m; }
     function refreshStats(s) {
       const m = boundMeta || {}, tier = m.tier || 1;
-      const coresRun = s.firstRun ? A.FIRST_PERM_COST : Math.max(1, Math.round((Math.floor(s.econ.kills / 10) + (s.wave.maxWave || 0)) * A.coreMult(tier)));
+      const coresRun = s.firstRun ? A.FIRST_PERM_COST : Math.max(1, Math.round(((Math.floor(s.econ.kills / 10) + (s.wave.maxWave || 0)) + (s.econ.bonusCores || 0)) * A.coreMult(tier)));
       const set = (id, v) => { const e = $('#st-' + id); if (e) e.textContent = v; };
       set('kills', fmt(s.econ.kills));
       set('foes', fmt(A.waveCount(s.wave.n * (s.difficultyMult || 1))));
@@ -330,7 +348,7 @@
       { id: 'powers', icon: 'powers', locked: true, unlock: 'Powers unlock in Tier 2' },
       { id: 'prestige', icon: 'prestige', locked: true, unlock: 'Prestige unlocks in Tier 3' },
     ];
-    let menuTab = 'hero', lastMeta = null, lastOpts = {};
+    let menuTab = 'hero', menuUpTab = 'attack', lastMeta = null, lastOpts = {}; // menuUpTab = active upgrade subtab
 
     MENU_TABS.forEach((t) => {
       const b = document.createElement('button');
@@ -399,16 +417,17 @@
 
     function permRowsHtml(meta, tutoring) {
       let html = '';
-      A.permVisible(meta).forEach((up, i) => {
-        const permLvl = (meta.perm && meta.perm[up.id]) || 0;
-        const eff = A.CORE[up.stat].base + permLvl;
-        const cur = A.statDisplay(up.stat, eff); // current effect (no increase shown)
+      A.upgradesIn(menuUpTab).forEach((up, i) => {
+        const bought = A.permBought(meta, up.id);
+        const cur = up.fmt(bought); // current effect (no increase shown)
+        const maxed = A.permAtMax(meta, up.id);
         const cost = A.permCost(meta, up.id), afford = (meta.cores || 0) >= cost;
-        const isTut = tutoring && i === 0 && permLvl === 0;
-        html += '<button class="perm' + (isTut ? ' tut' : '') + (afford ? '' : ' cant') + '" data-perm="' + up.id + '">' +
-          '<span class="ptop">' + icon(STAT_ICON[up.stat] || 'burst', 18) + '<span class="pname">' + up.label + '</span></span>' +
+        // tutorial highlight: the very first attack upgrade, while nothing is owned yet
+        const isTut = tutoring && menuUpTab === 'attack' && i === 0 && bought === 0;
+        html += '<button class="perm' + (isTut ? ' tut' : '') + ((afford && !maxed) ? '' : ' cant') + '" data-perm="' + up.id + '"' + (maxed ? ' disabled' : '') + '>' +
+          '<span class="ptop">' + icon(up.icon, 18) + '<span class="pname">' + up.label + '</span></span>' +
           '<span class="pcur">' + cur + '</span>' +
-          '<span class="pcost">' + cost + ' ' + cores(12) + '</span></button>';
+          '<span class="pcost">' + (maxed ? 'MAX' : cost + ' ' + cores(12)) + '</span></button>';
       });
       return html;
     }
@@ -469,7 +488,19 @@
         html += '<button class="startsq" id="h-start">' + icon('play', 35, 'green') + '</button>';
       } else if (menuTab === 'upgrades') {
         html += '<div class="cores-chip">' + cores(15) + ' <b>' + (meta.cores || 0) + '</b></div>';
-        html += '<div class="permlist">' + permRowsHtml(meta, tutoring) + '</div>';
+        const ecoOk = A.economyUnlocked(meta);
+        html += '<div class="subtabs" id="h-uptabs">';
+        for (const t of A.TAB_DEFS) {
+          const lk = t.gated && !ecoOk;
+          html += '<button class="subtab' + (t.id === menuUpTab ? ' on' : '') + (lk ? ' locked' : '') + '" data-uptab="' + t.id + '" title="' + t.id + '">' +
+            icon(t.icon, 22) + (lk ? icon('lock', 11, 'lk') : '') + '</button>';
+        }
+        html += '</div>';
+        if (menuUpTab === 'economic' && !ecoOk) {
+          html += '<div class="locked-tab">' + icon('lock', 46) + '<div class="lockmsg">Economic upgrades unlock in Tier 2</div></div>';
+        } else {
+          html += '<div class="permlist">' + permRowsHtml(meta, tutoring) + '</div>';
+        }
       } else if (menuTab === 'cards') {
         if (!A.cardsUnlocked(meta)) {
           html += '<div class="locked-tab">' + icon('lock', 46) + '<div class="lockmsg">Reach wave 30 to unlock cards</div></div>';
@@ -500,6 +531,12 @@
         });
         $('#h-start').addEventListener('click', () => handlers.onStartRun && handlers.onStartRun());
       } else if (menuTab === 'upgrades') {
+        menuContent.querySelectorAll('[data-uptab]').forEach((b) =>
+          b.addEventListener('click', () => {
+            const t = A.TAB_DEFS.find((x) => x.id === b.dataset.uptab);
+            if (t.gated && !A.economyUnlocked(meta)) { showUnlockTip(b, 'Economic upgrades unlock in Tier 2'); return; }
+            menuUpTab = b.dataset.uptab; renderMenu();
+          }));
         menuContent.querySelectorAll('[data-perm]').forEach((b) =>
           b.addEventListener('click', () => {
             if (handlers.onBuyPerm && handlers.onBuyPerm(b.dataset.perm)) renderMenu();

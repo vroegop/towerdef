@@ -140,7 +140,7 @@
 
       const W = canvas.clientWidth, H = canvas.clientHeight;
       // ---- camera: center on the tower, zoom by range, clamp so arena edges stay off-screen ----
-      const range = (s.hero && s.hero.range) || 220;
+      const range = (s.hero && s.hero.range) || (A.BASE_RANGE_M * A.PX_PER_METER);
       const coverScale = Math.max(W / s.arena.w, H / s.arena.h); // arena always covers the screen (no letterbox; spawns off-screen)
       const rangeScale = Math.min(W, H) / (2 * range * VIEW_MARGIN); // smaller range → zoom in; bigger range → zoom out
       const scale = Math.max(coverScale, rangeScale);
@@ -215,6 +215,7 @@
           const fx = tx(f.x), fy = ty(f.y);
           if (settings.goldOnKill && f.gold) spawnFloat(fx, fy, '+' + f.gold, '#ffd24a', 12);
           if (settings.coreOnKill && f.core) spawnFloat(fx, fy - 12, '+' + f.core, '#ff2e4e', 13);
+          if (f.dodge) spawnFloat(fx, fy - 18, 'Dodge', '#5fd0ff', 13);
         }
         lastFxSeq = s.fxSeq;
       }

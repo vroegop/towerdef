@@ -17,7 +17,7 @@
       hero: {
         x: A.ARENA_W / 2, y: A.ARENA_H / 2, r: 16,
         hp: 1, hpMax: 1, shield: 0, shieldMax: 0, sinceHit: 99, atkCd: 0,
-        range: 220,              // attack radius, written by the sim each step (renderer/camera read it)
+        range: A.BASE_RANGE_M * A.PX_PER_METER, // attack radius (px), written by the sim each step
       },
       enemies: [],
       projectiles: [],
@@ -25,7 +25,7 @@
       fx: [], fxSeq: 0,          // transient per-kill UI events (gold/core drops) the renderer consumes
       rewardMult: 1,
       wave: { n: 0, clock: A.WAVE.interval, toSpawn: 0, releaseTimer: 0, releaseGap: 1, count: 0, maxWave: 0 },
-      econ: { gold: 0, xp: 0, level: 1, kills: 0, goldEarned: 0 },
+      econ: { gold: 0, xp: 0, level: 1, kills: 0, goldEarned: 0, bonusCores: 0 }, // bonusCores: economic core income this run
       run: { levels: {} },       // core-stat levels bought this run (RESET each run)
       meta: meta || { cores: 0, perm: {} }, // PERMANENT (cores + permanent levels)
     };
