@@ -196,6 +196,17 @@
 
   Sim.prototype._enemies = function (dt) {
     const h = this.s.hero, st = this.stats;
+    // Protector aura: reset, then each protector grants nearby enemies damage reduction (not itself,
+    // so focus-firing the protector removes the shield). Only runs when a protector is alive.
+    let hasProt = false;
+    for (const e of this.s.enemies) { e.shielded = 0; if (e.aura > 0) hasProt = true; }
+    if (hasProt) {
+      for (const p of this.s.enemies) {
+        if (p.aura <= 0) continue;
+        const rr = p.auraR * p.auraR;
+        for (const e of this.s.enemies) { if (e === p) continue; const dx = e.x - p.x, dy = e.y - p.y; if (dx * dx + dy * dy <= rr) e.shielded = Math.max(e.shielded, p.aura); }
+      }
+    }
     for (const e of this.s.enemies) {
       if (e.hitFlash > 0) e.hitFlash -= dt;
       if (e.rend > 0) { e.rendT -= dt; if (e.rendT <= 0) e.rend = 0; } // Rend stacks decay over time
@@ -217,7 +228,7 @@
         else { // resolve overlap, cling to hero, gnaw
           e.state = 'stuck';
           e.x = h.x - dx / d * touch; e.y = h.y - dy / d * touch;
-          e.atkCd -= dt; if (e.atkCd <= 0) { this._hurtHero(e.dmg, e); e.atkCd = 0.8; }
+          e.atkCd -= dt; if (e.atkCd <= 0) { this._hurtHero(e.dmg, e); if (e.vamp) e.hp = Math.min(e.hpMax, e.hp + e.dmg * e.vamp); e.atkCd = 0.8; }
         }
       }
     }
@@ -226,7 +237,7 @@
   Sim.prototype._xpNeed = function () { return Math.round(20 * Math.pow(this.s.econ.level, 1.5)); };
 
   Sim.prototype._cleanup = function () {
-    const s = this.s, keep = [];
+    const s = this.s, keep = [], spawned = [];
     for (const e of s.enemies) {
       if (e.hp <= 0) {
         s.econ.kills++;
@@ -235,9 +246,21 @@
         const g = Math.round(tg.reward * this.stats.goldFind * e.strMult * (s.rewardMult || 1) * (this.stats.cashMult || 1) * decay);
         s.econ.gold += g; s.econ.goldEarned += g;
         if (this.stats.coresPerKill) s.econ.bonusCores += this.stats.coresPerKill; // economic per-kill cores
-        // Cells (farmed lab-fuel currency): bosses and elite-tier kills are the faucet.
+        // Cells (farmed lab-fuel currency) faucet: bosses/vampires/splitters/elites drop the most.
         if (e.type === 'boss') { s.econ.bonusCells += 3; s.econ.bossKills++; }
-        else if (e.tier === 'elite') s.econ.bonusCells += 1;
+        else if (e.type === 'vampire') s.econ.bonusCells += 2;
+        else if (e.type === 'splitter' || e.tier === 'elite') s.econ.bonusCells += 1;
+        // Splitter: spawn weaker children on death (capped so a mass-death can't explode the arena).
+        if (e.splits > 0 && s.enemies.length + spawned.length < A.WAVE.screenCap) {
+          for (let i = 0; i < e.splits; i++) {
+            const c = A.makeEnemy(s.nextId++, 'melee', e.tier, e.bornWave, this.rng, s.arena);
+            const a = this.rng.next() * Math.PI * 2;
+            c.x = e.x + Math.cos(a) * 14; c.y = e.y + Math.sin(a) * 14;
+            c.strMult = e.strMult * 0.35; c.hpMax = Math.max(1, Math.round(c.hpMax * 0.35)); c.hp = c.hpMax;
+            c.dmg = Math.max(1, Math.round(c.dmg * 0.35)); c.r = 8; c.agedWaves = e.agedWaves;
+            spawned.push(c);
+          }
+        }
         s.econ.xp += Math.round(2 * tg.reward * e.strMult * this.stats.xpGain);
         // UI-facing transient kill events (consumed by the renderer). cores accrue at the
         // banked rate of 1 per 10 kills, surfaced here as a per-kill drop. Capped so a
@@ -247,7 +270,7 @@
         if (s.fx.length > 32) s.fx.shift();
       } else keep.push(e);
     }
-    s.enemies = keep;
+    s.enemies = spawned.length ? keep.concat(spawned) : keep;
     let need = this._xpNeed();
     while (s.econ.xp >= need) { s.econ.xp -= need; s.econ.level++; need = this._xpNeed(); }
   };

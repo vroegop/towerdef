@@ -41,7 +41,7 @@
     if (rng && stats && stats.rendChance && rng.next() < stats.rendChance) {
       e.rend = Math.min(A.MAX_REND, (e.rend || 0) + 1); e.rendT = A.REND_DECAY;
     }
-    const dealt = baseDmg * (1 + (e.rend || 0) * ((stats && stats.rendMult) || 0));
+    const dealt = baseDmg * (1 + (e.rend || 0) * ((stats && stats.rendMult) || 0)) * (1 - (e.shielded || 0));
     e.hp -= dealt; e.hitFlash = 0.12; e.hitDmg = Math.round(dealt);
     if (stats && stats.lifesteal && state.hero) state.hero.hp = Math.min(state.hero.hpMax, state.hero.hp + dealt * stats.lifesteal);
     if (e.behavior === 'bounce') e.kb = Math.max(e.kb, 0.25);

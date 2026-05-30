@@ -4,8 +4,15 @@
    strength and speed. So survivors compound while never dropping below 1.1× the
    current baseline — hoarding a ball of enemies becomes lethal over time. */
 (function (A) {
+  // Archetypes are introduced as the (effective) wave climbs, so early waves stay simple.
   A.pickType = function (rng, n) {
     if (n % 10 === 0 && rng.next() < 0.2) return 'boss';
+    const r = rng.next();
+    if (n >= 8 && r < 0.10) return 'fast';
+    if (n >= 12 && r < 0.18) return 'tank';
+    if (n >= 16 && r < 0.25) return 'splitter';
+    if (n >= 22 && r < 0.31) return 'vampire';
+    if (n >= 28 && r < 0.36) return 'protector';
     return rng.next() < 0.55 ? 'melee' : 'ranged';
   };
 
@@ -35,6 +42,7 @@
       strMult, hpMax: hp, hp, dmg,
       speed, range: def.range, state: 'approach', atkCd: 0, kb: 0, hitFlash: 0, hitDmg: 0,
       rend: 0, rendT: 0, // Rend stacks + decay timer (Rend Armor upgrade)
+      splits: def.splits || 0, vamp: def.vamp || 0, aura: def.aura || 0, auraR: def.auraR || 0, shielded: 0,
       bornWave: waveN, veteran: false, agedWaves: 0, // agedWaves: waves survived (drives coin decay)
     };
   };
