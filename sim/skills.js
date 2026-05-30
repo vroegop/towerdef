@@ -87,8 +87,8 @@
   for (const u of A.UPGRADES) A.UP_BY_ID[u.id] = u;
   A.upgradesIn = (tab) => A.UPGRADES.filter((u) => u.tab === tab);
 
-  // economic tab opens once Tier 2 is reachable (wave 300 cleared in Tier 1)
-  A.economyUnlocked = (meta) => A.tierUnlocked(meta, 2);
+  // economic/utility upgrades: tier gating disabled — everything is buyable from the start (test mode)
+  A.economyUnlocked = (meta) => true;
 
   // The scripted first run grants exactly enough cores to buy the tutorial's first upgrade.
   A.FIRST_PERM_COST = A.UP_BY_ID.attackSpeed.core.cost(0);
@@ -162,10 +162,15 @@
   A.CARD_SLOTS = 20;
   A.CARD_ORDER = ['damage', 'power', 'haste', 'crit', 'execute', 'vitality', 'regrowth', 'phantom', 'fortune'];
   A.cardValue = (id, stars) => (A.CARDS[id] ? A.CARDS[id].value(stars) : 0);
-  A.cardsUnlocked = (meta) => (meta.bestWave || 0) >= 30; // unlocks at wave 30 (tier 1)
+  A.cardsUnlocked = (meta) => true; // cards available from the start
   A.grantInitialCard = function (meta) {
-    if (A.cardsUnlocked(meta) && !(meta.cards && meta.cards.length)) { meta.cards = [{ id: 'damage', stars: 1 }]; return true; }
-    return false;
+    // own one of every card type from the start (each at 1 star) so all types are testable
+    meta.cards = meta.cards || [];
+    let added = false;
+    for (const id of A.CARD_ORDER) {
+      if (!meta.cards.find((c) => c.id === id)) { meta.cards.push({ id, stars: 1 }); added = true; }
+    }
+    return added;
   };
   A.starSlot = (i, stars) => (stars >= i + 11 ? 'chroma' : stars >= i + 6 ? 'gold' : stars >= i + 1 ? 'white' : 'empty');
 
