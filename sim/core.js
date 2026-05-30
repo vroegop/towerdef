@@ -88,8 +88,11 @@
   Sim.prototype._waves = function (dt) {
     if (this.s.firstRun) return this._firstRunWaves(dt);
     const s = this.s, w = s.wave;
+    // Wave Speed upgrade shrinks the interval (kills the dead end-gap); spawnWindow is unchanged
+    // since the interval never drops below it, so waves just come back-to-back at max.
+    const effInt = A.WAVE.interval - (this.stats.waveCut || 0);
     w.clock += dt;
-    if (w.clock >= A.WAVE.interval) { this._startWave(w.n + 1); w.clock = 0; }
+    if (w.clock >= effInt) { this._startWave(w.n + 1); w.clock = 0; }
     if (w.toSpawn > 0 && w.clock <= A.WAVE.spawnWindow) {
       w.releaseTimer -= dt;
       let guard = 0;

@@ -128,6 +128,9 @@
     { id: 'freeUp',       tab: 'economic', icon: 'coins', label: 'Free Upgrades', max: 200, gated: true, // chance a buy is free, caps 50%
       value: (b) => Math.min(0.5, b * 0.0025),       fmt: (b) => (Math.min(0.5, b * 0.0025) * 100).toFixed(1) + '%',
       gold: curve(120, 1.6),   core: curve(25, 1.0018) },
+    { id: 'waveCut',      tab: 'economic', icon: 'rate',  label: 'Wave Speed', max: 5, gated: true, // shave the dead gap: -1s/lvl, 30s→25s
+      value: (b) => Math.min(5, b),                  fmt: (b) => '-' + Math.min(5, b) + 's',
+      gold: curve(5000, 4),    core: curve(2000, 3) },  // deliberately absurd early, only reachable much later
     { id: 'coresPerWave', tab: 'economic', icon: 'cores', label: 'Cores / Wave', max: 10000, gated: true,
       value: (b) => b,                               fmt: (b) => '+' + b,
       gold: curve(50, 1.6),    core: curve(10, 1.0018) },
@@ -342,6 +345,7 @@
       cashMult:     U.cashBonus.value(b('cashBonus')),  // global × on all gold income
       interest:     U.interest.value(b('interest')),    // fraction of banked cash paid at wave start
       maxInterest:  U.maxInterest.value(b('maxInterest')), // ceiling on the interest payout
+      waveCut:      U.waveCut.value(b('waveCut')),      // seconds shaved off the wave interval
       coinsPerWave: U.coinsPerWave.value(b('coinsPerWave')),
       coresPerWave: U.coresPerWave.value(b('coresPerWave')),
       coresPerKill: U.coresPerKill.value(b('coresPerKill')),

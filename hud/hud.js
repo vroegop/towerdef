@@ -242,7 +242,10 @@
       // wave countdown bar (hidden during the scripted first run, which has no wave clock)
       const wbar = $('#h-wavebar');
       if (s.firstRun) wbar.style.display = 'none';
-      else { wbar.style.display = ''; $('#h-wavefill').style.height = (Math.max(0, Math.min(1, s.wave.clock / A.WAVE.interval)) * 100) + '%'; }
+      else {
+        const effInt = A.WAVE.interval - (A.UP_BY_ID.waveCut ? A.UP_BY_ID.waveCut.value(A.boughtOf(s, 'waveCut')) : 0);
+        wbar.style.display = ''; $('#h-wavefill').style.height = (Math.max(0, Math.min(1, s.wave.clock / effInt)) * 100) + '%';
+      }
       // teach mid-run upgrades: pulse the tab bar the first time gold can afford any upgrade
       if (!taughtTabs && !s.firstRun && !tabOpen) {
         let min = Infinity;
