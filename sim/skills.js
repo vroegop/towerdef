@@ -51,6 +51,9 @@
     { id: 'critDamage',   tab: 'attack',  icon: 'burst', label: 'Crit Damage', max: 10000, // 1000× at level 10000
       value: (b) => 1 + b * (999 / 10000),          fmt: (b) => { const v = 1 + b * (999 / 10000); return (v < 10 ? v.toFixed(1) : v.toFixed(0)) + '×'; },
       gold: curve(50, 1.6),    core: curve(25, 1.0018) },
+    { id: 'superCrit',    tab: 'attack',  icon: 'burst', label: 'Super Crit', max: 1000, // up to +100% chance to crit-again
+      value: (b) => Math.min(1, b * 0.001),         fmt: (b) => (Math.min(1, b * 0.001) * 100).toFixed(1) + '%',
+      gold: curve(80, 1.6),    core: curve(25, 1.0018) },
 
     // ---- DEFENSE ----
     { id: 'health',       tab: 'defense', icon: 'heart', label: 'Health', max: 10000,
@@ -239,6 +242,8 @@
       dmgPerMeter:  U.dmgPerMeter.value(b('dmgPerMeter')),  // ×/metre coefficient
       critChance:   U.critChance.value(b('critChance')),
       critMult:     U.critDamage.value(b('critDamage')),
+      superCrit:    U.superCrit.value(b('superCrit')),  // chance for a crit to crit again
+
       dodge:        U.dodge.value(b('dodge')),
       armor:        U.armor.value(b('armor')),          // flat damage soaked per hit
       cashMult:     U.cashBonus.value(b('cashBonus')),  // global × on all gold income

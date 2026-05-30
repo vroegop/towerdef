@@ -115,6 +115,8 @@
     let dmg = st.rangedDamage * (1 + st.dmgPerMeter * (dist / A.PX_PER_METER));
     let k = Math.floor(st.critChance);
     if (this.rng.next() < st.critChance - k) k++;
+    // Super Crit: on a crit, a chance to apply the crit multiplier an extra time (stacks).
+    if (k > 0 && st.superCrit && this.rng.next() < st.superCrit) k++;
     if (k > 0) dmg *= Math.pow(st.critMult, k);
     return dmg;
   };
