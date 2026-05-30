@@ -68,7 +68,7 @@
     const renderer = A.Canvas2DRenderer(canvas, settings);
     const hud = A.Hud(document.getElementById('hud'), {
       settings, onSaveSettings: saveSettings,
-      onBuyRun: (stat) => { if (sim) A.buyRunUpgrade(sim.s, stat); },
+      onBuyRun: (stat) => { if (sim) A.buyRunUpgrade(sim.s, stat, sim.rng); },
       onBuyPerm: (id) => { const ok = A.buyPerm(meta, id); if (ok) saveMeta(); return ok; },
       onClaimMilestone: (wave) => { const r = A.claimMilestone(meta, wave); if (r) saveMeta(); return r; },
       onSetTier: (t) => { t = t | 0; if (t < 1 || t > A.MAX_TIER || !A.tierUnlocked(meta, t)) return false; meta.tier = t; saveMeta(); return true; },

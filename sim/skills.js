@@ -94,6 +94,9 @@
     { id: 'maxInterest',  tab: 'economic', icon: 'coin',  label: 'Max Interest', max: 10000, gated: true, // interest payout ceiling
       value: (b) => 50 + b * 10,                     fmt: (b) => '≤' + (50 + b * 10),
       gold: curve(40, 1.55),   core: curve(10, 1.0018) },
+    { id: 'freeUp',       tab: 'economic', icon: 'coins', label: 'Free Upgrades', max: 200, gated: true, // chance a buy is free, caps 50%
+      value: (b) => Math.min(0.5, b * 0.0025),       fmt: (b) => (Math.min(0.5, b * 0.0025) * 100).toFixed(1) + '%',
+      gold: curve(120, 1.6),   core: curve(25, 1.0018) },
     { id: 'coresPerWave', tab: 'economic', icon: 'cores', label: 'Cores / Wave', max: 10000, gated: true,
       value: (b) => b,                               fmt: (b) => '+' + b,
       gold: curve(50, 1.6),    core: curve(10, 1.0018) },
@@ -307,13 +310,18 @@
     const perm = (state.meta.perm && state.meta.perm[id]) || 0;
     return perm + (state.run.levels[id] || 0) >= capOf(state.meta, id);
   };
-  A.buyRunUpgrade = function (state, id) {
+  // `rng` (the live Sim PRNG) is optional; when present it drives the Free-Upgrades roll so a
+  // saved/resumed run stays consistent. Purchases are live events, never re-run by offline replay.
+  A.buyRunUpgrade = function (state, id, rng) {
     const up = A.UP_BY_ID[id]; if (!up) return false;
     if (up.gated && !A.economyUnlocked(state.meta)) return false;
     if (A.runAtMax(state, id)) return false;
     const n = state.run.levels[id] || 0, cost = up.gold.cost(n);
-    if (state.econ.gold < cost) return false;
-    state.econ.gold -= cost; state.run.levels[id] = n + 1; return true;
+    const freeChance = A.UP_BY_ID.freeUp.value(boughtOf(state, 'freeUp'));
+    const free = !!rng && freeChance > 0 && rng.next() < freeChance;
+    if (!free) { if (state.econ.gold < cost) return false; state.econ.gold -= cost; }
+    state.run.levels[id] = n + 1;
+    return true;
   };
 
   // ---- permanent upgrades (cores; price driven by perm levels only) ----
