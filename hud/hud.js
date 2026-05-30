@@ -467,7 +467,9 @@
         let right;
         if (researching) {
           const prog = A.researchProgress(meta, L.id, now), rem = A.researchRemaining(meta, L.id, now);
+          const rc = A.rushCellCost(meta, L.id, now), canRush = (meta.cells || 0) >= rc;
           right = '<span class="labprog"><span class="mbar"><i style="width:' + (prog * 100).toFixed(1) + '%"></i></span>' +
+            '<button class="rushlab' + (canRush ? '' : ' cant') + '" data-rushlab="' + L.id + '" title="Rush with cells">' + rc + ' ' + icon('cell', 11, 'cell') + '</button>' +
             '<button class="cancellab" data-cancellab="' + L.id + '">' + fmtTime(rem) + ' ' + icon('close', 11) + '</button></span>';
         } else if (!unlocked) {
           right = '<span class="pcost">' + icon('lock', 12) + ' wave ' + L.gate.wave + '</span>';
@@ -625,6 +627,8 @@
           b.addEventListener('click', () => { if (handlers.onStartResearch && handlers.onStartResearch(b.dataset.startlab)) renderMenu(); else shake(menuContent.querySelector('.cores-chip')); }));
         menuContent.querySelectorAll('[data-cancellab]').forEach((b) =>
           b.addEventListener('click', () => { if (handlers.onCancelResearch && handlers.onCancelResearch(b.dataset.cancellab)) renderMenu(); }));
+        menuContent.querySelectorAll('[data-rushlab]').forEach((b) =>
+          b.addEventListener('click', () => { if (handlers.onRushResearch && handlers.onRushResearch(b.dataset.rushlab)) renderMenu(); else shake(menuContent.querySelector('.cores-chip')); }));
         const sb = $('#h-buyslot'); if (sb) sb.addEventListener('click', () => { if (handlers.onBuyLabSlot && handlers.onBuyLabSlot()) renderMenu(); else shake(sb); });
       }
       // tutorial spotlight: hero step points at the upgrades tab, upgrades step points at the upgrade button

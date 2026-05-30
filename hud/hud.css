@@ -213,6 +213,10 @@
 .hud .lab .labprog { display: flex; align-items: center; gap: 8px; }
 .hud .lab .mbar { width: 90px; height: 8px; border-radius: 5px; background: #11151f; border: 1px solid #262c3d; overflow: hidden; }
 .hud .lab .mbar i { display: block; height: 100%; background: linear-gradient(90deg, #37d7ff, #4aa8ff); transition: width .25s linear; }
+.hud .lab .rushlab { background: transparent; border: 1px solid #2d3344; border-radius: 6px; color: #37d7ff;
+  font: 600 11px system-ui; padding: 4px 7px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+.hud .lab .rushlab:hover:not(.cant) { border-color: #37d7ff; }
+.hud .lab .rushlab.cant { opacity: .4; cursor: default; }
 .hud .lab .cancellab { background: transparent; border: 1px solid #2d3344; border-radius: 6px; color: #ff5d6c;
   font: 600 11px system-ui; padding: 4px 7px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
 .hud .lab .cancellab:hover { border-color: #ff5d6c; }

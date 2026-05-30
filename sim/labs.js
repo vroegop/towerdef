@@ -114,6 +114,21 @@
     return true;
   };
 
+  // Rush an in-progress lab by spending cells: halves its remaining time. Cost scales with the
+  // time skipped (1 cell per 2 minutes remaining, min 1) — the primary sink for farmed cells.
+  A.rushCellCost = function (meta, id, nowMs) {
+    const r = A.researchOf(meta, id); if (!r) return 0;
+    return Math.max(1, Math.ceil(Math.max(0, (r.endsAt - nowMs) / 1000) / 120));
+  };
+  A.rushResearch = function (meta, id, nowMs) {
+    const r = A.researchOf(meta, id); if (!r) return false;
+    const cost = A.rushCellCost(meta, id, nowMs);
+    if ((meta.cells || 0) < cost) return false;
+    meta.cells -= cost;
+    r.endsAt = nowMs + Math.max(0, (r.endsAt - nowMs) * 0.5);
+    return true;
+  };
+
   // Complete every research whose timer has elapsed. Returns the list of completed lab ids.
   // Idempotent and order-independent — safe to call on load, focus, and on a periodic tick.
   A.reconcileResearch = function (meta, nowMs) {

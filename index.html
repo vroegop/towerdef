@@ -76,6 +76,7 @@
       onUpgradeCard: () => { const r = A.upgradeRandomCard(meta); if (r) saveMeta(); return r; },
       onStartResearch: (id) => { const ok = A.startResearch(meta, id, Date.now()); if (ok) saveMeta(); return ok; },
       onCancelResearch: (id) => { const ok = A.cancelResearch(meta, id); if (ok) saveMeta(); return ok; },
+      onRushResearch: (id) => { const ok = A.rushResearch(meta, id, Date.now()); if (ok) saveMeta(); return ok; },
       onBuyLabSlot: () => { const ok = A.buyLabSlot(meta); if (ok) saveMeta(); return ok; },
       onReconcileLabs: () => reconcileLabs(),
       onStartRun: () => startRun(false),
