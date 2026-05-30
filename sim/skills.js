@@ -224,9 +224,41 @@
       effects: [{ stat: 'coins', kind: 'mult' }],
       value: (s) => s * 0.1, fmt: pct, desc: (v) => pct(v) + ' coins',
     },
+    // ---- cards for the Phase-2 mechanics (data-only; each maps to a new upgrade stat) ----
+    bramble: {
+      id: 'bramble', name: 'Bramble', art: 'shield', tint: '#3ddc84',
+      effects: [{ stat: 'thorns', kind: 'flat' }],
+      value: (s) => s * 0.05, fmt: (v) => '+' + v.toFixed(2) + '×', desc: (v) => '+' + v.toFixed(2) + '× thorns',
+    },
+    volley: {
+      id: 'volley', name: 'Volley', art: 'bow', tint: '#4aa8ff',
+      effects: [{ stat: 'msChance', kind: 'flat' }],
+      value: (s) => s * 0.02, fmt: (v) => '+' + (v * 100).toFixed(0) + '%', desc: (v) => '+' + (v * 100).toFixed(0) + '% multishot',
+    },
+    ricochet: {
+      id: 'ricochet', name: 'Ricochet', art: 'arrow', tint: '#37d7ff',
+      effects: [{ stat: 'bounceChance', kind: 'flat' }],
+      value: (s) => s * 0.02, fmt: (v) => '+' + (v * 100).toFixed(0) + '%', desc: (v) => '+' + (v * 100).toFixed(0) + '% bounce',
+    },
+    sunder: {
+      id: 'sunder', name: 'Sunder', art: 'burst', tint: '#e64cff',
+      effects: [{ stat: 'rendMult', kind: 'flat' }],
+      value: (s) => s * 0.02, fmt: (v) => '+' + (v * 100).toFixed(0) + '%', desc: (v) => '+' + (v * 100).toFixed(0) + '% rend power',
+    },
+    eagle: {
+      id: 'eagle', name: 'Eagle Eye', art: 'range', tint: '#37d7ff',
+      effects: [{ stat: 'range', kind: 'mult' }],
+      value: (s) => s * 0.05, fmt: pct, desc: (v) => pct(v) + ' range',
+    },
+    compound: {
+      id: 'compound', name: 'Compound', art: 'coin', tint: '#ffd24a',
+      effects: [{ stat: 'interest', kind: 'flat' }],
+      value: (s) => s * 0.002, fmt: (v) => '+' + (v * 100).toFixed(1) + '%', desc: (v) => '+' + (v * 100).toFixed(1) + '% interest',
+    },
   };
   A.CARD_SLOTS = 20;
-  A.CARD_ORDER = ['damage', 'power', 'haste', 'crit', 'execute', 'vitality', 'regrowth', 'phantom', 'fortune'];
+  A.CARD_ORDER = ['damage', 'power', 'haste', 'crit', 'execute', 'vitality', 'regrowth', 'phantom', 'fortune',
+    'bramble', 'volley', 'ricochet', 'sunder', 'eagle', 'compound'];
   A.cardValue = (id, stars) => (A.CARDS[id] ? A.CARDS[id].value(stars) : 0);
   A.cardsUnlocked = (meta) => true; // cards available from the start
   A.grantInitialCard = function (meta) {

@@ -119,9 +119,11 @@
 
     const STARP = 'M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6z';
     const STAT_ICON = { rangedDamage: 'bow', attackSpeed: 'rate', health: 'heart', regen: 'regen',
-      critChance: 'crit', critDamage: 'burst', dodge: 'dodge', coins: 'coin' };
+      critChance: 'crit', critDamage: 'burst', dodge: 'dodge', coins: 'coin',
+      thorns: 'shield', msChance: 'bow', bounceChance: 'arrow', rendMult: 'burst', range: 'range', interest: 'coin' };
     const STAT_LABEL = { rangedDamage: 'Ranged', attackSpeed: 'Speed', health: 'Health', regen: 'Regen',
-      critChance: 'Crit', critDamage: 'Crit Dmg', dodge: 'Dodge', coins: 'Coins' };
+      critChance: 'Crit', critDamage: 'Crit Dmg', dodge: 'Dodge', coins: 'Coins',
+      thorns: 'Thorns', msChance: 'Multishot', bounceChance: 'Bounce', rendMult: 'Rend', range: 'Range', interest: 'Interest' };
     const upIcon = (id) => (A.UP_BY_ID[id] && A.UP_BY_ID[id].icon) || 'burst';
     // currencies shown on the Hero screen — add a row here (+ a meta field) for future currencies
     const CURRENCIES = [{ key: 'cores', icon: 'cores', cls: 'core' }, { key: 'tokens', icon: 'token', cls: 'token' }, { key: 'cells', icon: 'cell', cls: 'cell' }];
