@@ -133,7 +133,12 @@
       <a href="#math">11 · The full stat-composition formula</a>
       <a href="#data">12 · Data-model &amp; save-migration changes</a>
       <a href="#roadmap">13 · Phased build order</a>
-      <a href="#risks">14 · Risks &amp; open questions</a>
+      <a href="#howto">14 · How to use these specs</a>
+      <a href="#board">15 · Status board</a>
+      <a href="#sandbox">16 · Mechanic sandbox (live)</a>
+      <a href="#specs">17 · Feature specs — pick one</a>
+      <a href="#cardspec">18 · Card specs &amp; mockups</a>
+      <a href="#risks">19 · Risks &amp; open questions</a>
       <a href="#sources">Sources</a>
     </div>
   </section>
@@ -602,8 +607,695 @@ state.econ.interest = 0;      <span class="c">// banked-cash interest accrual</s
   </section>
 
   <!-- ============================================================= -->
+  <!-- ============================================================= -->
+  <!--  FULL BUILD SPECS  ·  live sandbox  ·  HUD mockups               -->
+  <!-- ============================================================= -->
+  <style>
+    /* scoped styles for the spec backlog, sandbox and mockups (prefixed to avoid clashes) */
+    .spec h4{font-size:11.5px;text-transform:uppercase;letter-spacing:1px;color:var(--mut);margin:14px 0 4px}
+    .spec .goal{color:var(--tx);font-size:15px;margin:2px 0 10px}
+    .spec-cols{display:grid;grid-template-columns:1fr 320px;gap:20px}
+    @media(max-width:820px){.spec-cols{grid-template-columns:1fr}}
+    .spec ol{margin:6px 0;padding-left:20px} .spec ol li{margin:4px 0}
+    .spec{margin:16px 0}
+    .badge{font-size:11px;border:1px solid var(--line);border-radius:6px;padding:2px 8px;color:var(--mut);vertical-align:middle}
+    .badge.small{border-color:var(--green);color:var(--green)}
+    .badge.mid{border-color:var(--gold);color:var(--gold)}
+    .badge.big{border-color:var(--red);color:var(--red)}
+    .spec-h{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .spec-h h3{margin:0;font-size:19px}
+    .eff{font-size:12px;color:var(--mut);white-space:nowrap}
+    .acc li{color:var(--mut)} .acc li b{color:var(--green)}
+    /* HUD-style mockups ("screenshot-like") */
+    .mock{background:#0a0c12;border:1px solid var(--line);border-radius:10px;padding:12px}
+    .mock + .mock{margin-top:10px}
+    .mock .cap{font-size:11px;color:var(--mut);margin:0 0 8px;text-transform:uppercase;letter-spacing:1px}
+    .mrow{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--panel2);
+      border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:13px}
+    .mrow + .mrow{margin-top:7px}
+    .mrow .nm{display:flex;align-items:center;gap:7px;color:var(--tx)}
+    .mrow .delta{color:var(--mut);font-size:12px}
+    .mrow .delta .nx{color:var(--green)}
+    .mrow .cost{background:#11151f;border:1px solid var(--line);border-radius:6px;padding:2px 8px;color:var(--gold);font-size:12px}
+    .mrow .cost.free{color:var(--green);border-color:var(--green)}
+    .mrow.cant{opacity:.55}
+    .mbar{height:10px;border-radius:6px;background:#11151f;border:1px solid var(--line);overflow:hidden}
+    .mbar i{display:block;height:100%}
+    .micon{width:16px;height:16px;display:inline-block;vertical-align:middle}
+    .mcardgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:10px}
+    .mcard{background:linear-gradient(180deg,#141a2b,#0c1018);border:1px solid var(--line);border-radius:12px;
+      padding:10px 8px;text-align:center;position:relative}
+    .mcard.gold{border-color:#7a6320} .mcard.chroma{border-color:#6a3a78}
+    .mcard .art{height:46px;display:flex;align-items:center;justify-content:center}
+    .mcard .nm{font-size:11px;color:var(--tx);margin-top:4px}
+    .mcard .st{font-size:11px;color:var(--mut)}
+    .mcard .stars{font-size:10px;color:#ffd24a;letter-spacing:1px;min-height:12px}
+    .mcard .new{position:absolute;top:6px;right:6px;font-size:9px;color:var(--green);border:1px solid var(--green);border-radius:5px;padding:0 4px}
+    .sb-wrap{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:18px}
+    @media(max-width:820px){.sb-wrap{grid-template-columns:1fr}}
+    .sb-btns{display:flex;flex-direction:column;gap:8px}
+    .sb-btn{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--panel2);
+      border:1px solid var(--line);border-radius:9px;padding:9px 12px;color:var(--mut);cursor:pointer;font-size:13px;text-align:left}
+    .sb-btn:hover{border-color:var(--blue);color:var(--tx)}
+    .sb-btn.on{border-color:var(--green);color:var(--tx);box-shadow:inset 0 0 18px rgba(45,255,140,.12)}
+    .sb-btn .dot{width:9px;height:9px;border-radius:50%;background:#39405200;border:1px solid var(--line);flex:0 0 auto}
+    .sb-btn.on .dot{background:var(--green);border-color:var(--green)}
+    #sb{width:100%;display:block;border:1px solid var(--line);border-radius:12px;
+      background:radial-gradient(circle at 50% 50%,#141a2b 0%,#090b11 70%);touch-action:none}
+  </style>
+
+  <section class="sec" id="howto">
+    <h2>14 · How to use these specs</h2>
+    <p class="lede">Everything below the strategy is now an <b>actionable backlog</b>. Each feature is a
+      self-contained work package — roughly one PR — written so it can be picked up in isolation without
+      reading the others. The intent is that you skim a spec, look at its mockup or toggle it in the live
+      sandbox, and give a thumbs-up / change-this before any code is written.</p>
+    <div class="grid cols-3">
+      <div class="card"><h3>Each spec contains</h3><p>Goal · the exact data row · the sim hook (file &amp; function) ·
+        a numbered step list · headless acceptance criteria · and a visual (HUD mockup or sandbox toggle).</p></div>
+      <div class="card"><h3>Status legend</h3>
+        <p><span class="badge" style="border-color:var(--green);color:var(--green)">done</span> already shipped &nbsp;
+           <span class="badge mid">next</span> small localized hook &nbsp;
+           <span class="badge big">later</span> needs a bigger mechanic.</p></div>
+      <div class="card"><h3>How to give feedback</h3><p>Reference a spec by its heading (e.g. “Thorns” or
+        “Multishot”). Say <i>build it</i>, <i>change the numbers</i>, or <i>not yet</i>. I implement one spec
+        per PR so each is easy to review and revert.</p></div>
+    </div>
+  </section>
+
+  <section class="sec" id="board">
+    <h2>15 · Status board</h2>
+    <p class="lede">The full intended roster from <b>The Tower</b>, mapped to our game. ✔ = in the game today.</p>
+    <table>
+      <tr><th>Feature</th><th>Cat</th><th>Status</th><th>Effort</th><th>New mechanic?</th><th>Spec</th></tr>
+      <tr><td>Damage · Attack Speed · Range · Dmg/Meter · Crit Chance · Crit Damage</td><td>Atk</td><td><span class="badge" style="border-color:var(--green);color:var(--green)">done ✔</span></td><td>—</td><td>no</td><td>—</td></tr>
+      <tr><td>Health · Regen · Dodge · Armor</td><td>Def</td><td><span class="badge" style="border-color:var(--green);color:var(--green)">done ✔</span></td><td>—</td><td>no</td><td>—</td></tr>
+      <tr><td>Coins/Wave · Coins/Kill · Cash Bonus · Cores/Wave · Cores/Kill</td><td>Util</td><td><span class="badge" style="border-color:var(--green);color:var(--green)">done ✔</span></td><td>—</td><td>no</td><td>—</td></tr>
+      <tr><td>Super Crit</td><td>Atk</td><td><span class="badge mid">next</span></td><td>~1h</td><td>tiny</td><td><a href="#spec-supercrit">↓</a></td></tr>
+      <tr><td>Thorns</td><td>Def</td><td><span class="badge mid">next</span></td><td>½ day</td><td>small hook</td><td><a href="#spec-thorns">↓</a></td></tr>
+      <tr><td>Defense % (multiplicative DR)</td><td>Def</td><td><span class="badge mid">next</span></td><td>~1h</td><td>tiny</td><td><a href="#spec-defpct">↓</a></td></tr>
+      <tr><td>Lifesteal</td><td>Def</td><td><span class="badge mid">next</span></td><td>½ day</td><td>small hook</td><td><a href="#spec-lifesteal">↓</a></td></tr>
+      <tr><td>Interest + Max Interest</td><td>Util</td><td><span class="badge mid">next</span></td><td>½ day</td><td>econ hook</td><td><a href="#spec-interest">↓</a></td></tr>
+      <tr><td>Free Upgrades (per category)</td><td>Util</td><td><span class="badge mid">next</span></td><td>½ day</td><td>buy hook</td><td><a href="#spec-free">↓</a></td></tr>
+      <tr><td>Rend Armor</td><td>Atk</td><td><span class="badge big">later</span></td><td>1 day</td><td>per-enemy debuff</td><td><a href="#spec-rend">↓</a></td></tr>
+      <tr><td>Multishot (chance + targets)</td><td>Atk</td><td><span class="badge big">later</span></td><td>1 day</td><td>projectile fan</td><td><a href="#spec-multishot">↓</a></td></tr>
+      <tr><td>Bounce Shot (chance + targets + range)</td><td>Atk</td><td><span class="badge big">later</span></td><td>1–2 days</td><td>ricochet routing</td><td><a href="#spec-bounce">↓</a></td></tr>
+      <tr><td>Rapid Fire (chance + duration)</td><td>Atk</td><td><span class="badge big">later</span></td><td>1 day</td><td>buff window</td><td><a href="#spec-rapid">↓</a></td></tr>
+      <tr><td>Wall (health + rebuild)</td><td>Def</td><td><span class="badge big">later</span></td><td>1–2 days</td><td>2nd HP pool + render</td><td><a href="#spec-wall">↓</a></td></tr>
+      <tr><td>Knockback · Orbs · Land Mine · Recovery Pkg · Enemy Level Skip · Wave Accelerator</td><td>—</td><td><span class="badge big">later</span></td><td>varies</td><td>yes</td><td><a href="#spec-tail">↓</a></td></tr>
+      <tr><td>Ultimate-weapon &amp; mechanic cards</td><td>Cards</td><td><span class="badge big">later</span></td><td>per dep.</td><td>depends on weapon</td><td><a href="#cardspec">↓</a></td></tr>
+    </table>
+  </section>
+
+  <section class="sec" id="sandbox">
+    <h2>16 · Mechanic sandbox <span class="muted" style="font-size:13px;text-transform:none;letter-spacing:0">· live, in this page</span></h2>
+    <p class="lede">A deliberately tiny arena — one hero, a few dummy enemies, fixed numbers — so you can
+      <b>see each proposed mechanic in isolation</b>. Toggle them on/off; combine them. This is a mockup of
+      behaviour, not the real sim (no upgrades, no economy), purely to make “what would this feel like”
+      answerable in two seconds.</p>
+    <div class="sb-wrap">
+      <div>
+        <canvas id="sb" width="760" height="380"></canvas>
+        <p class="muted" style="font-size:12px;margin-top:8px">Floating numbers = damage dealt. Pips above an
+          enemy = Rend stacks. Cyan ring = Wall. Hero flashes gold during a Rapid-Fire burst.</p>
+      </div>
+      <div class="sb-btns" id="sb-btns"></div>
+    </div>
+  </section>
+  <script>
+  (function () {
+    const cv = document.getElementById('sb'); if (!cv) return;
+    const ctx = cv.getContext('2d');
+    const W = cv.width, H = cv.height, cx = W / 2, cy = H / 2, HR = 16;
+    const COL = { e: '#7a8296', hard: '#e64cff', wall: '#37d7ff', gold: '#ffd24a', blue: '#4aa8ff' };
+    const opt = { multishot: false, bounce: false, rend: false, thorns: false, wall: false, rapid: false };
+    const LABELS = [
+      ['multishot', 'Multishot', 'fire at 3 targets'],
+      ['bounce', 'Bounce Shot', 'ricochet to 3 foes'],
+      ['rend', 'Rend Armor', '+20% dmg per stack'],
+      ['thorns', 'Thorns', 'reflect contact dmg'],
+      ['wall', 'Wall', 'soak + rebuild'],
+      ['rapid', 'Rapid Fire', 'periodic burst'],
+    ];
+    const btnWrap = document.getElementById('sb-btns');
+    LABELS.forEach(([k, name, desc]) => {
+      const b = document.createElement('button'); b.className = 'sb-btn'; b.dataset.k = k;
+      b.innerHTML = '<span><b style="color:#d8deea">' + name + '</b><br><span style="font-size:11px">' + desc + '</span></span><span class="dot"></span>';
+      b.addEventListener('click', () => { opt[k] = !opt[k]; b.classList.toggle('on', opt[k]); });
+      btnWrap.appendChild(b);
+    });
+
+    let enemies = [], bullets = [], floats = [], fireCd = 0, rapidT = 0, rapidCd = 3, wall = 1, wallDown = 0;
+    function spawn() {
+      const a = Math.random() * Math.PI * 2, r = 230;
+      enemies.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r, r: 11, hp: 8, hpMax: 8, rend: 0, hit: 0, hard: Math.random() < 0.3 });
+    }
+    for (let i = 0; i < 6; i++) spawn();
+    function nearest(x, y, skip) { let best = null, bd = 1e9; for (const e of enemies) { if (e === skip) continue; const d = Math.hypot(e.x - x, e.y - y); if (d < bd) { bd = d; best = e; } } return best; }
+    function fire() {
+      const tgts = []; const n = opt.multishot ? 3 : 1;
+      const pool = enemies.slice().sort((a, b) => Math.hypot(a.x - cx, a.y - cy) - Math.hypot(b.x - cx, b.y - cy));
+      for (let i = 0; i < n && i < pool.length; i++) tgts.push(pool[i]);
+      for (const t of tgts) bullets.push({ x: cx, y: cy, target: t, bounces: 0 });
+    }
+    function damage(e, base) {
+      if (opt.rend) e.rend = Math.min(5, e.rend + 1);
+      const dmg = Math.round(base * (1 + (opt.rend ? e.rend * 0.2 : 0)));
+      e.hp -= dmg; e.hit = 0.12;
+      floats.push({ x: e.x, y: e.y - 14, txt: '' + dmg, color: opt.rend && e.rend > 1 ? COL.hard : '#fff', life: 0.8 });
+    }
+    let last = performance.now();
+    function step(dt) {
+      // hero fire
+      fireCd -= dt; rapidCd -= dt;
+      if (opt.rapid && rapidCd <= 0) { rapidT = 1.3; rapidCd = 4; }
+      if (rapidT > 0) rapidT -= dt;
+      const rate = rapidT > 0 ? 0.09 : 0.5;
+      if (fireCd <= 0 && enemies.length) { fire(); fireCd = rate; }
+      // bullets
+      for (const b of bullets) {
+        if (!b.target || b.target.hp <= 0 || enemies.indexOf(b.target) < 0) { b.dead = 1; continue; }
+        const dx = b.target.x - b.x, dy = b.target.y - b.y, d = Math.hypot(dx, dy) || 1, sp = 520;
+        if (d < 14) {
+          damage(b.target, 4);
+          if (opt.bounce && b.bounces < 3) { const nx = nearest(b.x, b.y, b.target); if (nx) { b.target = nx; b.bounces++; continue; } }
+          b.dead = 1;
+        } else { b.x += dx / d * sp * dt; b.y += dy / d * sp * dt; }
+      }
+      bullets = bullets.filter(b => !b.dead);
+      // enemies approach; wall / thorns / contact
+      for (const e of enemies) {
+        if (e.hit > 0) e.hit -= dt;
+        const dx = cx - e.x, dy = cy - e.y, d = Math.hypot(dx, dy) || 1;
+        const stop = HR + e.r + (opt.wall && wall > 0 ? 26 : 2);
+        if (d > stop) { e.x += dx / d * 34 * dt; e.y += dy / d * 34 * dt; }
+        else {
+          if (opt.wall && wall > 0) { wall = Math.max(0, wall - 0.5 * dt); if (wall <= 0) wallDown = 2.2; e.x -= dx / d * 30 * dt; e.y -= dy / d * 30 * dt; }
+          else {
+            // contact "hit" on hero; thorns reflects
+            if (opt.thorns) { e.hp -= 3; floats.push({ x: e.x, y: e.y - 14, txt: '3', color: COL.wall, life: 0.8 }); }
+            e.x -= dx / d * 22 * dt; e.y -= dy / d * 22 * dt;
+          }
+        }
+      }
+      if (opt.wall && wall <= 0) { wallDown -= dt; if (wallDown <= 0) wall = 1; }
+      if (!opt.wall) wall = 1;
+      enemies = enemies.filter(e => e.hp > 0);
+      while (enemies.length < 6) spawn();
+      for (const f of floats) { f.y -= 26 * dt; f.life -= dt; }
+      floats = floats.filter(f => f.life > 0);
+    }
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      // range ring
+      ctx.strokeStyle = 'rgba(74,168,255,.12)'; ctx.beginPath(); ctx.arc(cx, cy, 250, 0, 7); ctx.stroke();
+      // wall ring
+      if (opt.wall) {
+        ctx.lineWidth = 4; ctx.strokeStyle = wall > 0 ? 'rgba(55,215,255,' + (0.3 + 0.5 * wall) + ')' : 'rgba(255,93,108,.4)';
+        ctx.beginPath(); ctx.arc(cx, cy, HR + 22, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (wall > 0 ? wall : 0.001)); ctx.stroke(); ctx.lineWidth = 1;
+      }
+      // enemies
+      for (const e of enemies) {
+        ctx.save(); ctx.translate(e.x, e.y);
+        ctx.lineWidth = 2; ctx.strokeStyle = e.hard ? COL.hard : COL.e;
+        ctx.fillStyle = e.hit > 0 ? '#fff' : (e.hard ? COL.hard : COL.e) + '22';
+        ctx.beginPath(); ctx.rect(-e.r, -e.r, e.r * 2, e.r * 2); ctx.fill(); ctx.stroke();
+        ctx.restore();
+        // rend pips
+        for (let i = 0; i < e.rend; i++) { ctx.fillStyle = COL.hard; ctx.beginPath(); ctx.arc(e.x - 8 + i * 4, e.y - e.r - 6, 1.6, 0, 7); ctx.fill(); }
+        // hp bar
+        ctx.fillStyle = '#11151f'; ctx.fillRect(e.x - 11, e.y + e.r + 3, 22, 3);
+        ctx.fillStyle = '#3ddc84'; ctx.fillRect(e.x - 11, e.y + e.r + 3, 22 * Math.max(0, e.hp / e.hpMax), 3);
+      }
+      // bullets
+      ctx.fillStyle = COL.gold; for (const b of bullets) { ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, 7); ctx.fill(); }
+      // hero
+      ctx.fillStyle = rapidT > 0 ? COL.gold : COL.blue; ctx.strokeStyle = rapidT > 0 ? COL.gold : COL.blue; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, HR, 0, 7); ctx.fill();
+      // floats
+      ctx.textAlign = 'center'; ctx.font = '700 13px ui-monospace,monospace';
+      for (const f of floats) { ctx.globalAlpha = Math.max(0, f.life / 0.8); ctx.fillStyle = f.color; ctx.fillText(f.txt, f.x, f.y); }
+      ctx.globalAlpha = 1; ctx.textAlign = 'start';
+      // active label
+      const on = Object.keys(opt).filter(k => opt[k]);
+      ctx.fillStyle = '#8b93a7'; ctx.font = '12px ui-monospace,monospace';
+      ctx.fillText(on.length ? 'active: ' + on.join(', ') : 'all mechanics off — toggle on the right', 12, 20);
+    }
+    function loop(now) { const dt = Math.min((now - last) / 1000, 0.05); last = now; step(dt); draw(); requestAnimationFrame(loop); }
+    requestAnimationFrame(loop);
+  })();
+  </script>
+
+  <section class="sec" id="specs">
+    <h2>17 · Feature specs — pick one</h2>
+    <p class="lede">Ordered easiest-first. The <span class="badge mid">next</span> block is small, localized
+      hooks; the <span class="badge big">later</span> block needs a genuine new mechanic. Every spec maps onto
+      the existing data-driven <code>A.UPGRADES</code> machinery — only the noted hook is new.</p>
+
+    <h3 class="blk" style="color:var(--gold)">Small hooks <span class="badge mid">next</span></h3>
+
+    <!-- SUPER CRIT -->
+    <div class="card spec" id="spec-supercrit">
+      <div class="spec-h"><h3>Super Crit</h3><span class="eff">~1h · 1 file (sim/skills.js)</span></div>
+      <p class="goal">A crit can “crit again”: a chance for the crit multiplier to apply an extra time. Our
+        damage roll <i>already</i> supports stacking crits — this just exposes the chance as an upgrade.</p>
+      <div class="spec-cols">
+        <div>
+          <h4>Data row (Attack)</h4>
+<pre>{ id:'superCrit', tab:'attack', icon:'burst', label:'Super Crit', max:1000,
+  value:(b)=&gt; b*0.001, fmt:(b)=&gt;(b*0.001*100).toFixed(1)+'%',   <span class="c">// up to +100%</span>
+  gold:curve(80,1.6), core:curve(25,1.0018) }</pre>
+          <h4>Sim hook — <code>core.js · _rollDamage()</code></h4>
+<pre>let k = Math.floor(st.critChance);
+if (rng.next() &lt; st.critChance - k) k++;
+<span class="c">// NEW: on a crit, super-crit rolls an extra multiplier application</span>
+if (k &gt; 0 &amp;&amp; rng.next() &lt; st.superCrit) k++;</pre>
+          <h4>Steps</h4>
+          <ol>
+            <li>Add the row to <code>A.UPGRADES</code> and <code>superCrit: U.superCrit.value(...)</code> to <code>computeStats</code>.</li>
+            <li>Add the one <code>if</code> in <code>_rollDamage</code>.</li>
+            <li>Done — HUD lists it automatically (icon <code>burst</code> exists).</li>
+          </ol>
+          <h4>Acceptance</h4>
+          <ul class="acc">
+            <li>Headless: with <code>critChance=1</code> and <code>superCrit=1</code>, every shot applies <b>critMult²</b>.</li>
+            <li>With <code>superCrit=0</code>, damage is unchanged from today.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>How it looks</h4>
+          <div class="mock"><p class="cap">Attack tab — new row</p>
+            <div class="mrow"><span class="nm"><svg class="micon" viewBox="0 0 24 24" fill="none" stroke="#ffd24a" stroke-width="2"><path d="M12 3l1.6 5.4 5.4 1.6-5.4 1.6L12 21l-1.6-5.4L5 14l5.4-1.6z"/></svg> Super Crit</span>
+              <span class="delta">0.0% <span class="nx">→ 0.2%</span></span><span class="cost">80 g</span></div>
+          </div>
+          <p class="muted" style="font-size:12px">No sandbox toggle (it’s a damage-number multiplier). Validated by the acceptance test.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEFENSE % -->
+    <div class="card spec" id="spec-defpct">
+      <div class="spec-h"><h3>Defense % <span class="muted" style="font-size:13px">(multiplicative reduction)</span></h3><span class="eff">~1h · 2 files</span></div>
+      <p class="goal">A percentage damage reduction that stacks <i>after</i> flat Armor — Armor subtracts, then
+        Defense % scales the remainder. Together they cover early (flat) and late (%) game.</p>
+      <div class="spec-cols">
+        <div>
+          <h4>Data row (Defense)</h4>
+<pre>{ id:'defPct', tab:'defense', icon:'shield', label:'Defense %', max:900,
+  value:(b)=&gt; Math.min(0.9, b*0.001), fmt:(b)=&gt;(Math.min(0.9,b*0.001)*100).toFixed(1)+'%',
+  gold:curve(50,1.6), core:curve(20,1.008) }   <span class="c">// caps at 90% DR</span></pre>
+          <h4>Sim hook — <code>core.js · _hurtHero()</code></h4>
+<pre>let amt = (amount - (st.armor||0));
+amt *= (1 - (st.defPct||0));        <span class="c">// NEW</span>
+if (amt &lt;= 0) return;</pre>
+          <h4>Steps</h4>
+          <ol><li>Add row + <code>defPct</code> to <code>computeStats</code>.</li>
+            <li>Multiply the post-armor amount in <code>_hurtHero</code>.</li>
+            <li>Hard-cap value at 0.9 (done in <code>value</code>) so a hit always lands.</li></ol>
+          <h4>Acceptance</h4>
+          <ul class="acc"><li>Armor 2 + Defense 50% vs a 12-dmg hit → <b>(12−2)·0.5 = 5</b> taken.</li>
+            <li>Capped: even maxed, ≥10% of every hit lands (no invulnerability).</li></ul>
+        </div>
+        <div>
+          <h4>How it looks</h4>
+          <div class="mock"><p class="cap">Defense tab</p>
+            <div class="mrow"><span class="nm"><svg class="micon" viewBox="0 0 24 24" fill="none" stroke="#3ddc84" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Defense %</span>
+              <span class="delta">0.0% <span class="nx">→ 0.1%</span></span><span class="cost">50 g</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- THORNS -->
+    <div class="card spec" id="spec-thorns">
+      <div class="spec-h"><h3>Thorns</h3><span class="eff">½ day · 2 files · sandbox ✓</span></div>
+      <p class="goal">Reflect a share of incoming damage back at whatever hit the hero — counters the swarm.</p>
+      <div class="spec-cols">
+        <div>
+          <h4>Data row (Defense)</h4>
+<pre>{ id:'thorns', tab:'defense', icon:'shield', label:'Thorns', max:10000,
+  value:(b)=&gt; b*0.05, fmt:(b)=&gt;'+'+(b*0.05).toFixed(2)+'×',
+  gold:curve(35,1.55), core:curve(8,1.0018) }   <span class="c">// reflect = thorns × hit dmg</span></pre>
+          <h4>Sim hook — pass the attacker into <code>_hurtHero</code></h4>
+<pre><span class="c">// _enemies(): the two call sites become</span>
+this._hurtHero(e.dmg, e);
+<span class="c">// _hurtHero(amount, attacker):</span>
+if (st.thorns &amp;&amp; attacker) {
+  attacker.hp -= amount * st.thorns;
+  if (attacker.hp &lt;= 0) attacker.hitFlash = 0.12; <span class="c">// dies in _cleanup</span>
+}</pre>
+          <h4>Steps</h4>
+          <ol><li>Add row + <code>thorns</code> to <code>computeStats</code>.</li>
+            <li>Add the optional <code>attacker</code> arg to <code>_hurtHero</code>; pass <code>e</code> from both call sites in <code>_enemies</code>.</li>
+            <li>Apply reflect before the dodge/armor logic returns (reflect on a dodged hit? — decision: <b>no</b>, reflect only on hits that land).</li>
+            <li>Renderer already shows enemy hitFlash; reflected kills bank coins via <code>_cleanup</code>.</li></ol>
+          <h4>Acceptance</h4>
+          <ul class="acc"><li>Headless: thorns 1.0, an enemy dealing 5 to the hero loses 5 hp that tick.</li>
+            <li>Reflected damage can kill and pays out coins like any kill.</li></ul>
+        </div>
+        <div>
+          <h4>How it looks</h4>
+          <div class="mock"><p class="cap">Defense tab</p>
+            <div class="mrow"><span class="nm"><svg class="micon" viewBox="0 0 24 24" fill="none" stroke="#3ddc84" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Thorns</span>
+              <span class="delta">+0.00× <span class="nx">→ +0.05×</span></span><span class="cost">35 g</span></div></div>
+          <p class="muted" style="font-size:12px"><b>Sandbox:</b> toggle <i>Thorns</i> above — enemies that reach
+            the hero take cyan reflect numbers and can die on contact.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIFESTEAL -->
+    <div class="card spec" id="spec-lifesteal">
+      <div class="spec-h"><h3>Lifesteal</h3><span class="eff">½ day · 2 files</span></div>
+      <p class="goal">Heal the hero for a fraction of damage dealt — a sustain alternative to Regen that scales with offense.</p>
+      <div class="spec-cols">
+        <div>
+          <h4>Data row (Defense)</h4>
+<pre>{ id:'lifesteal', tab:'defense', icon:'regen', label:'Lifesteal', max:500,
+  value:(b)=&gt; Math.min(0.25, b*0.0005), fmt:(b)=&gt;(Math.min(0.25,b*0.0005)*100).toFixed(1)+'%',
+  gold:curve(60,1.6), core:curve(15,1.0018) }</pre>
+          <h4>Sim hook — on damage dealt (<code>projectiles.js</code> impact &amp; <code>core.js</code> lightning branch)</h4>
+<pre>if (st.lifesteal) {
+  hero.hp = Math.min(hero.hpMax, hero.hp + dealt * st.lifesteal);
+}</pre>
+          <h4>Steps</h4>
+          <ol><li>Add row + <code>lifesteal</code> to <code>computeStats</code>.</li>
+            <li>Where a bullet/lightning applies damage, heal the hero (clamp to hpMax).</li>
+            <li>Cap value (25%) so it can’t trivialise tanking.</li></ol>
+          <h4>Acceptance</h4>
+          <ul class="acc"><li>Lifesteal 10%, dealing 100 dmg over a tick heals 10 (never above hpMax).</li></ul>
+        </div>
+        <div>
+          <h4>How it looks</h4>
+          <div class="mock"><p class="cap">Defense tab</p>
+            <div class="mrow"><span class="nm"><svg class="micon" viewBox="0 0 24 24" fill="none" stroke="#3ddc84" stroke-width="2"><path d="M10 19s-4.8-3.2-4.8-6.7A2.6 2.6 0 0 1 10 10 2.6 2.6 0 0 1 14.8 12.3C14.8 15.8 10 19 10 19z"/><path d="M14 8.4A2.6 2.6 0 0 1 19 10.7c0 2.4-1.9 4.3-3.2 5.5"/></svg> Lifesteal</span>
+              <span class="delta">0.0% <span class="nx">→ 0.1%</span></span><span class="cost">60 g</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INTEREST -->
+    <div class="card spec" id="spec-interest">
+      <div class="spec-h"><h3>Interest + Max Interest</h3><span class="eff">½ day · 2 files (Utility)</span></div>
+      <p class="goal">At each wave start, gain a % of your banked cash (capped). Rewards saving for big buys —
+        the classic idle-TD “let it ride” hook.</p>
+      <div class="spec-cols">
+        <div>
+          <h4>Data rows (Utility)</h4>
+<pre>{ id:'interest', tab:'economic', icon:'coin', label:'Interest', max:500, gated:true,
+  value:(b)=&gt; b*0.002, fmt:(b)=&gt;(b*0.002*100).toFixed(1)+'%/wave',
+  gold:curve(80,1.6), core:curve(20,1.0018) },
+{ id:'maxInterest', tab:'economic', icon:'coin', label:'Max Interest', max:10000, gated:true,
+  value:(b)=&gt; 50 + b*10, fmt:(b)=&gt;'≤'+(50+b*10), gold:curve(40,1.55), core:curve(10,1.0018) }</pre>
+          <h4>Sim hook — <code>core.js · _startWave()</code></h4>
+<pre>if (st.interest) {
+  const gain = Math.min(st.maxInterest, Math.floor(s.econ.gold * st.interest));
+  s.econ.gold += gain; s.econ.goldEarned += gain;
+  s.fx.push({ seq:++s.fxSeq, x:hero.x, y:hero.y, gold:gain }); <span class="c">// drop popup</span>
+}</pre>
+          <h4>Steps</h4>
+          <ol><li>Add both rows + <code>interest</code>/<code>maxInterest</code> to <code>computeStats</code>.</li>
+            <li>Compute and add interest in <code>_startWave</code> (after coinsPerWave).</li>
+            <li>Optional HUD: show “+N interest” on the wave banner.</li></ol>
+          <h4>Acceptance</h4>
+          <ul class="acc"><li>1,000 gold banked, interest 5%, max 50 → +50 next wave (cap bites).</li>
+            <li>Interest 1%, max 500 → +10. Determinism unaffected (pure of state).</li></ul>
+        </div>
+        <div>
+          <h4>How it looks</h4>
+          <div class="mock"><p class="cap">Wave banner — top of screen</p>
+            <div class="mrow"><span class="nm"><svg class="micon" viewBox="0 0 24 24" fill="none" stroke="#ffd24a" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg> Wave 14</span>
+              <span class="delta nx" style="color:#ffd24a">+50 interest</span></div></div>
+          <div class="mock"><p class="cap">Utility tab</p>
+            <div class="mrow"><span class="nm">Interest</span><span class="delta">2.0% <span class="nx">→ 2.2%</span></span><span class="cost">80 g</span></div>
+            <div class="mrow"><span class="nm">Max Interest</span><span class="delta">≤150 <span class="nx">→ ≤160</span></span><span class="cost">40 g</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FREE UPGRADES -->
+    <div class="card spec" id="spec-free">
+      <div class="spec-h"><h3>Free Upgrades</h3><span class="eff">½ day · 2 files (Utility)</span></div>
+      <p class="goal">A chance that buying an in-run upgrade costs no gold. Makes the upgrade bar feel slot-machine-good.</p>
+      <div class="spec-cols">
+        <div>
+          <h4>Data row (Utility)</h4>
+<pre>{ id:'freeUp', tab:'economic', icon:'coins', label:'Free Upgrades', max:200, gated:true,
+  value:(b)=&gt; Math.min(0.5, b*0.0025), fmt:(b)=&gt;(Math.min(0.5,b*0.0025)*100).toFixed(1)+'%',
+  gold:curve(120,1.6), core:curve(25,1.0018) }   <span class="c">// caps 50%</span></pre>
+          <h4>Sim hook — <code>skills.js · buyRunUpgrade()</code></h4>
+<pre>const free = st.freeUp &amp;&amp; rng.next() &lt; st.freeUp;   <span class="c">// rng = run rng for determinism</span>
+if (!free &amp;&amp; state.econ.gold &lt; cost) return false;
+if (!free) state.econ.gold -= cost;
+state.run.levels[id] = n + 1;</pre>
+          <h4>Steps</h4>
+          <ol><li>Add row + <code>freeUp</code> to <code>computeStats</code>.</li>
+            <li><b>Determinism note:</b> roll must use the sim’s seeded rng, so <code>buyRunUpgrade</code> needs access to it — pass the live <code>Sim</code>/rng in, or move the roll into a Sim method. (Today <code>buyRunUpgrade</code> is a pure helper on <code>state</code>.)</li>
+            <li>HUD: when free fires, flash the row cost as <span style="color:#3ddc84">FREE</span>.</li></ol>
+          <h4>Acceptance</h4>
+          <ul class="acc"><li>freeUp 100% → every purchase is free; offline replay reproduces the same frees from the same seed.</li></ul>
+        </div>
+        <div>
+          <h4>How it looks</h4>
+          <div class="mock"><p class="cap">Upgrade bar — a free proc</p>
+            <div class="mrow"><span class="nm"><svg class="micon" viewBox="0 0 24 24" fill="none" stroke="#4aa8ff" stroke-width="2"><path d="M8 3a10 10 0 0 1 0 18"/><path d="M5 12h13"/><path d="M15 9l3 3-3 3"/></svg> Ranged Damage</span>
+              <span class="delta">12 <span class="nx">→ 13</span></span><span class="cost free">FREE</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="blk" style="color:var(--red)">Bigger mechanics <span class="badge big">later</span></h3>
+
+    <!-- REND -->
+    <div class="card spec" id="spec-rend">
+      <div class="spec-h"><h3>Rend Armor</h3><span class="eff">1 day · sim/core.js + projectiles.js · sandbox ✓</span></div>
+      <p class="goal">Each hit stacks a debuff on the enemy: it takes +X% damage per stack (decays over time, capped stacks).</p>
+      <div class="spec-cols">
+        <div>
+          <h4>Data rows (Attack)</h4>
+<pre>{ id:'rendChance', tab:'attack', icon:'crit', label:'Rend Chance', max:1000, value:b=&gt;b*0.001, ... }
+{ id:'rendMult',   tab:'attack', icon:'burst', label:'Rend Power', max:1000, value:b=&gt;b*0.002, ... } <span class="c">// +%/stack</span></pre>
+          <h4>State &amp; hook</h4>
+<pre><span class="c">// each enemy gains: e.rend = 0 (stacks), e.rendT = 0 (decay timer)</span>
+<span class="c">// on hit (projectile impact):</span>
+if (rng.next() &lt; st.rendChance) { e.rend = Math.min(MAX_REND, e.rend+1); e.rendT = 4; }
+<span class="c">// damage applied uses:  dmg *= (1 + e.rend * st.rendMult)</span>
+<span class="c">// in _enemies(dt): if (e.rendT-=dt) &lt;= 0 e.rend = 0;</span></pre>
+          <h4>Steps</h4>
+          <ol><li>Add the two rows + stats; add <code>rend</code>/<code>rendT</code> fields on <code>makeEnemy</code>.</li>
+            <li>Roll the stack on impact; apply the multiplier to the damage number.</li>
+            <li>Decay timer in <code>_enemies</code>. Renderer: draw stack pips (already prototyped in the sandbox).</li></ol>
+          <h4>Acceptance</h4>
+          <ul class="acc"><li>3 stacks at +20%/stack → a hit deals <b>1.6×</b>. Stacks clear after the decay window.</li></ul>
+        </div>
+        <div>
+          <h4>How it looks</h4>
+          <p class="muted" style="font-size:12px"><b>Sandbox:</b> toggle <i>Rend Armor</i> — magenta pips appear
+            above struck enemies and damage numbers climb as stacks build.</p>
+          <div class="mock"><p class="cap">Attack tab</p>
+            <div class="mrow"><span class="nm">Rend Chance</span><span class="delta">0% <span class="nx">→ 0.1%</span></span><span class="cost">90 g</span></div>
+            <div class="mrow"><span class="nm">Rend Power</span><span class="delta">+0% <span class="nx">→ +0.2%</span></span><span class="cost">90 g</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MULTISHOT -->
+    <div class="card spec" id="spec-multishot">
+      <div class="spec-h"><h3>Multishot</h3><span class="eff">1 day · sim/core.js (_hero) · sandbox ✓</span></div>
+      <p class="goal">A chance to fire at several targets at once — chance gates whether it procs, “targets” sets how many extra.</p>
+      <div class="spec-cols">
+        <div>
+          <h4>Data rows (Attack)</h4>
+<pre>{ id:'msChance',  tab:'attack', icon:'bow', label:'Multishot', max:1000, value:b=&gt;b*0.001, ... }
+{ id:'msTargets', tab:'attack', icon:'bow', label:'Multishot Targets', max:8, value:b=&gt;1+b, ... }</pre>
+          <h4>Sim hook — <code>core.js · _hero()</code></h4>
+<pre>let shots = 1;
+if (rng.next() &lt; st.msChance) shots = 1 + st.msTargets;
+const targets = nearestN(s.enemies, h, shots);  <span class="c">// helper: N closest in range</span>
+for (const t of targets) A.fireProjectile(s, h, t, st, this._rollDamage(st, dist(h,t)));</pre>
+          <h4>Steps</h4>
+          <ol><li>Add rows + stats; write a small <code>nearestN</code> (extends the current single-nearest loop).</li>
+            <li>In <code>_hero</code>, when the attack fires, roll multishot and fan one projectile per target.</li>
+            <li>Each projectile rolls its own crit (independent), reusing <code>_rollDamage</code>.</li></ol>
+          <h4>Acceptance</h4>
+          <ul class="acc"><li>msChance 100%, targets 3 → 3 projectiles spawn per shot at the 3 nearest enemies (or fewer if fewer in range).</li>
+            <li>Cooldown logic unchanged (one cooldown per “shot”, not per projectile).</li></ul>
+        </div>
+        <div>
+          <h4>How it looks</h4>
+          <p class="muted" style="font-size:12px"><b>Sandbox:</b> toggle <i>Multishot</i> — the hero fires a fan
+            of bullets at the three nearest squares each shot.</p>
+          <div class="mock"><p class="cap">Attack tab</p>
+            <div class="mrow"><span class="nm">Multishot</span><span class="delta">0% <span class="nx">→ 0.1%</span></span><span class="cost">100 g</span></div>
+            <div class="mrow"><span class="nm">Multishot Targets</span><span class="delta">1 <span class="nx">→ 2</span></span><span class="cost">250 g</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOUNCE -->
+    <div class="card spec" id="spec-bounce">
+      <div class="spec-h"><h3>Bounce Shot</h3><span class="eff">1–2 days · projectiles.js · sandbox ✓</span></div>
+      <p class="goal">A projectile that ricochets from the first target to nearby ones, chance to trigger,
+        with target-count and bounce-range upgrades.</p>
+      <div class="spec-cols">
+        <div>
+          <h4>Data rows (Attack)</h4>
+<pre>{ id:'bounceChance',  ... value:b=&gt;b*0.001 }
+{ id:'bounceTargets', max:10, value:b=&gt;1+b }
+{ id:'bounceRange',   value:b=&gt;120+b }   <span class="c">// px search radius for next hop</span></pre>
+          <h4>Sim hook — <code>projectiles.js</code></h4>
+<pre><span class="c">// fireProjectile stamps: p.bounces = (rng&lt;chance)? targets : 0; p.hitIds = []</span>
+<span class="c">// on impact, before despawn:</span>
+if (p.bounces &gt; 0) {
+  const nxt = nearestNotHit(s.enemies, p, st.bounceRange, p.hitIds);
+  if (nxt) { p.bounces--; p.hitIds.push(p.target.id); p.target = nxt; return; /* keep flying */ }
+}</pre>
+          <h4>Steps</h4>
+          <ol><li>Add rows + stats; add <code>bounces/hitIds/target</code> to the projectile shape.</li>
+            <li>Decide chance at fire-time (deterministic). Re-route to the next un-hit enemy within range on impact.</li>
+            <li>Renderer needs nothing new (it draws projectiles by position).</li></ol>
+          <h4>Acceptance</h4>
+          <ul class="acc"><li>chance 100%, targets 3, range 150 → one shot damages up to 4 enemies in a chain, never the same twice.</li></ul>
+        </div>
+        <div>
+          <h4>How it looks</h4>
+          <p class="muted" style="font-size:12px"><b>Sandbox:</b> toggle <i>Bounce Shot</i> — bullets hop between
+            enemies instead of stopping on the first.</p>
+          <div class="mock"><p class="cap">Attack tab</p>
+            <div class="mrow"><span class="nm">Bounce Shot</span><span class="delta">0% <span class="nx">→ 0.1%</span></span><span class="cost">100 g</span></div>
+            <div class="mrow"><span class="nm">Bounce Targets</span><span class="delta">1 <span class="nx">→ 2</span></span><span class="cost">250 g</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RAPID FIRE -->
+    <div class="card spec" id="spec-rapid">
+      <div class="spec-h"><h3>Rapid Fire</h3><span class="eff">1 day · sim/core.js · sandbox ✓</span></div>
+      <p class="goal">Periodically, a short window of greatly increased fire rate. Chance gates each window; duration sets its length.</p>
+      <div class="spec-cols">
+        <div>
+          <h4>Data rows (Attack)</h4>
+<pre>{ id:'rapidChance',   value:b=&gt;b*0.001 }    <span class="c">// chance to start a burst each wave/interval</span>
+{ id:'rapidDuration', value:b=&gt;2+b*0.1 }    <span class="c">// seconds; burst = e.g. 3× fire rate</span></pre>
+          <h4>State &amp; hook — <code>core.js</code></h4>
+<pre><span class="c">// state.run gains: rapidT (remaining), rapidCheckCd</span>
+<span class="c">// in step(): tick rapidCheckCd; on elapse, if rng &lt; rapidChance → rapidT = rapidDuration</span>
+const rate = st.fireRate * (s.run.rapidT &gt; 0 ? 3 : 1);
+h.atkCd = 1 / Math.max(0.1, rate);</pre>
+          <h4>Steps</h4>
+          <ol><li>Add rows + stats; add the burst timer to run-state (so it serializes &amp; replays offline).</li>
+            <li>Multiply effective fire rate while the burst is active; renderer tints the hero (prototyped: gold flash in sandbox).</li></ol>
+          <h4>Acceptance</h4>
+          <ul class="acc"><li>During a burst the hero fires ~3× as often; bursts start deterministically from the seed.</li></ul>
+        </div>
+        <div>
+          <h4>How it looks</h4>
+          <p class="muted" style="font-size:12px"><b>Sandbox:</b> toggle <i>Rapid Fire</i> — every few seconds the
+            hero glows gold and unloads a burst.</p>
+          <div class="mock"><p class="cap">Attack tab</p>
+            <div class="mrow"><span class="nm">Rapid Fire</span><span class="delta">0% <span class="nx">→ 0.1%</span></span><span class="cost">100 g</span></div>
+            <div class="mrow"><span class="nm">Rapid Duration</span><span class="delta">2.0s <span class="nx">→ 2.1s</span></span><span class="cost">120 g</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WALL -->
+    <div class="card spec" id="spec-wall">
+      <div class="spec-h"><h3>Wall (Shield)</h3><span class="eff">1–2 days · state + core + renderer · sandbox ✓</span></div>
+      <p class="goal">A second HP pool that soaks damage before the hero’s health and rebuilds after a delay
+        once depleted. (You earlier said “Wall later” — this is its full spec for when you’re ready.)</p>
+      <div class="spec-cols">
+        <div>
+          <h4>Data rows (Defense)</h4>
+<pre>{ id:'wallHealth',  value:b=&gt; b*5,    fmt:b=&gt;'+'+(b*5) }      <span class="c">// wall max hp</span>
+{ id:'wallRebuild', value:b=&gt; Math.max(2, 10 - b*0.1) }      <span class="c">// seconds before rebuild</span></pre>
+          <h4>State &amp; hook</h4>
+<pre><span class="c">// hero already has shield/shieldMax fields in state.js — reuse them as the wall.</span>
+<span class="c">// _hero(): hero.shieldMax = st.wallHealth; rebuild after timer when shield==0.</span>
+<span class="c">// _hurtHero(): subtract from shield first, overflow to hp; on shield→0 start rebuild timer.</span></pre>
+          <h4>Steps</h4>
+          <ol><li>Add rows + stats; wire <code>shield/shieldMax</code> (already in the state contract).</li>
+            <li>Damage order in <code>_hurtHero</code>: wall → hp. Rebuild timer in <code>_hero</code>.</li>
+            <li>Renderer: draw the wall as a ring/bar around the hero (sandbox shows the cyan ring + depletion).</li>
+            <li>HUD: a wall bar under the HP bar.</li></ol>
+          <h4>Acceptance</h4>
+          <ul class="acc"><li>Wall 50 absorbs the next 50 damage; at 0 it rebuilds to full after the delay; overflow hits hp.</li></ul>
+        </div>
+        <div>
+          <h4>How it looks</h4>
+          <p class="muted" style="font-size:12px"><b>Sandbox:</b> toggle <i>Wall</i> — a cyan ring holds enemies
+            off and drains; it turns red and rebuilds when broken.</p>
+          <div class="mock"><p class="cap">HUD — under the HP bar</p>
+            <div style="font-size:11px;color:#8b93a7;margin-bottom:4px">WALL</div>
+            <div class="mbar"><i style="width:64%;background:linear-gradient(90deg,#37d7ff,#4aa8ff)"></i></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LONG TAIL -->
+    <div class="card spec" id="spec-tail">
+      <div class="spec-h"><h3>The long tail</h3><span class="badge big">later</span></div>
+      <p class="goal">Lower-priority Tower mechanics, each a future spec when prioritised:</p>
+      <table>
+        <tr><th>Feature</th><th>Sketch</th><th>Touches</th></tr>
+        <tr><td>Knockback</td><td>chance/force to shove stuck enemies off the hero (we already have <code>kb</code> on ranged bounce)</td><td>core.js</td></tr>
+        <tr><td>Orbs</td><td>N projectiles orbiting the hero dealing contact damage</td><td>state + core + renderer</td></tr>
+        <tr><td>Land Mines</td><td>deploy mines that stun/damage on contact</td><td>state + core + renderer</td></tr>
+        <tr><td>Recovery / Packages</td><td>enemies drop pickups (cash / health / box) on death</td><td>enemies.js drop table</td></tr>
+        <tr><td>Enemy Level Skip</td><td>reduce the effective wave used for enemy strength (atk/health separately)</td><td>waves.js / enemies.js</td></tr>
+        <tr><td>Wave Accelerator / Intro Sprint</td><td>shorten wave interval / fast first N waves</td><td>waves.js</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section class="sec" id="cardspec">
+    <h2>18 · Card specs &amp; mockups</h2>
+    <p class="lede">Cards reuse the existing data-only system (<code>A.CARDS</code> + <code>STAT2SIM</code>). The
+      9 we have map to scalar stats. The next batch maps to the <i>new</i> upgrade stats above (so each card
+      ships <b>with</b> or <b>after</b> its mechanic), plus the “ultimate-weapon” cards that depend on the
+      ability layer.</p>
+
+    <h3 class="blk">In the game today <span class="badge" style="border-color:var(--green);color:var(--green)">done ✔</span></h3>
+    <div class="mock"><div class="mcardgrid">
+      <div class="mcard"><div class="art"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#37d7ff" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.6"/></svg></div><div class="nm">Bullseye</div><div class="st">+ dmg (flat)</div><div class="stars">★★★</div></div>
+      <div class="mcard"><div class="art"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#4aa8ff" stroke-width="2"><path d="M8 3a10 10 0 0 1 0 18"/><path d="M5 12h13"/><path d="M15 9l3 3-3 3"/></svg></div><div class="nm">Onslaught</div><div class="st">+dmg %</div><div class="stars">★</div></div>
+      <div class="mcard"><div class="art"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#ffae4a" stroke-width="2"><circle cx="12" cy="13" r="7"/><path d="M12 13V9.5"/><path d="M10 3h4"/></svg></div><div class="nm">Overclock</div><div class="st">+atk speed</div><div class="stars">★★</div></div>
+      <div class="mcard"><div class="art"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#ffd24a" stroke-width="2"><path d="M12 3l1.6 5.4 5.4 1.6-5.4 1.6L12 21l-1.6-5.4L5 14l5.4-1.6z"/></svg></div><div class="nm">Deadeye</div><div class="st">+crit chance</div><div class="stars">★</div></div>
+      <div class="mcard"><div class="art"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#e64cff" stroke-width="2"><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></svg></div><div class="nm">Executioner</div><div class="st">+crit dmg</div><div class="stars">★★★★</div></div>
+      <div class="mcard gold"><div class="art"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#ff5d6c" stroke-width="2"><path d="M12 20s-6.5-4.3-6.5-9.3A3.7 3.7 0 0 1 12 8a3.7 3.7 0 0 1 6.5 2.7c0 5-6.5 9.3-6.5 9.3z"/></svg></div><div class="nm">Vitality</div><div class="st">+health</div><div class="stars">★★★★★★</div></div>
+    </div><p class="cap" style="margin:8px 0 0">…plus Regrowth, Phantom, Fortune. White → gold → chromatic frames as stars rise.</p></div>
+
+    <h3 class="blk">Next batch — ship beside their mechanic</h3>
+    <div class="mock"><div class="mcardgrid">
+      <div class="mcard"><div class="new">NEW</div><div class="art"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#3ddc84" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="nm">Bramble</div><div class="st">+thorns</div></div>
+      <div class="mcard"><div class="new">NEW</div><div class="art"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#4aa8ff" stroke-width="2"><path d="M8 3a10 10 0 0 1 0 18"/><path d="M5 12h13"/></svg></div><div class="nm">Volley</div><div class="st">+multishot</div></div>
+      <div class="mcard"><div class="new">NEW</div><div class="art"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#37d7ff" stroke-width="2"><path d="M5 12h13"/><path d="M12 6l6 6-6 6"/></svg></div><div class="nm">Ricochet</div><div class="st">+bounce</div></div>
+      <div class="mcard"><div class="new">NEW</div><div class="art"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#e64cff" stroke-width="2"><path d="M12 3l1.6 5.4 5.4 1.6-5.4 1.6L12 21z"/></svg></div><div class="nm">Sunder</div><div class="st">+rend power</div></div>
+      <div class="mcard"><div class="new">NEW</div><div class="art"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#37d7ff" stroke-width="2"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="5"/></svg></div><div class="nm">Eagle Eye</div><div class="st">+range</div></div>
+      <div class="mcard"><div class="new">NEW</div><div class="art"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#ffd24a" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></div><div class="nm">Compound</div><div class="st">+interest</div></div>
+    </div></div>
+    <h4>Spec (data-only, one entry each)</h4>
+<pre>Bramble:  effects:[{stat:'thorns',   kind:'flat'}]  value:s=&gt;s*0.05   <span class="c">// needs Thorns stat</span>
+Volley:   effects:[{stat:'msChance',  kind:'flat'}]  value:s=&gt;s*0.02   <span class="c">// needs Multishot</span>
+Ricochet: effects:[{stat:'bounceChance',kind:'flat'}] value:s=&gt;s*0.02 <span class="c">// needs Bounce</span>
+Sunder:   effects:[{stat:'rendMult',  kind:'flat'}]  value:s=&gt;s*0.02   <span class="c">// needs Rend</span>
+Eagle Eye:effects:[{stat:'range',     kind:'mult'}]  value:s=&gt;s*0.05
+Compound: effects:[{stat:'interest',  kind:'flat'}]  value:s=&gt;s*0.002  <span class="c">// needs Interest</span></pre>
+    <p class="muted">Each new card needs: a row in <code>A.CARDS</code>, its id in <code>A.CARD_ORDER</code>, an
+      entry in <code>STAT2SIM</code> if the target stat isn’t mapped yet, and <code>STAT_ICON</code>/<code>STAT_LABEL</code>
+      entries in the HUD (icons all already exist). <b>Build order:</b> a card ships in the same PR as the
+      stat it references, or immediately after — never before, or it’d be a dead card.</p>
+
+    <h3 class="blk">Ultimate-weapon cards <span class="badge big">depends on ability layer</span></h3>
+    <p class="muted">Cards like Plasma Cannon, Death Ray, Energy Net, Black Hole map to entries in
+      <code>sim/abilities.js</code> (which already has black-hole/meteor/golden effects). These wait on the
+      “Ultimate Weapons” system from the strategy plan — listed here only so the card grid layout reserves
+      room for them.</p>
+  </section>
+
+  <!-- ============================================================= -->
   <section class="sec" id="risks">
-    <h2>14 · Risks &amp; open questions</h2>
+    <h2>19 · Risks &amp; open questions</h2>
     <ul>
       <li><b>Determinism vs real-time labs.</b> Labs must advance on wall-clock and stay <i>out</i> of the
         seeded run sim, or offline replay breaks. Decision: labs are meta-state reconciled on load/menu tick,
