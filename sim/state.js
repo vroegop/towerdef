@@ -16,7 +16,7 @@
       arena: { w: A.ARENA_W, h: A.ARENA_H },
       hero: {
         x: A.ARENA_W / 2, y: A.ARENA_H / 2, r: 16,
-        hp: 1, hpMax: 1, shield: 0, shieldMax: 0, sinceHit: 99, atkCd: 0,
+        hp: 1, hpMax: 1, shield: 0, shieldMax: 0, wallTimer: 0, sinceHit: 99, atkCd: 0, // shield = the Wall pool
         range: A.BASE_RANGE_M * A.PX_PER_METER, // attack radius (px), written by the sim each step
       },
       enemies: [],

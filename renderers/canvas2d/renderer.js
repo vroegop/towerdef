@@ -237,6 +237,13 @@
         const frac = h.hpMax > 0 ? h.hp / h.hpMax : 0;
         ctx.strokeStyle = frac > 0.3 ? '#3ddc84' : '#ff5d6c'; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(hsx, hsy, (h.r + 6) * scale, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac); ctx.stroke();
+        // Wall ring (just outside the hp ring): cyan arc for remaining shield, faint red while rebuilding
+        if (h.shieldMax > 0) {
+          const wf = Math.max(0, Math.min(1, h.shield / h.shieldMax));
+          ctx.lineWidth = 3;
+          if (wf > 0) { ctx.strokeStyle = 'rgba(55,215,255,' + (0.4 + 0.5 * wf).toFixed(2) + ')'; ctx.beginPath(); ctx.arc(hsx, hsy, (h.r + 11) * scale, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * wf); ctx.stroke(); }
+          else { ctx.strokeStyle = 'rgba(255,93,108,.35)'; ctx.beginPath(); ctx.arc(hsx, hsy, (h.r + 11) * scale, 0, Math.PI * 2); ctx.stroke(); }
+        }
       } else if (heroWasAlive) {
         spawnShatter(hsx, hsy, '#4aa8ff', 24); // the hero "explodes" once, like an enemy but bigger
       }

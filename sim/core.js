@@ -115,6 +115,11 @@
       attacker.hp -= amount * st.thorns;
       attacker.hitFlash = 0.12;
     }
+    // Wall soaks first; overflow continues to armor/health. Depleting it starts the rebuild timer.
+    if (st.wallMax > 0 && h.shield > 0) {
+      if (h.shield >= amount) { h.shield -= amount; if (h.shield <= 0) h.wallTimer = st.wallRebuild; return; }
+      amount -= h.shield; h.shield = 0; h.wallTimer = st.wallRebuild;
+    }
     // Armor: a flat soak applied per hit, then Defense % scales the remainder (caps at 90%).
     let amt = (amount - (st.armor || 0)) * (1 - (st.defPct || 0));
     if (amt <= 0) return;
@@ -142,6 +147,13 @@
     h.range = st.range; // surfaced in the snapshot so the renderer/camera read the true range
     // derived max + regen
     h.hpMax = st.maxHp; if (h.hp > h.hpMax) h.hp = h.hpMax;
+    // Wall: a second HP pool (hero.shield) that soaks damage first and rebuilds to full after a delay.
+    h.shieldMax = st.wallMax || 0;
+    if (h.shieldMax <= 0) { h.shield = 0; }
+    else {
+      if (h.shield > h.shieldMax) h.shield = h.shieldMax;
+      if (h.shield <= 0) { h.wallTimer -= dt; if (h.wallTimer <= 0) h.shield = h.shieldMax; } // rebuild
+    }
     h.sinceHit += dt;
     if (st.regen > 0 && h.hp < h.hpMax) h.hp = Math.min(h.hpMax, h.hp + st.regen * dt);
     // Rapid Fire: every RAPID_CHECK seconds, a chance to start a timed high-firerate burst.
