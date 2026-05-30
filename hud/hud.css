@@ -359,8 +359,6 @@
 .hud .stat.hp { display: flex; align-items: center; gap: 7px; }
 .hud .hpbar { width: 64px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.12); overflow: hidden; }
 .hud .hpbar i { display: block; height: 100%; width: 100%; background: #3ddc84; transition: width .15s linear, background .2s; }
-.hud .wallbar { width: 64px; height: 4px; margin-top: 2px; border-radius: 3px; background: rgba(255,255,255,.10); overflow: hidden; }
-.hud .wallbar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #37d7ff, #4aa8ff); transition: width .15s linear; }
 
 /* ---- wave countdown: a narrow vertical bar on the right edge that fills, then drops ---- */
 .hud .wavebar { position: absolute; right: 0; top: 16%; bottom: 16%; width: 5px;

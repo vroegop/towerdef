@@ -108,12 +108,6 @@
     { id: 'lifesteal',    tab: 'defense', icon: 'regen', label: 'Lifesteal', max: 500, // heal % of damage dealt, caps 25%
       value: (b) => Math.min(0.25, b * 0.0005),      fmt: (b) => (Math.min(0.25, b * 0.0005) * 100).toFixed(1) + '%',
       gold: curve(60, 1.6),    core: curve(15, 1.0018) },
-    { id: 'wallHealth',   tab: 'defense', icon: 'shield', label: 'Wall', max: 10000, // second HP pool that soaks first
-      value: (b) => b * 5,                           fmt: (b) => '+' + (b * 5),
-      gold: curve(40, 1.55),   core: curve(8, 1.0018) },
-    { id: 'wallRebuild',  tab: 'defense', icon: 'regen', label: 'Wall Rebuild', max: 80, // seconds before the wall rebuilds (min 2)
-      value: (b) => Math.max(2, 10 - b * 0.1),       fmt: (b) => Math.max(2, 10 - b * 0.1).toFixed(1) + 's',
-      gold: curve(50, 1.55),   core: curve(10, 1.0018) },
 
     // ---- ECONOMIC (Tier 2+) ----
     { id: 'coinsPerWave', tab: 'economic', icon: 'coin',  label: 'Coins / Wave', max: 10000, gated: true,
@@ -345,8 +339,6 @@
       defPct:       U.defPct.value(b('defPct')),        // multiplicative DR applied after armor
       thorns:       U.thorns.value(b('thorns')),        // fraction of a landed hit reflected to the attacker
       lifesteal:    U.lifesteal.value(b('lifesteal')),  // fraction of damage dealt healed back to the hero
-      wallMax:      U.wallHealth.value(b('wallHealth')),// second HP pool that soaks before health
-      wallRebuild:  U.wallRebuild.value(b('wallRebuild')), // seconds before a depleted wall rebuilds
       cashMult:     U.cashBonus.value(b('cashBonus')),  // global × on all gold income
       interest:     U.interest.value(b('interest')),    // fraction of banked cash paid at wave start
       maxInterest:  U.maxInterest.value(b('maxInterest')), // ceiling on the interest payout

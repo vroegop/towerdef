@@ -56,8 +56,7 @@
     root.innerHTML =
       '<div class="topbar" id="h-top">' +
       '  <div class="stat wave"><span class="lbl">Wave</span><b id="h-wave">1</b></div>' +
-      '  <div class="stat hp">' + icon('heart', 15, 'hp') + '<b id="h-hp">1</b><span class="hpbar"><i id="h-hpfill"></i></span>' +
-      '    <span class="wallbar hide" id="h-wallbar"><i id="h-wallfill"></i></span></div>' +
+      '  <div class="stat hp">' + icon('heart', 15, 'hp') + '<b id="h-hp">1</b><span class="hpbar"><i id="h-hpfill"></i></span></div>' +
       '  <div class="stat gold">' + icon('coin', 15, 'gold') + '<b id="h-gold">0</b></div>' +
       '  <button class="iconbtn" id="h-chart" title="Stats">' + icon('chart', 20) + '</button>' +
       '  <button class="iconbtn" id="h-settings-btn" title="Settings">' + icon('gear', 20) + '</button>' +
@@ -240,10 +239,6 @@
       const hpfill = $('#h-hpfill');
       hpfill.style.width = (hpf * 100) + '%';
       hpfill.style.background = hpf > 0.3 ? '#3ddc84' : '#ff5d6c';
-      // Wall bar (only shown when the Wall upgrade is active)
-      const wbar2 = $('#h-wallbar');
-      if (s.hero.shieldMax > 0) { wbar2.classList.remove('hide'); $('#h-wallfill').style.width = (Math.max(0, Math.min(1, s.hero.shield / s.hero.shieldMax)) * 100) + '%'; }
-      else wbar2.classList.add('hide');
       // wave countdown bar (hidden during the scripted first run, which has no wave clock)
       const wbar = $('#h-wavebar');
       if (s.firstRun) wbar.style.display = 'none';
