@@ -157,7 +157,7 @@
           const t = targets[i];
           const dmg = this._rollDamage(st, Math.hypot(t.x - h.x, t.y - h.y)); // each shot rolls its own crit
           if (s.atkMode === 'lightning') A.applyHit(s, t, dmg, st, this.rng);
-          else A.fireProjectile(s, h, t, st, dmg); // travelling bullet: damage lands on impact
+          else A.fireProjectile(s, h, t, st, dmg, this.rng); // travelling bullet: damage lands on impact
         }
         h.atkCd = 1 / Math.max(0.1, st.fireRate);
       }

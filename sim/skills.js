@@ -68,6 +68,15 @@
     { id: 'msTargets',    tab: 'attack',  icon: 'bow',   label: 'Multishot Targets', max: 8, // extra targets when it procs
       value: (b) => 1 + b,                           fmt: (b) => '' + (1 + b),
       gold: curve(250, 1.7),   core: curve(40, 1.02) },
+    { id: 'bounceChance', tab: 'attack',  icon: 'arrow', label: 'Bounce Shot', max: 1000, // chance a shot ricochets
+      value: (b) => Math.min(1, b * 0.001),         fmt: (b) => (Math.min(1, b * 0.001) * 100).toFixed(1) + '%',
+      gold: curve(100, 1.6),   core: curve(25, 1.0018) },
+    { id: 'bounceTargets',tab: 'attack',  icon: 'arrow', label: 'Bounce Targets', max: 10, // ricochets per shot
+      value: (b) => 1 + b,                           fmt: (b) => '' + (1 + b),
+      gold: curve(250, 1.7),   core: curve(40, 1.02) },
+    { id: 'bounceRange',  tab: 'attack',  icon: 'range', label: 'Bounce Range', max: 10000, // px search radius for next hop
+      value: (b) => 120 + b,                         fmt: (b) => Math.round((120 + b) / A.PX_PER_METER) + 'm',
+      gold: curve(60, 1.5),    core: curve(10, 1.0018) },
 
     // ---- DEFENSE ----
     { id: 'health',       tab: 'defense', icon: 'heart', label: 'Health', max: 10000,
@@ -279,6 +288,9 @@
       rendMult:     U.rendMult.value(b('rendMult')),    // bonus damage taken per Rend stack
       msChance:     U.msChance.value(b('msChance')),    // chance a shot fans to multiple targets
       msTargets:    U.msTargets.value(b('msTargets')),  // how many targets a multishot proc hits
+      bounceChance: U.bounceChance.value(b('bounceChance')), // chance a shot ricochets
+      bounceTargets:U.bounceTargets.value(b('bounceTargets')), // ricochet hops per shot
+      bounceRange:  U.bounceRange.value(b('bounceRange')),// px search radius for the next hop
 
       dodge:        U.dodge.value(b('dodge')),
       armor:        U.armor.value(b('armor')),          // flat damage soaked per hit

@@ -8,16 +8,31 @@
   // Spawn one bullet from the hero toward a target's CURRENT position (fire-and-forget,
   // so fast/strafing enemies can dodge). Damage is locked in now (crit + range bonus
   // already folded in by the sim and passed as `dmg`), not at impact.
-  A.fireProjectile = function (state, hero, target, stats, dmg) {
+  // `rng` (optional, the sim PRNG) decides Bounce Shot at fire time so replay is deterministic.
+  A.fireProjectile = function (state, hero, target, stats, dmg, rng) {
     const dx = target.x - hero.x, dy = target.y - hero.y, d = Math.hypot(dx, dy) || 1;
+    const bounces = (rng && stats.bounceChance && rng.next() < stats.bounceChance)
+      ? Math.max(0, Math.floor(stats.bounceTargets || 0)) : 0;
     state.projectiles.push({
       id: state.nextId++,
       x: hero.x, y: hero.y,
       vx: dx / d * A.BULLET_SPEED, vy: dy / d * A.BULLET_SPEED,
       r: A.BULLET_R, dmg: dmg == null ? stats.rangedDamage : dmg,
       traveled: 0, maxDist: stats.range * 1.2,
+      bounces, hitIds: bounces ? [] : null, bounceRange: stats.bounceRange || 0,
     });
   };
+
+  // nearest live enemy to (x,y) within `range` whose id isn't already in `hitIds` — the next hop.
+  function nearestNotHit(state, x, y, range, hitIds) {
+    let best = null, bd = range * range;
+    for (const e of state.enemies) {
+      if (e.hp <= 0 || hitIds.indexOf(e.id) >= 0) continue;
+      const dd = (e.x - x) ** 2 + (e.y - y) ** 2;
+      if (dd <= bd) { bd = dd; best = e; }
+    }
+    return best;
+  }
 
   // Apply one hit's damage to an enemy, folding in Rend (stack + scale), Lifesteal, and the
   // ranged-enemy knockback. Shared by bullets and the lightning beam so both behave identically.
@@ -36,6 +51,7 @@
   function hitEnemy(state, p) {
     for (const e of state.enemies) {
       if (e.hp <= 0) continue;
+      if (p.hitIds && p.hitIds.indexOf(e.id) >= 0) continue; // a bouncing shot never re-hits the same enemy
       const rr = e.r + p.r;
       if ((e.x - p.x) ** 2 + (e.y - p.y) ** 2 <= rr * rr) return e;
     }
@@ -53,7 +69,20 @@
       for (let i = 0; i < subs; i++) {
         p.x += p.vx * sdt; p.y += p.vy * sdt; p.traveled += A.BULLET_SPEED * sdt;
         const e = hitEnemy(state, p);
-        if (e) { A.applyHit(state, e, p.dmg, stats, rng); dead = true; break; }
+        if (e) {
+          A.applyHit(state, e, p.dmg, stats, rng);
+          // Bounce Shot: ricochet to the nearest un-hit enemy within range instead of despawning.
+          if (p.bounces > 0) {
+            p.hitIds.push(e.id);
+            const nxt = nearestNotHit(state, e.x, e.y, p.bounceRange, p.hitIds);
+            if (nxt) {
+              const dx = nxt.x - p.x, dy = nxt.y - p.y, dd = Math.hypot(dx, dy) || 1;
+              p.vx = dx / dd * A.BULLET_SPEED; p.vy = dy / dd * A.BULLET_SPEED;
+              p.bounces--; p.traveled = 0; continue; // keep flying toward the next target
+            }
+          }
+          dead = true; break;
+        }
         if (p.traveled >= p.maxDist) { dead = true; break; }
       }
       if (!dead) keep.push(p);
