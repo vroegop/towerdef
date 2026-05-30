@@ -62,6 +62,9 @@
     { id: 'dodge',        tab: 'defense', icon: 'dodge', label: 'Dodge', max: 1100, // 1100·0.09% = 99%
       value: (b) => Math.min(0.99, b * 0.0009),      fmt: (b) => (Math.min(0.99, b * 0.0009) * 100).toFixed(1) + '%',
       gold: curve(40, 1.6),    core: curve(20, 1.008) },
+    { id: 'armor',        tab: 'defense', icon: 'shield', label: 'Armor', max: 10000, // flat damage soak per hit
+      value: (b) => b,                               fmt: (b) => '-' + b,
+      gold: curve(30, 1.55),   core: curve(6, 1.0018) },
 
     // ---- ECONOMIC (Tier 2+) ----
     { id: 'coinsPerWave', tab: 'economic', icon: 'coin',  label: 'Coins / Wave', max: 10000, gated: true,
@@ -70,6 +73,9 @@
     { id: 'coinsPerKill', tab: 'economic', icon: 'coin',  label: 'Coins / Kill', max: 10000, gated: true,
       value: (b) => b * 0.1,                         fmt: (b) => '+' + (b * 0.1).toFixed(1) + '×',
       gold: curve(50, 1.6),    core: curve(12, 1.0018) },
+    { id: 'cashBonus',    tab: 'economic', icon: 'coin',  label: 'Cash Bonus', max: 10000, gated: true,
+      value: (b) => 1 + b * 0.02,                    fmt: (b) => '×' + (1 + b * 0.02).toFixed(2), // global × on all gold income
+      gold: curve(40, 1.55),   core: curve(10, 1.0018) },
     { id: 'coresPerWave', tab: 'economic', icon: 'cores', label: 'Cores / Wave', max: 10000, gated: true,
       value: (b) => b,                               fmt: (b) => '+' + b,
       gold: curve(50, 1.6),    core: curve(10, 1.0018) },
@@ -102,16 +108,59 @@
   // A card contributes one or more {stat, kind:'flat'|'mult'} effects; its magnitude is value(stars).
   // Stacking is resolved at calc time via the kind flag: effective = (base + flats) * prod(1 + mults).
   A.MAX_STARS = 15; // 5 white, then 5 gold, then 5 chromatic (each star raises value)
+  // A card contributes flat or mult bonuses to one sim stat (see STAT2SIM). `value(stars)` is the
+  // magnitude; `fmt(v)` is how that magnitude is shown on the card. Flat geometric cards reuse pow2.
+  const pow2 = (stars) => (stars > 0 ? Math.pow(2, stars - 1) : 0); // 1,2,4,8,16...
+  const pct = (v) => '+' + Math.round(v * 100) + '%';
   A.CARDS = {
     damage: {
       id: 'damage', name: 'Bullseye', art: 'bullseye', tint: '#37d7ff',
       effects: [{ stat: 'rangedDamage', kind: 'flat' }],
-      value: (stars) => (stars > 0 ? Math.pow(2, stars - 1) : 0), // 1,2,4,8,16...
-      desc: (v) => '+' + v + ' ranged damage',
+      value: pow2, fmt: (v) => '+' + v, desc: (v) => '+' + v + ' ranged damage',
+    },
+    power: {
+      id: 'power', name: 'Onslaught', art: 'bow', tint: '#4aa8ff',
+      effects: [{ stat: 'rangedDamage', kind: 'mult' }],
+      value: (s) => s * 0.1, fmt: pct, desc: (v) => pct(v) + ' damage',
+    },
+    haste: {
+      id: 'haste', name: 'Overclock', art: 'rate', tint: '#ffae4a',
+      effects: [{ stat: 'attackSpeed', kind: 'mult' }],
+      value: (s) => s * 0.1, fmt: pct, desc: (v) => pct(v) + ' attack speed',
+    },
+    crit: {
+      id: 'crit', name: 'Deadeye', art: 'crit', tint: '#ffd24a',
+      effects: [{ stat: 'critChance', kind: 'flat' }],
+      value: (s) => s * 0.01, fmt: (v) => '+' + (v * 100).toFixed(0) + '%', desc: (v) => '+' + (v * 100).toFixed(0) + '% crit chance',
+    },
+    execute: {
+      id: 'execute', name: 'Executioner', art: 'burst', tint: '#e64cff',
+      effects: [{ stat: 'critDamage', kind: 'mult' }],
+      value: (s) => s * 0.15, fmt: pct, desc: (v) => pct(v) + ' crit damage',
+    },
+    vitality: {
+      id: 'vitality', name: 'Vitality', art: 'heart', tint: '#ff5d6c',
+      effects: [{ stat: 'health', kind: 'flat' }],
+      value: pow2, fmt: (v) => '+' + v, desc: (v) => '+' + v + ' health',
+    },
+    regrowth: {
+      id: 'regrowth', name: 'Regrowth', art: 'regen', tint: '#3ddc84',
+      effects: [{ stat: 'regen', kind: 'flat' }],
+      value: (s) => s * 0.5, fmt: (v) => '+' + v.toFixed(1) + '/s', desc: (v) => '+' + v.toFixed(1) + ' regen/s',
+    },
+    phantom: {
+      id: 'phantom', name: 'Phantom', art: 'dodge', tint: '#37d7ff',
+      effects: [{ stat: 'dodge', kind: 'flat' }],
+      value: (s) => s * 0.005, fmt: (v) => '+' + (v * 100).toFixed(1) + '%', desc: (v) => '+' + (v * 100).toFixed(1) + '% dodge',
+    },
+    fortune: {
+      id: 'fortune', name: 'Fortune', art: 'coin', tint: '#ffd24a',
+      effects: [{ stat: 'coins', kind: 'mult' }],
+      value: (s) => s * 0.1, fmt: pct, desc: (v) => pct(v) + ' coins',
     },
   };
   A.CARD_SLOTS = 20;
-  A.CARD_ORDER = ['damage'];
+  A.CARD_ORDER = ['damage', 'power', 'haste', 'crit', 'execute', 'vitality', 'regrowth', 'phantom', 'fortune'];
   A.cardValue = (id, stars) => (A.CARDS[id] ? A.CARDS[id].value(stars) : 0);
   A.cardsUnlocked = (meta) => (meta.bestWave || 0) >= 30; // unlocks at wave 30 (tier 1)
   A.grantInitialCard = function (meta) {
@@ -158,7 +207,11 @@
 
   // Turn levels into the numbers the sim runs on, then apply card bonuses.
   // Stacking is resolved at calc time per-modifier: effective = (base + Σflat) × Π(1 + mult).
-  const STAT2SIM = { rangedDamage: 'rangedDamage', attackSpeed: 'fireRate', health: 'maxHp', regen: 'regen' };
+  // card effect stat → the sim stat key it modifies (extend this to let cards target more stats)
+  const STAT2SIM = {
+    rangedDamage: 'rangedDamage', attackSpeed: 'fireRate', health: 'maxHp', regen: 'regen',
+    critChance: 'critChance', critDamage: 'critMult', dodge: 'dodge', coins: 'goldFind',
+  };
   A.computeStats = function (state) {
     const b = (id) => boughtOf(state, id);
     const U = A.UP_BY_ID;
@@ -174,6 +227,8 @@
       critChance:   U.critChance.value(b('critChance')),
       critMult:     U.critDamage.value(b('critDamage')),
       dodge:        U.dodge.value(b('dodge')),
+      armor:        U.armor.value(b('armor')),          // flat damage soaked per hit
+      cashMult:     U.cashBonus.value(b('cashBonus')),  // global × on all gold income
       coinsPerWave: U.coinsPerWave.value(b('coinsPerWave')),
       coresPerWave: U.coresPerWave.value(b('coresPerWave')),
       coresPerKill: U.coresPerKill.value(b('coresPerKill')),
@@ -196,6 +251,8 @@
         out[k] = (out[k] + (flat[stat] || 0)) * (mult[stat] || 1);
       }
     }
+    // safety clamp: dodge must stay below 1 so the hero can never become un-hittable
+    if (out.dodge > 0.99) out.dodge = 0.99;
     return out;
   };
 

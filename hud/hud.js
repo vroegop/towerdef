@@ -115,8 +115,10 @@
     root.querySelector('#h-cardmodal').addEventListener('click', () => root.querySelector('#h-cardmodal').classList.add('hide'));
 
     const STARP = 'M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6z';
-    const STAT_ICON = { rangedDamage: 'bow', attackSpeed: 'rate', health: 'heart', regen: 'regen' };
-    const STAT_LABEL = { rangedDamage: 'Ranged', attackSpeed: 'Speed', health: 'Health', regen: 'Regen' };
+    const STAT_ICON = { rangedDamage: 'bow', attackSpeed: 'rate', health: 'heart', regen: 'regen',
+      critChance: 'crit', critDamage: 'burst', dodge: 'dodge', coins: 'coin' };
+    const STAT_LABEL = { rangedDamage: 'Ranged', attackSpeed: 'Speed', health: 'Health', regen: 'Regen',
+      critChance: 'Crit', critDamage: 'Crit Dmg', dodge: 'Dodge', coins: 'Coins' };
     const upIcon = (id) => (A.UP_BY_ID[id] && A.UP_BY_ID[id].icon) || 'burst';
     // currencies shown on the Hero screen — add a row here (+ a meta field) for future currencies
     const CURRENCIES = [{ key: 'cores', icon: 'cores', cls: 'core' }, { key: 'tokens', icon: 'token', cls: 'token' }];
@@ -145,7 +147,7 @@
       for (const e of def.effects) {
         const ic = STAT_ICON[e.stat] || 'burst';
         stats += '<span class="cstat">' + icon(ic, 15) +
-          '<span class="cl">' + (STAT_LABEL[e.stat] || e.stat) + '</span><b>+' + v + '</b></span>';
+          '<span class="cl">' + (STAT_LABEL[e.stat] || e.stat) + '</span><b>' + (def.fmt ? def.fmt(v) : '+' + v) + '</b></span>';
       }
       return '<div class="card tier-' + tier + '" data-card="' + card.id + '">' +
         '<div class="card-img" style="color:' + def.tint + '">' + icon(def.art, 52) + '</div>' +
@@ -175,7 +177,7 @@
         const tier = s >= 11 ? 'chroma' : s >= 6 ? 'gold' : 'white';
         rows += '<div class="csr' + (s <= stars ? ' have' : '') + '">' + starSvg(tier) +
           '<span class="csv">' + icon(STAT_ICON[e0.stat] || 'burst', 14) +
-          (STAT_LABEL[e0.stat] || e0.stat) + ' <b>+' + def.value(s) + '</b></span></div>';
+          (STAT_LABEL[e0.stat] || e0.stat) + ' <b>' + (def.fmt ? def.fmt(def.value(s)) : '+' + def.value(s)) + '</b></span></div>';
       }
       $('#h-cardmodal-inner').innerHTML = '<div class="cmhead" style="color:' + def.tint + '">' + icon(def.art, 32) + '</div>' + rows;
       $('#h-cardmodal').classList.remove('hide');
