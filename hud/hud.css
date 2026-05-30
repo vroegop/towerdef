@@ -193,6 +193,33 @@
 .hud .perm .pcost { color: #ff2e4e; font-size: 11px; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
 
 
+/* ---- LAB tab (research rows + progress bars) ---- */
+.hud .cores-chip .slotchip { margin-left: 10px; color: #8b93a7; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
+.hud .lablist { display: flex; flex-direction: column; gap: 7px; }
+.hud .lab { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px;
+  background: #151823; border: 1px solid #262c3d; border-radius: 6px; padding: 9px 11px; }
+.hud .lab.active { border-color: #4aa8ff; box-shadow: inset 0 0 16px rgba(74,168,255,.10); }
+.hud .lab.locked { opacity: .55; }
+.hud .lab .ptop { display: flex; align-items: center; gap: 7px; }
+.hud .lab .pname { font-size: 13px; font-weight: 700; color: #d8deea; }
+.hud .lab .lablv { font-size: 11px; color: #8b93a7; font-variant-numeric: tabular-nums; }
+.hud .lab .pcur { font-size: 13px; font-weight: 800; color: #3ddc84; font-variant-numeric: tabular-nums; }
+.hud .lab .pcost { color: #8b93a7; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.hud .lab .reslab { background: #11151f; border: 1px solid #2d3344; border-radius: 6px; color: #ffd24a;
+  font: 600 12px system-ui; padding: 5px 9px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.hud .lab .reslab:hover:not(.cant) { border-color: #ffd24a; }
+.hud .lab .reslab.cant { opacity: .4; cursor: default; }
+.hud .lab .labprog { display: flex; align-items: center; gap: 8px; }
+.hud .lab .mbar { width: 90px; height: 8px; border-radius: 5px; background: #11151f; border: 1px solid #262c3d; overflow: hidden; }
+.hud .lab .mbar i { display: block; height: 100%; background: linear-gradient(90deg, #37d7ff, #4aa8ff); transition: width .25s linear; }
+.hud .lab .cancellab { background: transparent; border: 1px solid #2d3344; border-radius: 6px; color: #ff5d6c;
+  font: 600 11px system-ui; padding: 4px 7px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+.hud .lab .cancellab:hover { border-color: #ff5d6c; }
+.hud .slotbtn { display: block; width: 100%; margin-top: 12px; background: #11151f; border: 1px solid #2d3344; border-radius: 6px;
+  color: #d8deea; font: 600 13px system-ui; padding: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+.hud .slotbtn:hover:not(.cant) { border-color: #4aa8ff; }
+.hud .slotbtn.cant { opacity: .45; cursor: default; }
+
 .hud .locked-tab { text-align: center; color: #4a5168; padding-top: 70px; }
 .hud .lockbig { font-size: 46px; }
 .hud .lockmsg { margin-top: 8px; font-size: 14px; }

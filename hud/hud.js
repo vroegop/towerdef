@@ -32,6 +32,7 @@
       regen: '<path d="M10 19s-4.8-3.2-4.8-6.7A2.6 2.6 0 0 1 10 10 2.6 2.6 0 0 1 14.8 12.3C14.8 15.8 10 19 10 19z"/><path d="M14 8.4A2.6 2.6 0 0 1 19 10.7c0 2.4-1.9 4.3-3.2 5.5"/>',
       powers: '<path d="M13 2L4 14h6l-1 8 9-12h-6z"/>',
       prestige: '<path d="M5 18h14"/><path d="M5 18l-1-9 4 3 4-7 4 7 4-3-1 9z"/>',
+      flask: '<path d="M9 3h6"/><path d="M10 3v6L5 18a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3"/><path d="M7.5 14h9"/>',
       tier: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
       sword: '<path d="M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2"/>',
       shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
@@ -346,11 +347,11 @@
     const spot = $('#h-spot'), thought = $('#h-thought');
     const MENU_TABS = [
       { id: 'hero', icon: 'hero' }, { id: 'upgrades', icon: 'upgrades' },
-      { id: 'cards', icon: 'cards', gated: true, unlock: 'Reach wave 30 to unlock Cards' }, // unlocks at wave 30
-      { id: 'powers', icon: 'powers', locked: true, unlock: 'Powers unlock in Tier 2' },
+      { id: 'cards', icon: 'cards', gated: true, unlockFn: (m) => A.cardsUnlocked(m), unlock: 'Reach wave 30 to unlock Cards' }, // unlocks at wave 30
+      { id: 'labs', icon: 'flask', gated: true, unlockFn: (m) => A.labsTabUnlocked(m), unlock: 'Reach wave 30 to unlock Labs' }, // research: caps + scaling
       { id: 'prestige', icon: 'prestige', locked: true, unlock: 'Prestige unlocks in Tier 3' },
     ];
-    let menuTab = 'hero', menuUpTab = 'attack', lastMeta = null, lastOpts = {}; // menuUpTab = active upgrade subtab
+    let menuTab = 'hero', menuUpTab = 'attack', menuLabCat = 'attack', lastMeta = null, lastOpts = {}; // menuUpTab/menuLabCat = active subtab
 
     MENU_TABS.forEach((t) => {
       const b = document.createElement('button');
@@ -360,9 +361,9 @@
         b.classList.add('locked');
         b.addEventListener('click', () => showUnlockTip(b, t.unlock));
       }
-      else if (t.gated) {                                                                      // cards: unlock-gated
+      else if (t.gated) {                                                                      // unlock-gated (cards, labs)
         b.innerHTML = icon(t.icon, 24);
-        b.addEventListener('click', () => { if (A.cardsUnlocked(lastMeta)) { menuTab = t.id; modal.classList.add('hide'); renderMenu(); } else showUnlockTip(b, t.unlock); });
+        b.addEventListener('click', () => { if (t.unlockFn(lastMeta)) { menuTab = t.id; modal.classList.add('hide'); renderMenu(); } else showUnlockTip(b, t.unlock); });
       } else {
         b.innerHTML = icon(t.icon, 24);
         b.addEventListener('click', () => { menuTab = t.id; modal.classList.add('hide'); renderMenu(); });
@@ -434,6 +435,52 @@
       return html;
     }
 
+    // compact wall-clock duration: 45s / 12m / 3.2h / 1.4d
+    function fmtTime(sec) {
+      sec = Math.ceil(sec);
+      if (sec < 60) return sec + 's';
+      if (sec < 3600) return Math.round(sec / 60) + 'm';
+      if (sec < 86400) return (sec / 3600).toFixed(1) + 'h';
+      return (sec / 86400).toFixed(1) + 'd';
+    }
+    // what a lab currently grants at level `lv` (UI flavour over the neutral sim numbers)
+    function labEffectDesc(L, lv) {
+      if (L.kind === 'cap') return lv > 0 ? '+' + abbr(L.per * lv) + ' cap' : '+' + abbr(L.per) + ' cap / lvl';
+      if (L.kind === 'scale') return '×' + (1 + L.per * lv).toFixed(2);
+      if (L.target === 'gameSpeed') return '×' + (1 + L.per * lv).toFixed(1) + ' speed';
+      if (L.target === 'labTime') return '-' + Math.round(Math.min(0.5, L.per * lv) * 100) + '% time';
+      return '';
+    }
+    const LAB_CAT_ICON = { attack: 'sword', defense: 'shield', utility: 'coins' };
+    function labRowsHtml(meta) {
+      const now = Date.now();
+      let h = '';
+      for (const L of A.labsIn(menuLabCat)) {
+        const lv = A.labLevel(meta, L.id), maxed = A.labAtMax(meta, L.id);
+        const unlocked = A.labUnlocked(meta, L.id), researching = !!A.researchOf(meta, L.id);
+        let right;
+        if (researching) {
+          const prog = A.researchProgress(meta, L.id, now), rem = A.researchRemaining(meta, L.id, now);
+          right = '<span class="labprog"><span class="mbar"><i style="width:' + (prog * 100).toFixed(1) + '%"></i></span>' +
+            '<button class="cancellab" data-cancellab="' + L.id + '">' + fmtTime(rem) + ' ' + icon('close', 11) + '</button></span>';
+        } else if (!unlocked) {
+          right = '<span class="pcost">' + icon('lock', 12) + ' wave ' + L.gate.wave + '</span>';
+        } else if (maxed) {
+          right = '<span class="pcost">MAX</span>';
+        } else {
+          const cost = A.labCoinCost(meta, L.id), t = A.labTimeSec(meta, L.id);
+          const can = (meta.cores || 0) >= cost && A.freeSlots(meta) > 0;
+          right = '<button class="reslab' + (can ? '' : ' cant') + '" data-startlab="' + L.id + '">' +
+            cost + ' ' + cores(12) + ' · ' + fmtTime(t) + '</button>';
+        }
+        h += '<div class="lab' + (researching ? ' active' : '') + (unlocked ? '' : ' locked') + '">' +
+          '<span class="ptop">' + icon(LAB_CAT_ICON[L.cat], 18) + '<span class="pname">' + L.label + '</span>' +
+          '<span class="lablv">' + lv + '/' + L.max + '</span></span>' +
+          '<span class="pcur">' + labEffectDesc(L, lv) + '</span>' + right + '</div>';
+      }
+      return h;
+    }
+
     function renderMilestones() {
       const meta = lastMeta, cl = meta.claimedMilestones || {}, best = meta.bestWave || 0;
       let html = '<button class="close" id="h-ms-close">' + icon('back', 16) + ' Back</button><h2>Milestones</h2>' +
@@ -465,6 +512,11 @@
           const u = A.cardsUnlocked(meta); b.classList.toggle('locked', !u); // keep the card icon even while locked (just dimmed)
           b.innerHTML = icon('cards', 24) +
             (u && totalStars > 0 ? '<span class="tabbadge br">' + totalStars + icon('star', 11, 'gold') + '</span>' : '');
+        }
+        if (b.dataset.mtab === 'labs') {
+          const u = A.labsTabUnlocked(meta); b.classList.toggle('locked', !u);
+          const active = (meta.research || []).length;
+          b.innerHTML = icon('flask', 24) + (u && active ? '<span class="tabbadge br">' + active + '</span>' : '');
         }
       });
       menuContent.className = 'menu-content tab-' + menuTab + (tutoring && menuTab === 'hero' ? ' tut-block' : '');
@@ -515,6 +567,17 @@
             '</div>';
           html += '<div class="cardgrid">' + cardGridHtml(meta) + '</div>';
         }
+      } else if (menuTab === 'labs') {
+        const used = (meta.research || []).length, slots = meta.labSlots || 1;
+        html += '<div class="cores-chip">' + cores(15) + ' <b>' + (meta.cores || 0) + '</b>' +
+          '<span class="slotchip">' + icon('flask', 13) + ' ' + used + '/' + slots + '</span></div>';
+        const LCAT_ICON = { attack: 'sword', defense: 'shield', utility: 'coins' };
+        html += '<div class="subtabs" id="h-labtabs">';
+        for (const cat of A.LAB_CATS)
+          html += '<button class="subtab' + (cat === menuLabCat ? ' on' : '') + '" data-labcat="' + cat + '" title="' + cat + '">' + icon(LCAT_ICON[cat], 22) + '</button>';
+        html += '</div><div class="lablist">' + labRowsHtml(meta) + '</div>';
+        const sc = A.labSlotCost(meta), canSlot = slots < A.MAX_SLOTS;
+        if (canSlot) html += '<button class="slotbtn' + ((meta.tokens || 0) < sc ? ' cant' : '') + '" id="h-buyslot">+1 Slot · ' + sc + ' ' + icon('token', 13, 'token') + '</button>';
       } else {
         html += '<div class="locked-tab">' + icon('lock', 46) + '<div class="lockmsg">Unlocks later</div></div>';
       }
@@ -548,6 +611,14 @@
         const bb = $('#h-buycard'); if (bb) bb.addEventListener('click', () => { if (handlers.onBuyCard && handlers.onBuyCard()) renderMenu(); else shake(bb); });
         const ub = $('#h-upcard'); if (ub) ub.addEventListener('click', () => { if (handlers.onUpgradeCard && handlers.onUpgradeCard()) renderMenu(); else shake(ub); });
         menuContent.querySelectorAll('.card[data-card]').forEach((el) => el.addEventListener('click', () => openCardModal(el.dataset.card)));
+      } else if (menuTab === 'labs') {
+        menuContent.querySelectorAll('[data-labcat]').forEach((b) =>
+          b.addEventListener('click', () => { menuLabCat = b.dataset.labcat; renderMenu(); }));
+        menuContent.querySelectorAll('[data-startlab]').forEach((b) =>
+          b.addEventListener('click', () => { if (handlers.onStartResearch && handlers.onStartResearch(b.dataset.startlab)) renderMenu(); else shake(menuContent.querySelector('.cores-chip')); }));
+        menuContent.querySelectorAll('[data-cancellab]').forEach((b) =>
+          b.addEventListener('click', () => { if (handlers.onCancelResearch && handlers.onCancelResearch(b.dataset.cancellab)) renderMenu(); }));
+        const sb = $('#h-buyslot'); if (sb) sb.addEventListener('click', () => { if (handlers.onBuyLabSlot && handlers.onBuyLabSlot()) renderMenu(); else shake(sb); });
       }
       // tutorial spotlight: hero step points at the upgrades tab, upgrades step points at the upgrade button
       let spotTarget = null, spotText = '';
@@ -599,6 +670,14 @@
       b.textContent = kind.charAt(0).toUpperCase() + kind.slice(1) + ': ' + (on ? 'on' : 'off');
       b.classList.toggle('on', !!on);
     }
+
+    // tick the research progress bars (and promptly complete finished labs) while the Lab tab is open
+    setInterval(() => {
+      if (!menuEl.classList.contains('show') || menuTab !== 'labs' || !lastMeta) return;
+      const had = (lastMeta.research || []).length;
+      if (handlers.onReconcileLabs) handlers.onReconcileLabs();
+      if (had) renderMenu();
+    }, 1000);
 
     return { update, showMenu, refreshMenu, hideMenu, showOverview, hideOverview, showHint, hideHint, setMeta, setDevToggle, root };
   };

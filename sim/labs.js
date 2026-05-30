@@ -72,6 +72,15 @@
     const L = A.LAB_BY_ID[id]; if (!L) return false;
     return (meta && meta.bestWave || 0) >= ((L.gate && L.gate.wave) || 0);
   };
+  // the Lab menu tab itself opens once the first lab's gate is reachable (keeps the tutorial clean).
+  A.labsTabUnlocked = function (meta) { return (meta && meta.bestWave || 0) >= 30; };
+  // wall-clock seconds remaining for an in-progress lab (for the progress bar).
+  A.researchRemaining = function (meta, id, nowMs) { const r = A.researchOf(meta, id); return r ? Math.max(0, (r.endsAt - nowMs) / 1000) : 0; };
+  A.researchProgress = function (meta, id, nowMs) {
+    const r = A.researchOf(meta, id); if (!r) return 0;
+    const total = A.LAB_BY_ID[id].time.at(lvl(meta, id)) * (1 - A.labSpeedReduction(meta)) * 1000;
+    return total > 0 ? Math.max(0, Math.min(1, 1 - (r.endsAt - nowMs) / total)) : 1;
+  };
   A.labAtMax = function (meta, id) { const L = A.LAB_BY_ID[id]; return lvl(meta, id) >= (L ? L.max : 0); };
   A.labCoinCost = function (meta, id) { const L = A.LAB_BY_ID[id]; return L ? L.coin.at(lvl(meta, id)) : 0; };
   // wall-clock seconds for the next level, after the lab-speed reduction.
@@ -116,6 +125,16 @@
     }
     meta.research = keep;
     return done;
+  };
+
+  // ---- concurrent research slots (a premium-currency / token sink; 1 → MAX_SLOTS) ----
+  A.MAX_SLOTS = 5;
+  A.labSlotCost = function (meta) { return 25 * Math.pow(2, Math.max(0, (meta.labSlots || 1) - 1)); }; // 25,50,100,200
+  A.buyLabSlot = function (meta) {
+    if ((meta.labSlots || 1) >= A.MAX_SLOTS) return false;
+    const cost = A.labSlotCost(meta);
+    if ((meta.tokens || 0) < cost) return false;
+    meta.tokens -= cost; meta.labSlots = (meta.labSlots || 1) + 1; return true;
   };
 
   // ---- meta defaults / migration (idempotent; additive only, never destructive) ----
