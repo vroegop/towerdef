@@ -44,6 +44,7 @@
       dodge: '<path d="M3 8h11a3 3 0 1 1-3 3M3 12h15a3 3 0 1 0-3-3M3 16h9"/>',
       fwd: '<path d="M9 5l7 7-7 7"/>',
       gear: '<circle cx="12" cy="12" r="3.2"/><path d="M19.4 13a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.7 8.6a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+      gallery: '<rect x="3" y="3" width="7.5" height="7.5" rx="1.2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.2"/>',
     };
     function icon(name, size, cls) {
       size = size || 16;
@@ -58,6 +59,7 @@
       '  <div class="stat wave"><span class="lbl">Wave</span><b id="h-wave">1</b></div>' +
       '  <div class="stat hp">' + icon('heart', 15, 'hp') + '<b id="h-hp">1</b><span class="hpbar"><i id="h-hpfill"></i></span></div>' +
       '  <div class="stat gold">' + icon('coin', 15, 'gold') + '<b id="h-gold">0</b></div>' +
+      '  <a class="iconbtn protolink" id="h-proto" href="huds/_prototype-hud-gallery.html" target="_blank" rel="noopener" title="HUD design prototypes">' + icon('gallery', 20) + '</a>' +
       '  <button class="iconbtn" id="h-chart" title="Stats">' + icon('chart', 20) + '</button>' +
       '  <button class="iconbtn" id="h-settings-btn" title="Settings">' + icon('gear', 20) + '</button>' +
       '</div>' +
@@ -66,6 +68,7 @@
       '<div class="ghint hide" id="h-ghint"></div>' +
       '<div class="tabbar" id="h-tabbar"><div id="h-tabcontent"></div><div class="tabs" id="h-tabs"></div></div>' +
       '<div class="menu" id="h-menu">' +
+      '  <a class="menuproto" id="h-menuproto" href="huds/_prototype-hud-gallery.html" target="_blank" rel="noopener" title="HUD design prototypes">' + icon('gallery', 20) + '<span>Designs</span></a>' +
       '  <button class="menugear" id="h-menugear" title="Settings">' + icon('gear', 22) + '</button>' +
       '  <div class="menu-content" id="h-menu-content"></div>' +
       '  <div class="menutabs" id="h-menu-tabs"></div>' +

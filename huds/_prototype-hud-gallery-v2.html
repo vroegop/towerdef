@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HUD Style Gallery — SET B (redesign) — PROTOTYPE</title>
+<!--
+  PROTOTYPE — throwaway. SET B = full redesign of the SAME 6 themes as Set A.
+  Sister doc: _prototype-hud-gallery.html = SET A (baseline).
+  Same themes, deliberately DIFFERENT: navigation paradigm, naming, palette, layout.
+  Nav per theme (none are Set A's top tabs):
+    D&D=right ribbon bookmarks · Arcade=handheld D-pad dock · Holo=radial wheel
+    Terminal=bottom tmux status bar · Steam=lever bank · Plants=left garden trellis
+  Shared mock state (G). Buttons are dummy (toast). Cards stay literally "Cards".
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&family=EB+Garamond:ital@0;1&family=Press+Start+2P&family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&family=Cinzel:wght@600&family=IM+Fell+English&family=Inter:wght@300;400;600;800&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:#0b0c10;color:#e6e6e6;font-family:Inter,system-ui,sans-serif;overflow:hidden;
+  --bg:#0b0c10;--panel:#16181f;--ink:#e6e6e6;--dim:#8a8a96;--accent:#5ad;--accent2:#f9a826;--line:#2a2e3a;--font:Inter,sans-serif}
+#stage{position:absolute;inset:0;overflow:auto}
+.hud{min-height:100%;font-family:var(--font);color:var(--ink)}
+.muted{opacity:.62}
+.bar{height:10px;background:var(--line);border-radius:6px;overflow:hidden}.bar>span{display:block;height:100%;background:var(--accent)}
+.btn{font-family:var(--font);background:var(--accent);color:#06121a;border:0;border-radius:8px;padding:7px 13px;cursor:pointer;font-weight:800;font-size:12px;white-space:nowrap}
+.btn.ghost{background:transparent;border:1px solid var(--accent);color:var(--accent)}
+.btn:active{transform:translateY(1px)}.btn.flash{animation:flash .4s}@keyframes flash{0%{filter:brightness(1.9)}100%{filter:none}}
+.btn.big{font-size:15px;padding:12px 22px}
+
+/* content wrappers (padding adjusts to nav paradigm) */
+.bwrap{min-height:100%}
+.bsheet{max-width:760px;margin:0 auto;padding:26px}
+.btag{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:16px}
+body.nav-railR .bwrap{padding-right:124px}
+body.nav-railL .bwrap{padding-left:124px}
+body.nav-dock .bwrap,body.nav-status .bwrap,body.nav-levers .bwrap{padding-bottom:104px}
+
+/* ===== NAV PARADIGMS ===== */
+.bnav{position:fixed;z-index:60}
+.bnav-btn{font-family:var(--font);cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:8px 12px;font-size:12px}
+.bnav-btn:hover{border-color:var(--accent)}
+.bnav-btn.active{background:var(--accent);color:#06121a;font-weight:800;border-color:var(--accent)}
+.rail{top:0;bottom:0;width:112px;display:flex;flex-direction:column;gap:10px;justify-content:center;padding:14px 12px;background:var(--panel)}
+.railR{right:0;border-left:2px solid var(--line)}.railL{left:0;border-right:2px solid var(--line)}
+.dock{left:50%;bottom:16px;transform:translateX(-50%);display:flex;gap:6px;background:var(--panel);padding:8px;border-radius:16px;border:2px solid var(--line);align-items:center}
+.status{left:0;right:0;bottom:0;display:flex;background:var(--panel);border-top:1px solid var(--accent)}
+.status .bnav-btn{flex:1;border-radius:0;border:0;border-right:1px solid var(--line)}
+.levers{left:0;right:0;bottom:0;display:flex;justify-content:center;gap:18px;padding:12px 10px 16px;background:linear-gradient(transparent,var(--panel))}
+.lever{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;background:none;border:0;color:var(--dim);font-family:var(--font);font-size:11px}
+.lever .lv-stick{width:8px;height:34px;background:linear-gradient(var(--accent2),#0000);border-radius:6px;transform-origin:bottom;transition:transform .15s}
+.lever.active{color:var(--ink)}.lever.active .lv-stick{transform:rotate(-18deg);background:linear-gradient(var(--accent),#0000)}
+.wheel{left:20px;bottom:20px;width:170px;height:170px}
+.wheel .bnav-btn{position:absolute;transform:translate(-50%,-50%);font-size:10px;padding:5px 8px;border-radius:999px}
+.wheel-hub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:24px;color:var(--accent);text-shadow:0 0 12px var(--accent)}
+
+/* ===== shared redesigned sections ===== */
+.bgroup{margin-bottom:18px}
+.bgh{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);font-weight:800;margin-bottom:8px}
+.specrow{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.specrow .spec-k{min-width:120px;font-weight:700}
+.specrow .spec-bar{flex:1;height:8px;background:var(--line);border-radius:5px;overflow:hidden;min-width:60px}
+.specrow .spec-bar>span{display:block;height:100%;background:var(--accent)}
+.specrow .spec-v{color:var(--accent2);font-weight:700;min-width:54px;text-align:right}
+.specrow .spec-l{color:var(--dim);font-size:12px;min-width:46px;text-align:right}
+.crow{display:flex;align-items:center;gap:14px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;background:var(--panel)}
+.crow.tier-gold{border-color:#e8b54a}.crow.tier-chroma{border-color:#b46bff}
+.crow .crow-art{font-size:28px}.crow .crow-mid{flex:1}.crow .crow-name{font-weight:800}.crow .crow-fx{color:var(--dim);font-size:12px}
+.crow .crow-stars{color:var(--accent2)}
+.lab-intro2{color:var(--dim);font-size:13px;margin-bottom:14px}
+.ladder{display:flex;flex-direction:column;gap:10px}
+.lrow{display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.lrow .lnum{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--dim)}
+.lrow .lbody{flex:1}.lrow .lbody b{font-weight:800}
+.lrow .lbar{height:7px;background:var(--line);border-radius:5px;overflow:hidden;margin-top:6px;max-width:300px}.lrow .lbar>span{display:block;height:100%;background:var(--accent)}
+.lrow .lmeta{color:var(--accent2);font-size:13px}
+.lrow.open{border-style:dashed;border-color:var(--accent);cursor:pointer}
+.lrow.lock{opacity:.55}
+.ls-h2{font-weight:800;margin:14px 0 12px}
+.qrow{display:flex;gap:14px;padding:12px 0;border-bottom:1px dashed var(--line);line-height:1.5}.qrow .n{color:var(--accent);font-weight:800}
+.qintro2{color:var(--dim);margin-bottom:16px;line-height:1.5}
+
+/* ===== in-game shared ===== */
+.barena{position:relative;min-height:78vh}
+.ingame-bar{position:sticky;bottom:0;display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:12px;font-weight:700;background:linear-gradient(transparent,rgba(0,0,0,.55) 40%);z-index:4}
+.ingame-bar .bar{flex:1;max-width:220px}.ingame-bar .iw{color:var(--accent)}.ingame-bar .ig{color:var(--accent2)}
+.ig-flag{position:absolute;left:14px;top:12px;z-index:5;font-size:11px;letter-spacing:2px;text-transform:uppercase;border:1px solid var(--accent);color:var(--accent);padding:3px 9px;border-radius:999px;background:rgba(0,0,0,.35);animation:lp 1.6s ease-in-out infinite}
+@keyframes lp{50%{opacity:.5}}
+.ig-menu{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.62);backdrop-filter:blur(3px)}
+.ig-card{width:520px;max-width:92vw;border:1px solid var(--accent);border-radius:16px;background:var(--panel);padding:22px}
+.ig-tag{font-weight:900;letter-spacing:2px;color:var(--accent);font-size:18px}.ig-sub{color:var(--dim);font-size:12px;margin:4px 0 14px}
+.ig-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px;margin-bottom:12px}
+.ig-chip{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 9px;margin:2px}
+.ig-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* shared scene */
+.scene{position:relative;width:340px;height:320px;margin:6px auto}
+.scene .tower{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:42px;z-index:3;filter:drop-shadow(0 0 12px var(--accent))}
+.scene .ring2{position:absolute;left:50%;top:50%;width:110px;height:110px;transform:translate(-50%,-50%);border:1px solid var(--accent);border-radius:50%;opacity:.25;animation:ping 2.6s ease-out infinite}
+@keyframes ping{0%{transform:translate(-50%,-50%) scale(.5);opacity:.5}100%{transform:translate(-50%,-50%) scale(2.6);opacity:0}}
+.enemy{position:absolute;left:50%;top:50%;transform:rotate(var(--a))}
+.enemy .arm{position:absolute;left:0;top:0;animation:approach 5s linear infinite}
+@keyframes approach{0%{transform:translate(164px,-50%);opacity:0}10%{opacity:1}88%{opacity:1}100%{transform:translate(28px,-50%);opacity:.15}}
+.enemy .arm>i{display:block;font-size:20px;transform:rotate(calc(-1*var(--a)));filter:drop-shadow(0 0 4px var(--accent2))}
+
+#switch{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:9999;display:flex;align-items:center;gap:2px;background:#fff;color:#111;border-radius:999px;padding:4px;box-shadow:0 8px 30px rgba(0,0,0,.5);font:13px Inter}
+#switch button{border:0;background:#111;color:#fff;border-radius:999px;width:34px;height:34px;cursor:pointer;font-size:16px}
+#switch .lbl{padding:0 14px;min-width:240px;text-align:center;font-weight:700;white-space:nowrap}#switch .lbl small{display:block;font-weight:400;opacity:.55;font-size:11px}
+#count{position:fixed;left:14px;bottom:18px;z-index:9999;font:12px/1 Share Tech Mono,monospace;color:#888}
+#toast{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);background:#111;color:#fff;padding:9px 18px;border-radius:10px;opacity:0;transition:opacity .2s;z-index:9998;font:13px Inter;pointer-events:none}#toast.show{opacity:.96}
+.xlink{position:fixed;left:12px;top:10px;z-index:9999;background:#6c47ff;color:#fff;text-decoration:none;font:600 12px Inter;padding:7px 12px;border-radius:8px}
+
+/* =========================================================
+   SET B THEME PALETTES + BESPOKE
+   ========================================================= */
+/* --- D&D B · Illuminated Tome (right ribbon nav) --- */
+body.theme-dnd{--ink:#2b1c0c;--panel:#efe2c2;--dim:#8a6a3a;--accent:#8a1a12;--accent2:#b8860b;--line:#c8b285;--font:'EB Garamond',Georgia,serif;background:#1a0f06}
+.theme-dnd .hud{background:#3a2410;padding:18px}
+.theme-dnd .bwrap{background:#e8d9b5;background-image:radial-gradient(circle at 20% 10%,#f3ead0,#e0cfa8 70%);border:14px solid #2a1808;border-radius:6px;box-shadow:inset 0 0 60px #c8b28577,0 0 0 2px #b8860b}
+.theme-dnd .railR{background:transparent;border-left:0;width:118px}
+.theme-dnd .rail .bnav-btn{font-family:Cinzel,serif;background:#8a1a12;color:#f3ead0;border:0;border-radius:4px 0 0 4px;writing-mode:vertical-rl;text-orientation:mixed;padding:14px 8px;box-shadow:-3px 3px 6px #0006;letter-spacing:2px}
+.theme-dnd .rail .bnav-btn.active{background:#b8860b;color:#2b1c0c}
+.theme-dnd h1{font-family:'UnifrakturCook',serif;font-size:38px;color:#8a1a12;text-align:center;margin:0 0 6px}
+.theme-dnd .rubric{font-family:Cinzel,serif;color:#8a1a12;text-transform:uppercase;letter-spacing:2px;font-size:13px;border-bottom:2px solid #b8860b;padding-bottom:4px;margin:16px 0 8px}
+.theme-dnd .tome{column-count:2;column-gap:30px;column-rule:1px solid #c8b285}
+.theme-dnd .tome p{margin:0 0 10px;text-align:justify;line-height:1.5}
+.theme-dnd .dropcap::first-letter{font-family:'UnifrakturCook',serif;font-size:46px;float:left;line-height:.8;padding:4px 8px 0 0;color:#8a1a12}
+.theme-dnd .illum{border:3px double #b8860b;border-radius:8px;padding:12px;background:#f3ead055;margin-bottom:12px}
+.theme-dnd .specrow .spec-bar>span,.theme-dnd .lrow .lbar>span{background:#8a1a12}
+
+/* --- Arcade B · Handheld DMG (green LCD, d-pad dock) --- */
+body.theme-arcade{--ink:#0f380f;--panel:#9bbc0f;--dim:#306230;--accent:#0f380f;--accent2:#306230;--line:#5a7a18;--font:'Press Start 2P',monospace;background:#5a5a5a}
+.theme-arcade .hud{background:radial-gradient(circle at 50% 30%,#6a6a6a,#3a3a3a);padding:18px}
+.theme-arcade .bwrap{background:#8bac0f;background-image:repeating-linear-gradient(#9bbc0f 0 3px,#94b40d 3px 4px);border:14px solid #2a2a2a;border-radius:10px 10px 40px 10px;box-shadow:inset 0 0 0 4px #0f380f,inset 0 0 30px #30623077;font-size:10px;line-height:1.9;max-width:560px}
+.theme-arcade .dock{background:#2a2a2a;border:0;border-radius:30px;gap:4px;padding:10px 14px}
+.theme-arcade .dock .bnav-btn{font-family:'Press Start 2P';font-size:7px;background:#444;color:#cdd;border:2px solid #111;border-radius:6px;box-shadow:0 3px 0 #111}
+.theme-arcade .dock .bnav-btn.active{background:#9bbc0f;color:#0f380f}
+.theme-arcade h1{font-size:13px;text-align:center;margin:0 0 14px;color:#0f380f}
+.theme-arcade .lcd-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:2px solid #5a7a18}
+.theme-arcade .specrow .spec-bar,.theme-arcade .lrow .lbar{background:#5a7a18}
+.theme-arcade .specrow .spec-bar>span,.theme-arcade .lrow .lbar>span{background:#0f380f}
+.theme-arcade .btn{background:#0f380f;color:#9bbc0f;border-radius:4px}
+.theme-arcade .dmgfield{position:relative;width:300px;height:200px;margin:0 auto;border:3px solid #0f380f;background:#9bbc0f;background-image:repeating-linear-gradient(90deg,#94b40d 0 10px,#9bbc0f 10px 20px);overflow:hidden}
+.theme-arcade .dmgfield .h{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);font-size:20px}
+.theme-arcade .dmgfield .z{position:absolute;font-size:16px;animation:march 4s linear infinite}@keyframes march{0%{top:-16px}100%{top:170px}}
+
+/* --- Holo B · AR Visor amber (radial wheel nav) --- */
+body.theme-holo{--ink:#ffd9a0;--panel:rgba(60,30,0,.34);--dim:#b07a3a;--accent:#ffb000;--accent2:#ff5e3a;--line:rgba(255,176,0,.34);--font:Orbitron,sans-serif;background:#0a0805}
+.theme-holo .hud{background:radial-gradient(circle at 50% 42%,#1a0f02,#070502 72%)}
+.theme-holo .bwrap{position:relative;min-height:100vh}
+.theme-holo .wheel-hub{color:#ffb000}
+.theme-holo .visor{position:relative;min-height:78vh}
+.theme-holo .reticle{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:130px;height:130px;border:2px solid #ffb000;border-radius:50%;box-shadow:0 0 30px #ffb00066,inset 0 0 20px #ffb00033}
+.theme-holo .reticle::before,.theme-holo .reticle::after{content:"";position:absolute;background:#ffb000}
+.theme-holo .reticle::before{left:50%;top:-12px;bottom:-12px;width:1px;transform:translateX(-50%)}
+.theme-holo .reticle::after{top:50%;left:-12px;right:-12px;height:1px;transform:translateY(-50%)}
+.theme-holo .rc-hp{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;color:#fff;font-weight:900}
+.theme-holo .corner{position:absolute;border:2px solid #ffb000;width:40px;height:40px;opacity:.7}
+.theme-holo .c-tl{left:18px;top:14px;border-right:0;border-bottom:0}.theme-holo .c-tr{right:18px;top:14px;border-left:0;border-bottom:0}
+.theme-holo .c-bl{left:18px;bottom:14px;border-right:0;border-top:0}.theme-holo .c-br{right:18px;bottom:14px;border-left:0;border-top:0}
+.theme-holo .vread{position:absolute;font-size:11px;letter-spacing:1px;color:#ffd9a0}.theme-holo .vread b{display:block;color:#fff;font-size:18px}
+.theme-holo .v-tl{left:34px;top:34px}.theme-holo .v-tr{right:34px;top:34px;text-align:right}.theme-holo .v-bl{left:34px;bottom:60px}.theme-holo .v-br{right:34px;bottom:60px;text-align:right}
+
+/* --- Terminal B · Amber BBS tmux (bottom status bar) --- */
+body.theme-tui{--ink:#ffb000;--panel:#1a1206;--dim:#7a5a10;--accent:#ffb000;--accent2:#ff7a1a;--line:#4a3608;--font:'Share Tech Mono',monospace;background:#0a0700}
+.theme-tui .hud{padding:0}
+.theme-tui .bwrap{max-width:1000px;margin:0 auto;padding:18px;background:repeating-linear-gradient(#0a0700 0 2px,#0d0900 2px 3px)}
+.theme-tui .status{background:#2a1e06}
+.theme-tui .status .bnav-btn{color:#ffb000;font-family:'Share Tech Mono'}
+.theme-tui .status .bnav-btn.active{background:#ffb000;color:#1a1206}
+.theme-tui .ansi{white-space:pre;color:#ff7a1a;font-size:13px;line-height:1.05;text-shadow:0 0 6px #ff7a1a55}
+.theme-tui .pane{border:1px solid #4a3608;border-radius:4px;padding:10px 12px;margin-bottom:10px;position:relative}
+.theme-tui .pane>.pcap{position:absolute;top:-9px;left:10px;background:#0a0700;padding:0 6px;color:#ffb000}
+.theme-tui table{width:100%;border-collapse:collapse}.theme-tui td,.theme-tui th{padding:2px 8px;text-align:left}.theme-tui th{border-bottom:1px solid #4a3608}
+.theme-tui .specrow .spec-bar>span,.theme-tui .lrow .lbar>span{background:#ffb000}
+
+/* --- Steam B · Iron Cockpit verdigris (lever bank) --- */
+body.theme-steam{--ink:#d8e8e0;--panel:#1a2226;--dim:#6a8a82;--accent:#4aa899;--accent2:#c87a3a;--line:#34464a;--font:'IM Fell English',Georgia,serif;background:#0c1214}
+.theme-steam .hud{background:radial-gradient(circle at 50% 0,#1c2a2e,#0a1012 72%)}
+.theme-steam .bwrap{max-width:880px;margin:0 auto;padding:24px}
+.theme-steam .levers{background:linear-gradient(transparent,#0a1012);border-top:2px solid #34464a}
+.theme-steam .lever .lv-stick{background:linear-gradient(#c87a3a,#0000)}
+.theme-steam h1{font-family:Cinzel,serif;text-align:center;color:#4aa899;letter-spacing:2px;margin:0 0 14px;text-shadow:0 0 10px #4aa89955}
+.theme-steam .ironpanel{background:linear-gradient(#1c262a,#10181a);border:3px solid #34464a;border-radius:10px;padding:18px;margin-bottom:14px;box-shadow:inset 0 0 30px #0008,0 0 0 4px #0c1214}
+.theme-steam .rivet{position:relative}.theme-steam .rivet::before,.theme-steam .rivet::after{content:"";position:absolute;top:8px;width:8px;height:8px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#7a9a92,#34464a)}
+.theme-steam .rivet::before{left:8px}.theme-steam .rivet::after{right:8px}
+.theme-steam .porthole{width:300px;height:300px;border-radius:50%;margin:0 auto;border:14px solid #2a363a;background:radial-gradient(circle,#0c1a1e,#060c0e);box-shadow:0 0 0 6px #1a2226,inset 0 0 40px #000;position:relative;overflow:hidden}
+.theme-steam .specrow .spec-bar>span,.theme-steam .lrow .lbar>span{background:#4aa899}
+
+/* --- Plants B · Moonlit Terrarium (left trellis nav, vertical) --- */
+body.theme-plants{--ink:#dff0e2;--panel:#16243a;--dim:#7a93b0;--accent:#7ad08a;--accent2:#c8b0ff;--line:#2a3b54;--font:Inter,sans-serif;background:#0a1322}
+.theme-plants .hud{background:radial-gradient(circle at 70% 12%,#1a2c46,#0a1322 72%)}
+.theme-plants .bwrap{min-height:100vh}
+.theme-plants .railL{background:linear-gradient(#16243a,#0e1a2c);border-right:2px solid #2a3b54;width:120px}
+.theme-plants .rail .bnav-btn{background:#1c3050;border:1px solid #2a3b54;color:#dff0e2;border-radius:999px;position:relative}
+.theme-plants .rail .bnav-btn.active{background:#7ad08a;color:#0a1322}
+.theme-plants .rail .bnav-btn::after{content:"";position:absolute;left:50%;bottom:-10px;width:2px;height:10px;background:#2a3b54;transform:translateX(-50%)}
+.theme-plants h1{font-family:Caveat,cursive;font-size:34px;color:#7ad08a;text-align:center;margin:0 0 6px}
+.theme-plants .moonpanel{background:#16243a;border:1px solid #2a3b54;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 0 30px #7ad08a11}
+.theme-plants .line{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dotted #2a3b54}
+.theme-plants .terra-tank{position:relative;width:240px;height:360px;margin:0 auto;border:6px solid #2a3b54;border-radius:14px 14px 6px 6px;background:linear-gradient(#0e1a2c,#16243a);overflow:hidden;box-shadow:inset 0 0 30px #000}
+.theme-plants .terra-tank .moon{position:absolute;right:16px;top:12px;font-size:24px}
+.theme-plants .terra-tank .core{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);font-size:34px}
+.theme-plants .terra-tank .climb{position:absolute;font-size:18px;animation:fall 6s linear infinite}@keyframes fall{0%{top:-18px;opacity:0}10%{opacity:1}100%{top:320px;opacity:1}}
+.theme-plants .specrow .spec-bar>span,.theme-plants .lrow .lbar>span{background:#7ad08a}
+
+/* @BCSS */
+</style>
+</head>
+<body class="theme-dnd nav-railR">
+<div id="stage"></div>
+<a class="xlink" href="_prototype-hud-gallery.html">↔ Set A (baseline)</a>
+<div id="toast"></div>
+<div id="switch"><button id="prev">‹</button><div class="lbl" id="lbl">—<small></small></div><button id="next">›</button></div>
+<div id="count"></div>
+
+<script>
+const G={hero:{hp:4820,hpMax:6000,shield:900,shieldMax:1200,atkSpeed:'7.0/s',crit:42,critDmg:'8.5×',dodge:27,armor:300,range:340,regen:48,lifesteal:6},
+  wave:{n:137,max:142,clock:12,alive:88,count:140,tier:2},econ:{gold:184320,kills:20133,cores:512,tokens:35,cells:28},checkin:{next:412,banked:3}};
+const UPG={Attack:[['Attack Speed',240,'7.0/s','1.2k'],['Ranged Damage',880,'+880','3.4k'],['Crit Chance',420,'42%','8.1k'],['Crit Damage',75,'8.5×','5.0k'],['Range',2900,'340m','2.2k']],
+  Defense:[['Health',6000,'+6000','4.0k'],['Regen',240,'48/s','2.6k'],['Dodge',300,'27%','9.0k'],['Armor',300,'-300','3.1k'],['Lifesteal',120,'6%','12k']],
+  Economy:[['Coins/Wave',50,'+50','1.0k'],['Cash Bonus',80,'+160%','6.4k'],['Interest',30,'+6%','20k'],['Wave Cut',3,'-3s','2k']]};
+const CARDS=[['Damage',7,'gold','+% all damage','⚔️'],['Execute',11,'chroma','instakill <8% HP','💀'],['Crit',4,'white','+ crit chance','🎯'],['Vitality',6,'gold','+ max health','❤️'],['Volley',9,'gold','+ projectiles','🏹'],['Fortune',3,'white','+ gold drops','🪙'],['Phantom',5,'white','+ dodge','👻'],['Bramble',8,'gold','reflect damage','🌵']];
+const LAB_SLOTS=[{s:'running',k:'Damage Scale',lv:18,max:50,eta:'2h 14m'},{s:'open'},{s:'locked',need:'wave 45'},{s:'locked',need:'wave 60'},{s:'locked',need:'wave 100'}];
+const LAB_PICK=[['Rate Scale','1h 40m','9 cells','+ attack rate'],['Crit Scale','48m','7 cells','+ crit power'],['HP Scale','3h 02m','14 cells','+ max health'],['Game Speed','11h 02m','40 cells','sim speed ×'],['Lab Speed','2h 12m','18 cells','− research time']];
+const fmt=n=>n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?(n/1e3).toFixed(1)+'k':''+n;
+const pct=(v,m)=>Math.min(100,Math.round(v/m*100));
+const mmss=s=>`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+const bar=(v,m)=>`<div class="bar"><span style="width:${pct(v,m)}%"></span></div>`;
+const allUpg=()=>[...UPG.Attack,...UPG.Defense,...UPG.Economy];
+function sceneRadial(o){const n=o.n||8;let e='';for(let i=0;i<n;i++){const a=i*(360/n)+(i%2?18:0);e+=`<div class="enemy" style="--a:${a}deg"><div class="arm" style="animation-delay:${(i*0.5).toFixed(2)}s;animation-duration:${(4.4+i%3*0.6).toFixed(1)}s"><i>${o.enemy(i)}</i></div></div>`;}return `<div class="scene"><div class="tower">${o.tower}</div>${e}<div class="ring2"></div></div>`;}
+
+/* shared redesigned sections */
+function bUpgrades(s){return `<div class="bwrap"><div class="bsheet"><div class="btag">${s.nav.upgrades} · out of run · locked mid-run</div>
+  ${Object.entries(UPG).map(([cat,list])=>`<div class="bgroup"><div class="bgh">${s.upCat?s.upCat(cat):cat}</div>
+    ${list.map((u,i)=>`<div class="specrow"><div class="spec-k">${u[0]}</div><div class="spec-bar"><span style="width:${30+(i*23)%70}%"></span></div><div class="spec-v">${u[2]}</div><div class="spec-l">L${u[1]}</div><button class="btn" data-act="${s.upVerb||'Upgrade'} ${u[0]} (mock)">${s.upVerb||'Upgrade'} ${u[3]}</button></div>`).join('')}</div>`).join('')}
+  </div></div>`;}
+function bCards(s){return `<div class="bwrap"><div class="bsheet"><div class="btag">Cards · collection · 20 slots</div>
+  ${CARDS.map(c=>`<div class="crow tier-${c[2]}"><div class="crow-art">${c[4]}</div><div class="crow-mid"><div class="crow-name">${c[0]} <span class="muted">${c[2]} · S${c[1]}/15</span></div><div class="crow-fx">${c[3]}</div></div><div class="crow-stars">${'★'.repeat(Math.min(5,c[1]))}</div><button class="btn" data-act="Upgraded card ${c[0]} (mock)">Upgrade ${5+c[1]*5}t</button></div>`).join('')}
+  </div></div>`;}
+function bLabs(s){const L=s.lab;return `<div class="bwrap"><div class="bsheet"><div class="btag">${L.place} · research</div>
+  <div class="lab-intro2">One slot active, up to five. Tap the open slot to choose a ${L.word}.</div>
+  <div class="ladder">${LAB_SLOTS.map((sl,i)=>{
+    if(sl.s==='running')return `<div class="lrow run"><div class="lnum">${i+1}</div><div class="lbody"><b>${sl.k}</b><div class="lbar"><span style="width:${pct(sl.lv,sl.max)}%"></span></div></div><div class="lmeta">${pct(sl.lv,sl.max)}% · ${sl.eta}</div></div>`;
+    if(sl.s==='open')return `<div class="lrow open" data-labslot><div class="lnum">${i+1}</div><div class="lbody"><b>Open slot</b><div class="muted">tap to ${L.verb.toLowerCase()} a ${L.word}</div></div><div class="lmeta">＋</div></div>`;
+    return `<div class="lrow lock"><div class="lnum">${i+1}</div><div class="lbody"><b>Locked</b><div class="muted">unlocks at ${sl.need}</div></div><div class="lmeta">🔒</div></div>`;}).join('')}</div></div></div>`;}
+function bLabSelect(s){const L=s.lab;return `<div class="bwrap"><div class="bsheet"><div class="btag">${L.place} · choose a ${L.word}</div>
+  <button class="btn ghost" data-labback>← back</button><div class="ls-h2">Select a ${L.word} to ${L.verb.toLowerCase()} (slot 2)</div>
+  <div class="ladder">${LAB_PICK.map(r=>`<div class="lrow"><div class="lnum">▸</div><div class="lbody"><b>${r[0]}</b><div class="muted">${r[3]} · ${r[1]} · ${r[2]}</div></div><button class="btn" data-labpick data-act="${L.verb}: ${r[0]} (mock)">${L.verb}</button></div>`).join('')}</div></div></div>`;}
+function bQuestions(s){return `<div class="bwrap"><div class="bsheet"><div class="btag">redesign notes · open questions</div>
+  <div class="qintro2">${s.qintro}</div>${s.questions.map((q,i)=>`<div class="qrow"><span class="n">Q${i+1}</span><span>${q}</span></div>`).join('')}</div></div>`;}
+function ingameBar(s){return `<div class="ingame-bar"><span>HP</span>${bar(G.hero.hp,G.hero.hpMax)}<b>${G.hero.hp}/${G.hero.hpMax}</b>
+  <span class="iw">W${G.wave.n}·T${G.wave.tier}</span><span class="ig">◎${fmt(G.econ.gold)}</span><span style="flex:1"></span>
+  <button class="btn ghost" data-act="Speed ×2 (mock)">×2</button><button class="btn" data-ingame="open">❚❚ ${s.ingameWord}</button></div>`;}
+function ingameMenu(s){return `<div class="ig-menu"><div class="ig-card"><div class="ig-tag">❚❚ ${s.ingameWord} · WAVE ${G.wave.n}</div>
+  <div class="ig-sub">In-run overlay — main-menu upgrades stay locked mid-run.</div>
+  <div class="ig-stats"><div>HP ${G.hero.hp}/${G.hero.hpMax}</div><div>Hostiles ${G.wave.alive}/${G.wave.count}</div><div>Gold ◎${fmt(G.econ.gold)}</div><div>Kills ${fmt(G.econ.kills)}</div></div>
+  <div class="muted" style="font-size:12px;margin-bottom:12px">Active cards: ${CARDS.slice(0,5).map(c=>`<span class="ig-chip">${c[0]} ${c[1]}★</span>`).join('')}</div>
+  <div class="ig-actions"><button class="btn" data-ingame="close">▶ Resume</button><button class="btn ghost" data-act="Re-rolled boon (mock)">Re-roll boon</button><button class="btn ghost" data-act="Abandoned run (mock)">Abandon</button></div></div></div>`;}
+function arenaPage(s){return `<div class="bwrap"><div class="barena"><div class="ig-flag">● live run</div>${s.arena()}${igMenuOpen?ingameMenu(s):''}${ingameBar(s)}</div></div>`;}
+
+const STYLES=[];
+
+/* 1 · D&D B — Illuminated Tome (right ribbon nav) */
+STYLES.push({ id:'dnd', name:'D&D · Illuminated Tome', tag:'redesign · two-page manuscript · ribbon bookmarks', navKind:'railR', ingameWord:'STAY',
+  lab:{word:'Pact',verb:'Swear',place:'the Ledger of Pacts'}, upVerb:'Inscribe', upCat:c=>c==='Attack'?'Of War':c==='Defense'?'Of Warding':'Of Coin',
+  nav:{home:'Frontispiece',upgrades:'Ascensions',cards:'Cards',labs:'Pacts',play:'Venture',questions:'Marginalia'},
+  home(){return `<div class="bwrap"><div class="bsheet"><div class="btag">main menu · the open tome</div><h1>Liber Vael</h1>
+    <div class="illum"><div class="rubric">The Hero, Illuminated</div>
+      <div class="tome"><p class="dropcap">Herein stands Sir Vael, the Endless, who hath weathered ${G.wave.n} sieges and felled ${fmt(G.econ.kills)} foes. His vigour holds at ${G.hero.hp} of ${G.hero.hpMax}, his ward at ${G.hero.shield}.</p>
+        <p>His blade falls ${G.hero.atkSpeed}; his fortune is ${G.hero.crit} in the hundred; his reach, ${G.hero.range} paces. ${fmt(G.econ.gold)} gold and ${G.econ.cores} cores lie in his coffer. The next tithe arrives in ${mmss(G.checkin.next)}.</p></div></div>
+    <div class="illum"><div class="rubric">To Venture Forth</div><div style="display:flex;gap:12px;flex-wrap:wrap"><button class="btn big" data-page="play">⚔ Take up the Campaign</button><button class="btn big" data-page="play">♾ Descend, Endless</button></div></div></div></div>`;},
+  arena(){return `<div class="bsheet"><div class="illum"><div class="rubric" style="text-align:center">The Venture · Wave ${G.wave.n}</div>${sceneRadial({tower:'🛡️',enemy:i=>['😈','🗡️','👹','🏹','💀'][i%5],n:7})}</div></div>`;},
+  qintro:'Set B reframes D&D from a character-sheet-with-tabs into an illuminated tome with right-edge ribbon bookmarks. Open questions:',
+  questions:['Is a "book you leaf through" too slow/skeuomorphic for frequent 15-minute check-ins, versus Set A’s instant tabs?',
+    'Prose stat-blocks ("his fortune 42 in the hundred") are gorgeous but bury the numbers. Keep a terse stat panel too, or fully commit to flavor?',
+    'Pacts replace Quests as the labs name. Does "sworn bargain with fixed terms" still read as research, or is it now too oblique?',
+    'Two-column justified manuscript reflows badly on phones — tome on desktop, simpler layout on mobile?'] });
+
+/* 2 · Arcade B — Handheld DMG (D-pad dock nav) */
+STYLES.push({ id:'arcade', name:'Arcade · Handheld DMG', tag:'redesign · 4-shade LCD · D-pad dock', navKind:'dock', ingameWord:'PAUSE',
+  lab:{word:'ROM',verb:'Sync',place:'the LINK CABLE'}, upVerb:'GET', upCat:c=>c.toUpperCase(),
+  nav:{home:'DMG',upgrades:'GET',cards:'Cards',labs:'LINK',play:'PLAY',questions:'MANUAL'},
+  home(){const h=Math.round(pct(G.hero.hp,G.hero.hpMax)/20);return `<div class="bwrap"><div class="bsheet"><div class="btag">▸ pocket horde · v1.37</div><h1>HORDE-BOY</h1>
+    <div class="lcd-row"><span>LIFE</span><span>${'♥'.repeat(h)}${'·'.repeat(5-h)}</span></div>
+    <div class="lcd-row"><span>HP</span><span>${G.hero.hp}/${G.hero.hpMax}</span></div>
+    <div class="lcd-row"><span>WAVE</span><span>${G.wave.n}</span></div>
+    <div class="lcd-row"><span>COIN</span><span>${fmt(G.econ.gold)}</span></div>
+    <div class="lcd-row"><span>DROP IN</span><span>${mmss(G.checkin.next)}</span></div>
+    <div style="text-align:center;margin-top:16px"><button class="btn" data-page="play">▶ PRESS START</button></div>
+    <div style="text-align:center;margin-top:10px;font-size:8px">◀ USE D-PAD BELOW ▶</div></div></div>`;},
+  arena(){const zs=[40,110,180,240];return `<div class="bsheet" style="padding-top:14px"><div class="dmgfield"><div class="h">d•b</div>${zs.map((x,i)=>`<div class="z" style="left:${x}px;animation-delay:${i*0.7}s">Z</div>`).join('')}</div><div class="lcd-row" style="margin-top:10px"><span>WAVE ${G.wave.n}</span><span>HP ${pct(G.hero.hp,G.hero.hpMax)}%</span></div></div>`;},
+  qintro:'Set B turns Arcade from a colorful CRT cabinet into a 4-shade Game-Boy handheld with a physical D-pad dock. Open questions:',
+  questions:['Is the handheld nostalgia worth losing color entirely (no rarity/danger coding) versus Set A’s CRT palette?',
+    'A D-pad dock is charming but slower than tabs — keep it, or offer a tab fallback on desktop?',
+    'LINK-CABLE "ROM sync" replaces cartridge LOAD for labs. Clear that these are permanent research, not swappable carts?',
+    'Dot-matrix green legibility for six-figure numbers — do we need a zoom/readout mode?'] });
+
+/* 3 · Holo B — AR Visor amber (radial wheel nav) */
+STYLES.push({ id:'holo', name:'Holographic · AR Visor', tag:'redesign · first-person reticle · radial wheel', navKind:'wheel', ingameWord:'FREEZE',
+  lab:{word:'schematic',verb:'Forge',place:'the FORGE'}, upVerb:'Splice', upCat:c=>c.toUpperCase(),
+  nav:{home:'VISOR',upgrades:'IMPLANTS',cards:'Cards',labs:'FORGE',play:'SORTIE',questions:'LOGS'},
+  home(){return `<div class="bwrap"><div class="visor">
+    <div class="corner c-tl"></div><div class="corner c-tr"></div><div class="corner c-bl"></div><div class="corner c-br"></div>
+    <div class="reticle"><div class="rc-hp">${pct(G.hero.hp,G.hero.hpMax)}%</div></div>
+    <div class="vread v-tl">INTEGRITY<b>${G.hero.hp}/${G.hero.hpMax}</b></div>
+    <div class="vread v-tr">WAVE<b>${G.wave.n}</b>tier ${G.wave.tier}</div>
+    <div class="vread v-bl">EDDIES<b>${fmt(G.econ.gold)}</b>cores ${G.econ.cores}</div>
+    <div class="vread v-br">CHECK-IN<b>${mmss(G.checkin.next)}</b>${G.checkin.banked} banked</div>
+    <div style="position:absolute;left:50%;bottom:7%;transform:translateX(-50%)"><button class="btn big" data-page="play">▶ DEPLOY — SORTIE</button></div></div></div>`;},
+  arena(){return `<div class="bsheet">${sceneRadial({tower:'◈',enemy:()=>'▲',n:9})}</div>`;},
+  qintro:'Set B shifts Holo from a centered radial dashboard (Set A) to a first-person AR visor with a summoned radial wheel nav. Open questions:',
+  questions:['Does diegetic "you are wearing the visor" beat a clean centered dashboard for a game you mostly glance at?',
+    'Amber instead of cyan is warmer and less generic-sci-fi — but does it clash with a sword-and-horde hero? Re-skin the hero as a drone?',
+    'A radial wheel (bottom-left) hides labels until learned — do we need a first-run hint or always-on labels?',
+    'Corner-anchored readouts keep the center clear for combat, but is peripheral text harder to read than centered numbers?'] });
+
+/* 4 · Terminal B — Amber BBS (bottom tmux status bar) */
+STYLES.push({ id:'tui', name:'Terminal · Amber BBS', tag:'redesign · amber phosphor · tmux status bar', navKind:'status', ingameWord:'^Z',
+  lab:{word:'job',verb:'Schedule',place:'crontab'}, upVerb:'make', upCat:c=>c.toLowerCase(),
+  nav:{home:'motd',upgrades:'make',cards:'Cards',labs:'cron',play:'attach',questions:'man'},
+  home(){return `<div class="bwrap"><div class="bsheet">
+    <pre class="ansi"> ##  ##  ####  ####    ####  ####  ####
+ ##  ## ##  ## ##  ##  ##    ##  ## ##
+ ###### ##  ## ##  ##  ####  ####  ####
+ ##  ## ##  ## ##  ##     ## ##  ##    ##
+ ##  ##  ####  ####   ####  ####  ####   motd</pre>
+    <div class="pane"><span class="pcap"> ~/status </span>
+      <div>user@towerdef · wave <b>${G.wave.n}</b> · tier ${G.wave.tier}</div>
+      <div>hp ${G.hero.hp}/${G.hero.hpMax} · sh ${G.hero.shield} · gold ${fmt(G.econ.gold)} · cores ${G.econ.cores}</div>
+      <div class="muted">next check-in ${mmss(G.checkin.next)} · banked ${G.checkin.banked}/8</div></div>
+    <div class="pane"><span class="pcap"> launch </span><button class="btn" data-page="play">$ tmux attach -t run</button> <span class="muted">— window keys 1..6 in the status bar ▼</span></div></div></div>`;},
+  arena(){const grid=["+-----------------------------+","|  M     g       g           |","|     g        M      @  g   |","|  g       @         g       |","|      M        g     M      |","+-----------------------------+"].join("\n");
+    return `<div class="bsheet"><div class="pane"><span class="pcap"> arena · attached </span><pre class="ansi">${grid}</pre></div><div class="pane"><span class="pcap"> top </span><div>dps ▁▂▄▆█▆▄▅▇█▆▃▂ · hp ${pct(G.hero.hp,G.hero.hpMax)}% · wave ${G.wave.n}</div></div></div>`;},
+  qintro:'Set B recolors Terminal to amber phosphor and moves nav to a bottom tmux-style status bar (windows 1..6) instead of top tabs. Open questions:',
+  questions:['Is a bottom status bar more "native" to the terminal metaphor than tabs — and does amber beat green for hours-long sessions?',
+    'make / cron / man naming (vs Set A’s apt / downloads) is cuter — but which reads as "permanent research" to a non-developer?',
+    'ANSI-art headers are delightful but eat vertical space; keep them or collapse after first load?',
+    'tmux window-number nav assumes keyboard literacy — what is the touch story?'] });
+
+/* 5 · Steam B — Iron Cockpit verdigris (lever bank nav) */
+STYLES.push({ id:'steam', name:'Steampunk · Iron Cockpit', tag:'redesign · verdigris submarine · lever bank', navKind:'levers', ingameWord:'ALL STOP',
+  lab:{word:'reagent',verb:'Charge',place:'the Retort Bank'}, upVerb:'Calibrate', upCat:c=>c,
+  nav:{home:'Bridge',upgrades:'Governor',cards:'Cards',labs:'Retorts',play:'Dive',questions:'Logbook'},
+  home(){return `<div class="bwrap"><div class="bsheet"><div class="btag">main menu · the bridge</div><h1>Nautilus Bridge</h1>
+    <div class="porthole">${sceneRadial({tower:'⚙️',enemy:i=>['🔩','⚙️','🛠️'][i%3],n:7})}</div>
+    <div class="ironpanel rivet"><div style="display:flex;justify-content:space-between"><span>Hull integrity</span><span>${G.hero.hp}/${G.hero.hpMax}</span></div>${bar(G.hero.hp,G.hero.hpMax)}
+      <div style="display:flex;justify-content:space-between;margin-top:8px"><span>Depth (wave)</span><span>${G.wave.n} · tier ${G.wave.tier}</span></div>
+      <div style="display:flex;justify-content:space-between"><span>Ballast (gold)</span><span>${fmt(G.econ.gold)} · ${G.econ.cores} cores</span></div></div>
+    <div style="text-align:center"><button class="btn big" data-page="play">⚓ Dive — engage</button> <span class="muted">pull a lever below ▼</span></div></div></div>`;},
+  arena(){return `<div class="bsheet"><div class="porthole">${sceneRadial({tower:'⚙️',enemy:i=>['🦑','🐙','🔩','⚙️'][i%4],n:9})}</div></div>`;},
+  qintro:'Set B reskins Steam from warm brass (Set A) into a dark iron + verdigris submarine cockpit, navigated by a bottom lever bank. Open questions:',
+  questions:['Does the moodier iron/verdigris palette read better over long sessions than Set A’s bright brass — and are levers too gimmicky versus tabs?',
+    'A porthole frames the arena as "outside the hull" — lovely diegesis, but it shrinks the play area. Worth the trade?',
+    'Governor / Retorts / Ballast naming (vs Manifold / Alembics) — does the nautical reframing stay coherent with a hero-vs-horde fantasy?',
+    'Lever widgets need large hit targets on touch; is the bottom lever bank workable on mobile?'] });
+
+/* 6 · Plants B — Moonlit Terrarium (left trellis nav, vertical) */
+STYLES.push({ id:'plants', name:'Plants · Moonlit Terrarium', tag:'redesign · vertical night garden · vine trellis', navKind:'railL', ingameWord:'HUSH',
+  lab:{word:'cutting',verb:'Root',place:'Propagation'}, upVerb:'Tend', upCat:c=>c==='Attack'?'Thorns':c==='Defense'?'Roots':'Bloom',
+  nav:{home:'Terrarium',upgrades:'Field Guide',cards:'Cards',labs:'Propagation',play:'Night Watch',questions:'Notes'},
+  home(){return `<div class="bwrap"><div class="bsheet"><div class="btag">main menu · the night garden</div><h1>Moonlit Terrarium</h1>
+    <div class="terra-tank"><div class="moon">🌙</div>${['❄️','🐛','🍂','🐌'].map((g,i)=>`<div class="climb" style="left:${24+i*52}px;animation-delay:${(i*1.2).toFixed(1)}s">${g}</div>`).join('')}<div class="core">🌼</div></div>
+    <div class="moonpanel"><div class="line"><span>Garden vitality</span><span>${G.hero.hp}/${G.hero.hpMax}</span></div>${bar(G.hero.hp,G.hero.hpMax)}
+      <div class="line"><span>Night (wave)</span><span>${G.wave.n} · tier ${G.wave.tier}</span></div>
+      <div class="line"><span>Dew (gold)</span><span>${fmt(G.econ.gold)}</span></div>
+      <div class="line"><span>Next rain (check-in)</span><span>${mmss(G.checkin.next)}</span></div></div>
+    <div style="text-align:center"><button class="btn big" data-page="play">🌙 Begin the Night Watch</button></div></div></div>`;},
+  arena(){return `<div class="bsheet"><div class="terra-tank" style="height:420px"><div class="moon">🌙</div>${['🧟','❄️','🐛','🪦','🦗','🍂'].map((g,i)=>`<div class="climb" style="left:${22+i*34}px;animation-delay:${(i*0.8).toFixed(1)}s">${g}</div>`).join('')}<div class="core">🌻</div></div></div>`;},
+  qintro:'Set B reimagines Plants from sunny horizontal PvZ lanes into a vertical moonlit terrarium (threats descend toward one potted core), navigated by a left vine trellis. Open questions:',
+  questions:['Which framing fits a hero-vs-horde sim better — Set A’s multiple lanes, or Set B’s single defended core?',
+    'The night palette improves contrast for glowing effects but loses PvZ’s cheerful daytime read — which audience are we targeting?',
+    'Field Guide / Propagation / cuttings naming (vs Almanac / Greenhouse / seeds) — fresh, but should we settle on one canonical vocabulary?',
+    'Vertical play suits portrait phones beautifully; does it waste space on widescreen desktop, and do we letterbox?'] });
+/* @BSTYLES */
+
+/* wiring */
+const ORDER=['home','upgrades','cards','labs','play','questions'];
+const stage=document.getElementById('stage'),lbl=document.getElementById('lbl');
+const params=new URLSearchParams(location.search);
+let idx=Math.max(0,STYLES.findIndex(s=>s.id===params.get('style')));if(idx<0)idx=0;
+let page=ORDER.includes(params.get('page'))?params.get('page'):'home';
+let labPick=false,igMenuOpen=false;
+function renderNav(s){
+  const items=ORDER.map(k=>`<button data-page="${k}" class="bnav-btn ${k===page?'active':''}">${s.nav[k]}</button>`).join('');
+  const K=s.navKind;
+  if(K==='railR')return `<nav class="bnav rail railR">${items}</nav>`;
+  if(K==='railL')return `<nav class="bnav rail railL">${items}</nav>`;
+  if(K==='dock')return `<nav class="bnav dock">${items}</nav>`;
+  if(K==='status')return `<nav class="bnav status">${ORDER.map((k,i)=>`<button data-page="${k}" class="bnav-btn ${k===page?'active':''}">${i+1}:${s.nav[k]}</button>`).join('')}</nav>`;
+  if(K==='levers')return `<nav class="bnav levers">${ORDER.map(k=>`<button data-page="${k}" class="lever ${k===page?'active':''}"><span class="lv-stick"></span><span class="lv-lbl">${s.nav[k]}</span></button>`).join('')}</nav>`;
+  if(K==='wheel')return `<nav class="bnav wheel">${ORDER.map((k,i)=>{const a=(i/ORDER.length)*2*Math.PI-Math.PI/2,x=50+Math.cos(a)*42,y=50+Math.sin(a)*42;return `<button data-page="${k}" class="bnav-btn ${k===page?'active':''}" style="left:${x}%;top:${y}%">${s.nav[k]}</button>`;}).join('')}<div class="wheel-hub">◎</div></nav>`;
+  return `<nav class="bnav dock">${items}</nav>`;
+}
+function body(s){
+  switch(page){case 'upgrades':return bUpgrades(s);case 'cards':return bCards(s);
+    case 'labs':return labPick?bLabSelect(s):bLabs(s);case 'play':return arenaPage(s);
+    case 'questions':return bQuestions(s);default:return s.home();}
+}
+function render(){const s=STYLES[idx];document.body.className='theme-'+s.id+' nav-'+s.navKind;
+  stage.innerHTML=`<div class="hud">${body(s)}${renderNav(s)}</div>`;
+  lbl.innerHTML=`${idx+1}/${STYLES.length} · ${s.name}<small>${s.tag}</small>`;
+  document.getElementById('count').textContent=`SET B · style=${s.id} · page=${page}`;
+  history.replaceState(null,'',`?style=${s.id}&page=${page}`);stage.scrollTop=0;}
+function goStyle(d){idx=(idx+d+STYLES.length)%STYLES.length;labPick=false;igMenuOpen=false;render();}
+function goPage(k){if(ORDER.includes(k)){page=k;labPick=false;igMenuOpen=false;render();}}
+document.getElementById('prev').onclick=()=>goStyle(-1);document.getElementById('next').onclick=()=>goStyle(1);
+window.addEventListener('keydown',e=>{const t=e.target.tagName;if(t==='INPUT'||t==='TEXTAREA'||e.target.isContentEditable)return;
+  if(e.key==='ArrowLeft')goStyle(-1);else if(e.key==='ArrowRight')goStyle(1);else if(/^[1-6]$/.test(e.key))goPage(ORDER[+e.key-1]);});
+stage.addEventListener('click',e=>{
+  const nav=e.target.closest('[data-page]');if(nav){goPage(nav.dataset.page);return;}
+  const ig=e.target.closest('[data-ingame]');if(ig){igMenuOpen=ig.dataset.ingame==='open';render();return;}
+  const lp=e.target.closest('[data-labpick]');if(lp){toast(lp.dataset.act||'started');labPick=false;render();return;}
+  const lb=e.target.closest('[data-labback]');if(lb){labPick=false;render();return;}
+  const lsx=e.target.closest('[data-labslot]');if(lsx){labPick=true;render();return;}
+  const act=e.target.closest('[data-act]');if(act){toast(act.dataset.act);act.classList.add('flash');setTimeout(()=>act.classList.remove('flash'),400);}});
+let toastT;function toast(m){const el=document.getElementById('toast');el.textContent=m;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),1300);}
+if(STYLES.length)render();
+</script>
+</body>
+</html>
