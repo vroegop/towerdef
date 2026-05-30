@@ -231,7 +231,8 @@
       if (e.hp <= 0) {
         s.econ.kills++;
         const tg = A.TIERS[e.tier];
-        const g = Math.round(tg.reward * this.stats.goldFind * e.strMult * (s.rewardMult || 1) * (this.stats.cashMult || 1));
+        const decay = (e.agedWaves || 0) >= A.COIN_DECAY_WAVES ? A.COIN_DECAY_FACTOR : 1; // anti-kite
+        const g = Math.round(tg.reward * this.stats.goldFind * e.strMult * (s.rewardMult || 1) * (this.stats.cashMult || 1) * decay);
         s.econ.gold += g; s.econ.goldEarned += g;
         if (this.stats.coresPerKill) s.econ.bonusCores += this.stats.coresPerKill; // economic per-kill cores
         s.econ.xp += Math.round(2 * tg.reward * e.strMult * this.stats.xpGain);

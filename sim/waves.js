@@ -19,6 +19,9 @@
   // no-input 1/1/1/1 hero dies at ~10s (deterministic across seeds). Tuned via headless harness.
   A.FIRST_RUN = { count: 10, gap: 0.05, speed: 42, radius: 500 };
 
+  A.COIN_DECAY_WAVES = 3;    // a survivor older than this many waves...
+  A.COIN_DECAY_FACTOR = 0.5; // ...pays only this share of its coin value (anti-kite rule)
+
   A.waveCount = function (n) {
     return Math.min(A.WAVE.maxCount, A.WAVE.baseCount + A.WAVE.perWave * (n - 1));
   };

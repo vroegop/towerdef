@@ -35,7 +35,7 @@
       strMult, hpMax: hp, hp, dmg,
       speed, range: def.range, state: 'approach', atkCd: 0, kb: 0, hitFlash: 0, hitDmg: 0,
       rend: 0, rendT: 0, // Rend stacks + decay timer (Rend Armor upgrade)
-      bornWave: waveN, veteran: false,
+      bornWave: waveN, veteran: false, agedWaves: 0, // agedWaves: waves survived (drives coin decay)
     };
   };
 
@@ -51,7 +51,7 @@
       e.dmg = ihp(def.dmg, e.strMult);
       const freshSpd = def.speed * baseSpd;
       e.speed = Math.max(e.speed * 1.1, 1.1 * freshSpd);
-      e.veteran = true;
+      e.veteran = true; e.agedWaves = (e.agedWaves || 0) + 1;
     }
   };
 })(window.ARENA = window.ARENA || {});
