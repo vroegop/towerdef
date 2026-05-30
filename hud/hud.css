@@ -144,6 +144,7 @@
 .hud .ic.green { color: #2dff8c; }
 .hud .ic.token { color: #5fd0ff; }
 .hud .ic.core { color: #ff2e4e; filter: drop-shadow(0 0 3px rgba(255,46,78,.6)); } /* cores = neon red */
+.hud .ic.cell { color: #37d7ff; } /* cells = cyan */
 .hud .ic.hp { color: #ff5d6c; } /* heart (HP) */
 .hud .startsq .ic { vertical-align: middle; }
 

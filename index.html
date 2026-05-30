@@ -172,6 +172,7 @@
         ? A.FIRST_PERM_COST // exactly enough to raise attack speed (tutorial grant, not tier-scaled)
         : Math.max(1, Math.round(((Math.floor(sim.s.econ.kills / 10) + (sim.s.wave.maxWave || 0)) + (sim.s.econ.bonusCores || 0)) * A.coreMult(meta.tier || 1)));
       meta.cores = (meta.cores || 0) + cores;
+      meta.cells = (meta.cells || 0) + (sim.s.econ.bonusCells || 0); // farmed lab-fuel currency
       meta.bestWave = Math.max(meta.bestWave || 0, wave);
       const runTier = meta.tier || 1; // this run played at the selected tier; credit its furthest wave
       meta.tierBest = meta.tierBest || {};
@@ -181,9 +182,13 @@
       const tokensDue = Math.floor(meta.totalWaves / 100) - (meta.waveTokensGranted || 0);
       let tokens = 0;
       if (tokensDue > 0) { tokens = tokensDue; meta.tokens = (meta.tokens || 0) + tokens; meta.waveTokensGranted = (meta.waveTokensGranted || 0) + tokens; }
+      // premium tokens also come from combat: one per boss slain this run.
+      const bossTokens = sim.s.econ.bossKills || 0;
+      if (bossTokens > 0) { meta.tokens = (meta.tokens || 0) + bossTokens; tokens += bossTokens; }
+      const cells = sim.s.econ.bonusCells || 0;
       if (firstRunJustEnded) meta.hasPlayed = true;
       saveMeta();
-      return { cores, kills: sim.s.econ.kills, wave, tokens };
+      return { cores, kills: sim.s.econ.kills, wave, tokens, cells };
     }
 
     // Live death: explode (renderer detects it), let enemies drift in for ~1s, then overview.

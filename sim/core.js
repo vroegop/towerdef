@@ -235,6 +235,9 @@
         const g = Math.round(tg.reward * this.stats.goldFind * e.strMult * (s.rewardMult || 1) * (this.stats.cashMult || 1) * decay);
         s.econ.gold += g; s.econ.goldEarned += g;
         if (this.stats.coresPerKill) s.econ.bonusCores += this.stats.coresPerKill; // economic per-kill cores
+        // Cells (farmed lab-fuel currency): bosses and elite-tier kills are the faucet.
+        if (e.type === 'boss') { s.econ.bonusCells += 3; s.econ.bossKills++; }
+        else if (e.tier === 'elite') s.econ.bonusCells += 1;
         s.econ.xp += Math.round(2 * tg.reward * e.strMult * this.stats.xpGain);
         // UI-facing transient kill events (consumed by the renderer). cores accrue at the
         // banked rate of 1 per 10 kills, surfaced here as a per-kill drop. Capped so a

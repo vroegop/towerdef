@@ -33,6 +33,7 @@
       powers: '<path d="M13 2L4 14h6l-1 8 9-12h-6z"/>',
       prestige: '<path d="M5 18h14"/><path d="M5 18l-1-9 4 3 4-7 4 7 4-3-1 9z"/>',
       flask: '<path d="M9 3h6"/><path d="M10 3v6L5 18a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3"/><path d="M7.5 14h9"/>',
+      cell: '<path d="M12 2l8 6v8l-8 6-8-6V8z"/><path d="M12 8v8M8 10v4M16 10v4"/>',
       tier: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
       sword: '<path d="M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2"/>',
       shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
@@ -123,7 +124,7 @@
       critChance: 'Crit', critDamage: 'Crit Dmg', dodge: 'Dodge', coins: 'Coins' };
     const upIcon = (id) => (A.UP_BY_ID[id] && A.UP_BY_ID[id].icon) || 'burst';
     // currencies shown on the Hero screen — add a row here (+ a meta field) for future currencies
-    const CURRENCIES = [{ key: 'cores', icon: 'cores', cls: 'core' }, { key: 'tokens', icon: 'token', cls: 'token' }];
+    const CURRENCIES = [{ key: 'cores', icon: 'cores', cls: 'core' }, { key: 'tokens', icon: 'token', cls: 'token' }, { key: 'cells', icon: 'cell', cls: 'cell' }];
     function starSvg(kind) {
       const fill = kind === 'white' ? '#eef2f8' : kind === 'gold' ? '#ffd24a' : 'url(#chroma)';
       return '<svg class="star ' + kind + '" width="16" height="16" viewBox="0 0 24 24"><path fill="' + fill + '" stroke="rgba(0,0,0,.3)" stroke-width="1" d="' + STARP + '"/></svg>';
@@ -575,6 +576,7 @@
       } else if (menuTab === 'labs') {
         const used = (meta.research || []).length, slots = meta.labSlots || 1;
         html += '<div class="cores-chip">' + cores(15) + ' <b>' + (meta.cores || 0) + '</b>' +
+          '<span class="slotchip">' + icon('cell', 13, 'cell') + ' ' + (meta.cells || 0) + '</span>' +
           '<span class="slotchip">' + icon('flask', 13) + ' ' + used + '/' + slots + '</span></div>';
         const LCAT_ICON = { attack: 'sword', defense: 'shield', utility: 'coins' };
         html += '<div class="subtabs" id="h-labtabs">';
@@ -651,6 +653,7 @@
       const tier = meta.tier || 1;
       let rew = '<div class="rew"><span>Cores</span><b>+' + (e.cores || 0) + ' ' + cores(16) + '</b></div>';
       if (e.tokens) rew += '<div class="rew"><span>Tokens</span><b class="tok">+' + e.tokens + ' ' + icon('token', 15, 'token') + '</b></div>';
+      if (e.cells) rew += '<div class="rew"><span>Cells</span><b class="cell">+' + e.cells + ' ' + icon('cell', 15, 'cell') + '</b></div>';
       const row = (label, val) => '<div class="strow"><span>' + label + '</span><b>' + val + '</b></div>';
       overCard.innerHTML =
         '<div class="statshead"><h2>Run Over</h2><button class="iconclose" id="h-over-close" title="Workshop">' + icon('close', 18) + '</button></div>' +
