@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arena — Upgrade System Plan (inspired by "The Tower")</title>
+<style>
+  :root{
+    --bg:#0c0e14; --panel:#151823; --panel2:#1c2030; --line:#262c3d;
+    --tx:#d8deea; --mut:#8b93a7;
+    --blue:#4aa8ff; --green:#3ddc84; --pink:#e64cff; --gold:#ffd24a; --red:#ff5d6c;
+    --r:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:radial-gradient(1200px 700px at 70% -10%, #161b2e 0%, var(--bg) 60%);
+    color:var(--tx); font:15px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased; padding-bottom:60px;
+  }
+  a{color:var(--blue);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+  header.top{position:sticky;top:0;z-index:20;backdrop-filter:blur(8px);
+    background:rgba(12,14,20,.78);border-bottom:1px solid var(--line);}
+  .nav{display:flex;align-items:center;gap:18px;height:56px;flex-wrap:wrap}
+  .brand{font-weight:800;letter-spacing:.5px}
+  .brand .dot{color:var(--pink)}
+  .nav a{color:var(--mut);font-size:14px}
+  .nav a:hover{color:var(--tx);text-decoration:none}
+  .nav a.here{color:var(--tx)}
+  .hero{padding:48px 0 18px}
+  .hero h1{font-size:38px;line-height:1.08;margin:0 0 14px;letter-spacing:-.5px}
+  .hero h1 .g{background:linear-gradient(90deg,var(--blue),var(--pink),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p{font-size:17px;color:var(--mut);max-width:760px;margin:0}
+  .grid{display:grid;gap:18px}
+  .cols-2{grid-template-columns:1fr 1fr}
+  .cols-3{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:820px){.cols-2,.cols-3{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+  .card h3{margin:0 0 8px;font-size:16px}
+  .card p{margin:0 0 8px;color:var(--mut);font-size:14px}
+  .sec{margin-top:48px}
+  .sec h2{font-size:13px;text-transform:uppercase;letter-spacing:2px;color:var(--mut);margin:0 0 8px;font-weight:700}
+  .sec > p.lede{color:var(--mut);margin:0 0 18px;max-width:820px}
+  h3.blk{font-size:20px;margin:26px 0 10px;letter-spacing:-.3px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin:6px 0 4px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:1px}
+  td .mono{color:var(--green)}
+  td code{color:var(--green);font-size:12.5px}
+  pre{background:#0a0c12;border:1px solid var(--line);border-radius:10px;padding:14px;overflow:auto;
+    color:var(--green);font-size:12.5px;line-height:1.5;margin:8px 0}
+  pre .c{color:var(--mut)}
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;border:1px solid var(--line);color:var(--mut)}
+  .pill.have{border-color:var(--green);color:var(--green)}
+  .pill.miss{border-color:var(--red);color:var(--red)}
+  .pill.part{border-color:var(--gold);color:var(--gold)}
+  .pill.a{border-color:var(--blue);color:var(--blue)}
+  .pill.d{border-color:var(--green);color:var(--green)}
+  .pill.u{border-color:var(--gold);color:var(--gold)}
+  ul{margin:8px 0;padding-left:20px}
+  li{margin:5px 0}
+  .muted{color:var(--mut)}
+  .ph{border-left:3px solid var(--blue);padding:2px 0 2px 16px;margin:18px 0}
+  .ph h4{margin:0 0 4px;font-size:17px}
+  .ph .files{font-size:12.5px;color:var(--mut)}
+  .ph .files code{color:var(--blue)}
+  .tag{font-size:11px;color:var(--mut);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+  .note{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--gold);
+    border-radius:8px;padding:12px 14px;margin:12px 0;font-size:14px}
+  .toc{columns:2;column-gap:30px;font-size:14px}
+  @media(max-width:820px){.toc{columns:1}}
+  .toc a{display:block;padding:3px 0;color:var(--mut)}
+  .toc a:hover{color:var(--tx)}
+  footer{margin-top:60px;color:var(--mut);font-size:13px;border-top:1px solid var(--line);padding-top:20px}
+  .src{font-size:12.5px}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap nav">
+  <span class="brand">ARENA<span class="dot">.</span></span>
+  <a href="index.html">Dashboard</a>
+  <a href="architecture.html">Architecture</a>
+  <a href="enemies.html">Enemies</a>
+  <a href="skills.html">Skills</a>
+  <a href="abilities.html">Abilities</a>
+  <a href="upgrades.html" class="here">Upgrades</a>
+  <a href="ideas.html">Ideas</a>
+</div></header>
+
+<div class="wrap">
+
+  <section class="hero">
+    <h1>An upgrade system, <span class="g">layered to last forever</span>.</h1>
+    <p>A plan to adopt the proven progression skeleton of <b>The Tower — Idle Tower Defense</b>
+       (Tech Tree Games) on top of what we already have. We don't reinvent: our unified gold/cores
+       upgrade model already <i>is</i> The Tower's cash/coins workshop. This plan adds the missing
+       layer that makes that game's progression endless — <b>Labs (ceilings &amp; scaling)</b> — plus
+       the upgrade breadth, enhancements, perks, and "tricks" that sit on top of it, and ties enemy
+       scaling and cost to all of it so balance holds at every depth.</p>
+  </section>
+
+  <section class="card" style="border-color:var(--green)">
+    <h3 style="color:var(--green);margin-bottom:6px">TL;DR — what we keep, what we add</h3>
+    <p style="color:var(--tx)"><b>Keep (already built):</b> the dual-currency unified upgrade list
+      (<code>gold</code> in-run = The Tower's <i>cash</i>; <code>cores</code> out-of-run = <i>coins</i>),
+      attack/defense/economic tabs, cards-with-stars, tiers that double difficulty, milestones,
+      deterministic sim + offline catch-up.</p>
+    <p style="color:var(--tx);margin-bottom:0"><b>Add (this plan):</b> a <b>Lab</b> layer that raises
+      <i>caps</i> and multiplies <i>scaling</i> (the engine of endless growth), a much wider upgrade
+      roster with real combat mechanics (multishot, rapid-fire, bounce, super-crit, rend, wall, thorns),
+      <b>Workshop Enhancements</b>, <b>Perks</b>, <b>discounts &amp; respec</b>, the <b>ultimate-weapon /
+      module / bot</b> trick layer (reusing <code>abilities.js</code>), an expanded enemy roster, and a
+      balance model that pins enemy HP/coins to the player's ceiling so the "wall" always lands where we
+      want it.</p>
+  </section>
+
+  <section class="sec">
+    <h2>Contents</h2>
+    <div class="toc">
+      <a href="#model">1 · The Tower's progression model (condensed)</a>
+      <a href="#gap">2 · Gap analysis — us vs The Tower</a>
+      <a href="#ceiling">3 · The core idea: ceilings vs fill</a>
+      <a href="#labs">4 · Labs — the scaling/ceiling engine</a>
+      <a href="#workshop">5 · The expanded workshop roster</a>
+      <a href="#enhance">6 · Workshop Enhancements, discounts, respec</a>
+      <a href="#perks">7 · Perks — the in-run draft</a>
+      <a href="#tricks">8 · Tricks — ultimates, modules, bots, guardian</a>
+      <a href="#economy">9 · Economy — cash, coins, gems, cells</a>
+      <a href="#enemies">10 · Enemy scaling &amp; the balance loop</a>
+      <a href="#math">11 · The full stat-composition formula</a>
+      <a href="#data">12 · Data-model &amp; save-migration changes</a>
+      <a href="#roadmap">13 · Phased build order</a>
+      <a href="#risks">14 · Risks &amp; open questions</a>
+      <a href="#sources">Sources</a>
+    </div>
+  </section>
+
+  <!-- ============================================================= -->
+  <section class="sec" id="model">
+    <h2>1 · The Tower's progression model (condensed)</h2>
+    <p class="lede">The whole game is a few orthogonal layers that each multiply the others. Nothing is
+      novel in isolation — the power is that they compose and never hit a true ceiling.</p>
+
+    <table>
+      <tr><th>Layer</th><th>Where</th><th>Currency</th><th>Resets?</th><th>What it does</th></tr>
+      <tr><td><b>Workshop — in-run</b></td><td>during a battle</td><td>Cash</td><td>each run</td>
+        <td>Buy upgrade levels live as cash pours in. The moment-to-moment build.</td></tr>
+      <tr><td><b>Workshop — permanent</b></td><td>between battles</td><td>Coins</td><td>no (until respec)</td>
+        <td>Same upgrade list, bought with coins. A permanent head-start you begin every run with.</td></tr>
+      <tr><td><b>Labs (research)</b></td><td>menu, real-time</td><td>Coins + time</td><td>no</td>
+        <td><b>Raise the max level caps</b> of workshop upgrades and <b>add scaling multipliers</b>.
+          Each lab costs coins <i>and</i> real time; limited concurrent lab slots.</td></tr>
+      <tr><td><b>Workshop Enhancements</b></td><td>battle &amp; menu</td><td>Coins</td><td>no</td>
+        <td>A second multiplicative tier of the same three categories, unlocked deep (T12 W60). Each
+          purchase in a category unlocks the next enhancement in it.</td></tr>
+      <tr><td><b>Perks</b></td><td>in-run draft</td><td>—</td><td>each run</td>
+        <td>From wave 200, pick 1 of 3 powerful run modifiers; picks get rarer (wave gate grows).</td></tr>
+      <tr><td><b>Cards</b></td><td>collection</td><td>Gems</td><td>no</td>
+        <td>Equippable passives with star levels; gacha-pulled and merged.</td></tr>
+      <tr><td><b>Modules</b></td><td>collection</td><td>boss drops / shards</td><td>no</td>
+        <td>Slotted gear (cannon/armor/generator/core) with rarities, sub-stats, fusion.</td></tr>
+      <tr><td><b>Ultimate Weapons</b></td><td>in-run + labs</td><td>Stones / coins</td><td>cooldowns reset</td>
+        <td>Active/cooldown supers: Black Hole, Death Wave, Golden Tower, Smart Missiles, Chain Lightning…</td></tr>
+      <tr><td><b>Bots / Guardian</b></td><td>in-run</td><td>coins/medals</td><td>cooldowns reset</td>
+        <td>Autonomous helpers that pick up coins, flame, throw bombs, or block lanes.</td></tr>
+    </table>
+
+    <p class="muted">Cost &amp; scaling discipline: every layer's price grows with its own level
+      (<code>base · grow<sup>n</sup></code>), upgrades have <b>caps</b> that only labs can lift, coins-per-kill
+      has its own ceiling, and a <b>coin-decay</b> rule stops you farming one wave forever. Enemy HP/damage
+      grow <b>exponentially per wave</b> and step again <b>per tier</b>, so the player's multiplicative power
+      and the enemy's exponential health race each other — the gap is "the wall", and every layer above
+      exists to push the wall outward.</p>
+  </section>
+
+  <!-- ============================================================= -->
+  <section class="sec" id="gap">
+    <h2>2 · Gap analysis — what we already have vs The Tower</h2>
+    <p class="lede">Our foundation is unusually close already. The honest gaps are the <i>ceiling engine</i>
+      (labs), upgrade <i>breadth</i>, and the <i>trick</i> layer.</p>
+    <table>
+      <tr><th>System</th><th>Status</th><th>Where in our code</th><th>Gap to close</th></tr>
+      <tr><td>In-run + permanent same-list upgrades</td><td><span class="pill have">have</span></td>
+        <td><code>sim/skills.js</code> <code>A.UPGRADES</code>, <code>buyRunUpgrade</code>/<code>buyPerm</code></td>
+        <td>Effectively done — this is The Tower's cash/coins workshop.</td></tr>
+      <tr><td>Attack / Defense / (Economic) tabs</td><td><span class="pill have">have</span></td>
+        <td><code>A.TAB_DEFS</code></td><td>Rename <i>economic→utility</i>; add many more rows.</td></tr>
+      <tr><td>Cards with star tiers</td><td><span class="pill part">partial</span></td>
+        <td><code>A.CARDS</code> (1 card)</td><td>Add the real card roster + a gem economy + token sources.</td></tr>
+      <tr><td>Tiers that scale difficulty &amp; reward</td><td><span class="pill have">have</span></td>
+        <td><code>sim/waves.js</code> <code>tierDifficulty</code>, <code>coreMult</code></td><td>Wire enhancement/lab unlocks to tier+wave gates.</td></tr>
+      <tr><td>Milestones → currency</td><td><span class="pill have">have</span></td>
+        <td><code>A.MILESTONES</code>, <code>claimMilestone</code></td><td>Make milestones also <b>unlock labs</b> (the gating mechanic).</td></tr>
+      <tr><td><b>Labs: caps + scaling, real-time research</b></td><td><span class="pill miss">missing</span></td>
+        <td>—</td><td><b>The headline feature.</b> New <code>sim/labs.js</code> + dynamic caps in <code>skills.js</code>.</td></tr>
+      <tr><td>Dynamic upgrade caps</td><td><span class="pill miss">missing</span></td>
+        <td><code>max</code> is a hard constant per upgrade</td><td>Make <code>max</code> = base + lab cap bonus.</td></tr>
+      <tr><td>Combat-mechanic upgrades (multishot, bounce, rend, wall, thorns…)</td><td><span class="pill miss">missing</span></td>
+        <td>only scalar stats today</td><td>New sim mechanics in <code>core.js</code>/<code>projectiles.js</code>.</td></tr>
+      <tr><td>Workshop Enhancements (2nd multiplier tier)</td><td><span class="pill miss">missing</span></td><td>—</td><td>New enhancement table + gate.</td></tr>
+      <tr><td>Perks (in-run draft)</td><td><span class="pill miss">missing</span></td><td>—</td><td>New <code>sim/perks.js</code> + wave-gated offer flow.</td></tr>
+      <tr><td>Ultimate weapons / bots</td><td><span class="pill part">partial</span></td>
+        <td><code>sim/abilities.js</code> (blackhole, meteor, golden already!)</td><td>Promote to a managed slot system with unlock + level.</td></tr>
+      <tr><td>Discounts &amp; respec</td><td><span class="pill miss">missing</span></td><td>—</td><td>Discount upgrades + a coins-refunding respec.</td></tr>
+      <tr><td>Coin decay / coins-per-kill ceiling / interest</td><td><span class="pill miss">missing</span></td>
+        <td>flat reward in <code>core.js</code> cleanup</td><td>Economy rules in <code>core.js</code>.</td></tr>
+      <tr><td>Enemy archetypes (fast/tank/protector/splitter/vampire…)</td><td><span class="pill part">partial</span></td>
+        <td><code>registries.js</code> (melee/ranged/boss)</td><td>Add rows + behaviors; tie to scaling.</td></tr>
+      <tr><td>Game speed</td><td><span class="pill miss">missing</span></td><td>fixed <code>DT</code></td><td>Lab/perk-driven tick multiplier (offline-safe).</td></tr>
+    </table>
+  </section>
+
+  <!-- ============================================================= -->
+  <section class="sec" id="ceiling">
+    <h2>3 · The core idea: <span style="color:var(--tx)">ceilings vs fill</span></h2>
+    <p class="lede">This is the single most important mechanic to internalise, and the one thing our game
+      is missing. It's why The Tower never runs out of progression.</p>
+    <div class="grid cols-2">
+      <div class="card">
+        <h3 style="color:var(--blue)">Workshop = <i>fill</i></h3>
+        <p>Cheap, fast, frequent. You buy hundreds of levels per run with cash, and a permanent stack with
+          coins. But every upgrade has a <b>level cap</b>. Workshop fills the bar up to that cap — it can
+          never exceed it.</p>
+        <p class="muted">In our code today: <code>boughtOf()</code> = <code>min(max, perm+run)</code>.
+          The <code>max</code> is the bar.</p>
+      </div>
+      <div class="card">
+        <h3 style="color:var(--gold)">Labs = <i>ceiling + slope</i></h3>
+        <p>Slow, expensive, real-time-gated. A lab does one of two things: <b>raise the cap</b> (lets
+          workshop fill higher) or <b>steepen the curve / add a flat multiplier</b> (every workshop level
+          is worth more). Labs are where long-term power actually comes from.</p>
+        <p class="muted">The change: <code>max</code> stops being a constant and becomes
+          <code>baseMax + labCapBonus(stat)</code>, and <code>computeStats</code> multiplies by
+          <code>labScalingMult(stat)</code>.</p>
+      </div>
+    </div>
+    <div class="note"><b>Why two layers instead of one big number?</b> Pacing. Workshop gives fast dopamine
+      every few seconds; labs give a slow, planned, real-time investment that survives a death. The cap
+      is the leash: it stops players from dumping a lucky cash spike into one stat and trivialising the
+      run, and it turns "what do I research next" into the real meta-game. Enemy scaling is tuned against
+      the <i>cap</i>, not the current level — so the cap is also our primary balance knob.</div>
+  </section>
+
+  <!-- ============================================================= -->
+  <section class="sec" id="labs">
+    <h2>4 · Labs — the scaling / ceiling engine <span class="tag">new system</span></h2>
+    <p class="lede">A new meta system that lives entirely <b>outside</b> the deterministic run sim (it
+      advances on the wall clock, in menus and while offline), so it never threatens replay determinism.</p>
+
+    <h3 class="blk">Data shape</h3>
+    <pre><span class="c">// sim/labs.js — pure data + pure helpers, mirrors skills.js style</span>
+A.LABS = [
+  <span class="c">// id, category, what it boosts, per-level effect, cost &amp; time curves, cap, milestone gate</span>
+  { id:'dmgCap',     cat:'attack',  kind:'cap',   target:'rangedDamage', per:200,
+    coin:curve(50,1.15), time:curve(60,1.18), max:60, gate:{tier:1,wave:30} },
+  { id:'dmgScale',   cat:'attack',  kind:'scale', target:'rangedDamage', per:0.02,
+    coin:curve(80,1.16), time:curve(120,1.2), max:50, gate:{tier:1,wave:60} },
+  { id:'rateCap',    cat:'attack',  kind:'cap',   target:'attackSpeed',  per:20,  ... },
+  { id:'gameSpeed',  cat:'utility', kind:'special',target:'gameSpeed',   per:0.1, max:25, ... },
+  { id:'coinScale',  cat:'utility', kind:'scale', target:'coinsPerKill', per:0.05, ... },
+  { id:'labSpeed',   cat:'utility', kind:'special',target:'labTime',     per:-0.02, ... },
+  <span class="c">// ...one or two labs per workshop stat, plus economy/meta labs</span>
+];
+
+<span class="c">// meta gains:</span>
+meta.labs   = {};        <span class="c">// { labId: level }   — completed research</span>
+meta.labSlots = 1;       <span class="c">// concurrent research slots (buy more with gems)</span>
+meta.research = [];      <span class="c">// active: [{ id, endsAt }]  endsAt = wall-clock ms</span>
+meta.labSpeedBoost = null;<span class="c">// { mult, until } from spending cells</span></pre>
+
+    <h3 class="blk">How it works</h3>
+    <ul>
+      <li><b>Cap labs</b> raise an upgrade's effective <code>max</code>: <code>cap(id) = base.max + Σ per·level</code> over cap-labs targeting it. <code>boughtOf()</code> already clamps to <code>max</code> — we just make <code>max</code> a function.</li>
+      <li><b>Scale labs</b> add a multiplier applied in <code>computeStats</code>: <code>×(1 + Σ per·level)</code>.</li>
+      <li><b>Special labs</b> drive things outside the stat block: game speed, lab speed, extra perk choices, coin-decay softening, enhancement unlocks.</li>
+      <li><b>Real-time research:</b> starting a lab pushes <code>{id, endsAt:now+time(level)·labSpeedMult}</code> into <code>meta.research</code> if a slot is free, and deducts coins. On every menu load and tick we reconcile finished research (<code>now ≥ endsAt → meta.labs[id]++</code>). This is <b>independent of the run RNG</b>, so it's safe to advance from wall-clock deltas — see <a href="architecture.html">Architecture</a>'s offline section, but note labs use real time, not sim ticks.</li>
+      <li><b>Cancel = refund:</b> cancelling an in-progress lab refunds its coins and remembers progress (green bar), exactly like The Tower's "switch research".</li>
+      <li><b>Slots:</b> start at 1, buy up to 5 with gems (escalating price). More slots = research throughput, a major gem sink.</li>
+      <li><b>Speed-ups:</b> spend <i>cells</i> (a farmed currency, see §9) for a timed 1.5×–5× research multiplier.</li>
+      <li><b>Gating:</b> each lab unlocks only after its milestone (<code>gate:{tier,wave}</code>), reusing our milestone system so progression is paced.</li>
+    </ul>
+
+    <h3 class="blk">Cost &amp; time discipline (so it lasts thousands of levels)</h3>
+    <pre>coinCost(n) = round(base · 1.15..1.2<sup>n</sup>)     <span class="c">// steep — coins compound, so must this</span>
+timeSec(n)  = round(base · 1.18..1.22<sup>n</sup>)    <span class="c">// minutes → hours → days at the top</span>
+effectiveTime = timeSec(n) · (1 − labSpeedLab·k) · (1/activeSpeedBoost)</pre>
+    <p class="muted">Early labs finish in minutes (keeps day-one players engaged); top labs take real days,
+      which is the entire point of an idle game's retention curve. Time — not just coins — is the gate.</p>
+  </section>
+
+  <!-- ============================================================= -->
+  <section class="sec" id="workshop">
+    <h2>5 · The expanded workshop roster</h2>
+    <p class="lede">Same dual-currency machinery we already have (<code>A.UPGRADES</code>), just many more
+      rows — and crucially, several rows that require <b>new combat mechanics</b> in the sim, not just a
+      bigger number. Three tabs: <span class="pill a">Attack</span> <span class="pill d">Defense</span>
+      <span class="pill u">Utility</span> (rename of "economic"). Every row gets a <code>cap</code> liftable
+      by a lab.</p>
+
+    <h3 class="blk"><span class="pill a">Attack</span></h3>
+    <table>
+      <tr><th>Upgrade</th><th>Have?</th><th>Effect</th><th>Sim work needed</th></tr>
+      <tr><td>Damage</td><td><span class="pill have">have</span></td><td><code>rangedDamage</code></td><td>—</td></tr>
+      <tr><td>Attack Speed</td><td><span class="pill have">have</span></td><td><code>fireRate</code></td><td>—</td></tr>
+      <tr><td>Range</td><td><span class="pill have">have</span></td><td>radius</td><td>—</td></tr>
+      <tr><td>Damage / Meter</td><td><span class="pill have">have</span></td><td>+dmg by distance</td><td>—</td></tr>
+      <tr><td>Crit Chance / Crit Factor</td><td><span class="pill have">have</span></td><td>crit roll</td><td>—</td></tr>
+      <tr><td><b>Multishot</b></td><td><span class="pill miss">new</span></td><td>chance to fire N extra projectiles at extra targets</td><td>projectile fan in <code>_hero()</code></td></tr>
+      <tr><td><b>Rapid Fire</b></td><td><span class="pill miss">new</span></td><td>timed burst of very high fire-rate, periodic</td><td>buff window + cooldown</td></tr>
+      <tr><td><b>Bounce Shot</b></td><td><span class="pill miss">new</span></td><td>projectile ricochets to nearby enemies</td><td>bounce targeting in <code>projectiles.js</code></td></tr>
+      <tr><td><b>Super Crit</b></td><td><span class="pill miss">new</span></td><td>crits can crit again (multiplicative)</td><td>extend crit-count loop (already stacks &gt;100%!)</td></tr>
+      <tr><td><b>Rend Armor</b></td><td><span class="pill miss">new</span></td><td>hits stack a debuff: target takes +% damage</td><td>per-enemy <code>rend</code> stacks</td></tr>
+    </table>
+
+    <h3 class="blk"><span class="pill d">Defense</span></h3>
+    <table>
+      <tr><th>Upgrade</th><th>Have?</th><th>Effect</th><th>Sim work needed</th></tr>
+      <tr><td>Health</td><td><span class="pill have">have</span></td><td><code>maxHp</code></td><td>—</td></tr>
+      <tr><td>Health Regen</td><td><span class="pill have">have</span></td><td><code>regen</code></td><td>—</td></tr>
+      <tr><td>Dodge</td><td><span class="pill have">have</span></td><td>chance to negate a hit</td><td>—</td></tr>
+      <tr><td><b>Wall / Wall Regen</b></td><td><span class="pill miss">new</span></td><td>a second HP bar that soaks damage &amp; rebuilds after a delay</td><td><code>hero.wallHp/wallMax</code> + render</td></tr>
+      <tr><td><b>Thorns</b></td><td><span class="pill miss">new</span></td><td>reflect % of contact damage to attacker</td><td>in <code>_hurtHero</code>/contact code</td></tr>
+      <tr><td><b>Defense Absolute</b></td><td><span class="pill miss">new</span></td><td>flat damage reduction per hit</td><td>subtract before HP loss</td></tr>
+      <tr><td><b>Knockback / Orb</b></td><td><span class="pill miss">new</span></td><td>push enemies off; orbiting projectiles</td><td>optional, build identity</td></tr>
+    </table>
+
+    <h3 class="blk"><span class="pill u">Utility</span> <span class="muted">(rename of "economic", still Tier-2 gated)</span></h3>
+    <table>
+      <tr><th>Upgrade</th><th>Have?</th><th>Effect</th><th>Sim work needed</th></tr>
+      <tr><td>Coins / Wave, Coins / Kill</td><td><span class="pill have">have</span></td><td>cash &amp; coin income</td><td>—</td></tr>
+      <tr><td>Cores / Wave, Cores / Kill</td><td><span class="pill have">have</span></td><td>persistent income</td><td>—</td></tr>
+      <tr><td><b>Cash Bonus</b></td><td><span class="pill miss">new</span></td><td>global × on in-run cash</td><td>multiplier in cleanup</td></tr>
+      <tr><td><b>Interest</b></td><td><span class="pill miss">new</span></td><td>% of banked cash added each wave (capped)</td><td>per-wave econ hook</td></tr>
+      <tr><td><b>Free Upgrades</b></td><td><span class="pill miss">new</span></td><td>chance an in-run purchase is free</td><td>roll in <code>buyRunUpgrade</code></td></tr>
+      <tr><td><b>Wave Skip</b></td><td><span class="pill miss">new</span></td><td>chance to instantly clear+reward a wave</td><td>wave scheduler hook</td></tr>
+      <tr><td><b>Recovery / Package chance</b></td><td><span class="pill miss">new</span></td><td>enemies drop pickups (cash/health/box)</td><td>drop table on death</td></tr>
+    </table>
+    <div class="note">Implementation is mostly <b>data</b>: add rows to <code>A.UPGRADES</code> with their
+      curves &amp; caps, map the stat into <code>computeStats</code>, and (only for the "new mechanic" rows)
+      add the behavior in <code>core.js</code>. The buy/price/cap/perm machinery is untouched — it already
+      generalises over the list.</div>
+  </section>
+
+  <!-- ============================================================= -->
+  <section class="sec" id="enhance">
+    <h2>6 · Enhancements, discounts &amp; respec</h2>
+    <h3 class="blk">Workshop Enhancements <span class="tag">late-game multiplier</span></h3>
+    <p>A second, multiplicative pass over the same three categories, gated behind a deep milestone
+      (our analogue of T12 W60). Each enhancement bought in a category <b>unlocks the next</b> in that
+      category — a self-pacing tech tree. Mechanically identical to an upgrade row but its value enters
+      <code>computeStats</code> as a <code>× (1 + enhLevel·per)</code> rather than a flat add, so it
+      compounds with labs and cards. Stored as <code>meta.enh = { id: level }</code>.</p>
+
+    <h3 class="blk">Discounts</h3>
+    <p>Three utility upgrades — <i>Workshop Attack/Defense/Utility Discount</i> — that reduce the
+      <b>coin</b> price of permanent upgrades in their category by a %. Cleanly modeled as a multiplier on
+      <code>permCost()</code>. A soft pressure valve that keeps deep coin costs reachable.</p>
+
+    <h3 class="blk">Respec</h3>
+    <p>A button that refunds all coins spent on permanent workshop levels (optionally for a gem fee), zeroes
+      <code>meta.perm</code>, and returns the coins. Trivial given our model (perm levels and prices are
+      pure functions). Lets players re-pour into freshly cap-raised stats — the natural companion to labs.</p>
+  </section>
+
+  <!-- ============================================================= -->
+  <section class="sec" id="perks">
+    <h2>7 · Perks — the in-run draft <span class="tag">new system</span></h2>
+    <p class="lede">From a wave threshold, offer 1-of-3 powerful run modifiers; chosen perks live in
+      <code>state.run.perks</code> and feed <code>computeStats</code> as flats/mults. The wave gate
+      <i>grows</i> as you take more, so perks stay precious all run.</p>
+    <pre>A.PERKS = [
+  { id:'dmgMult',   roll:()=>({mult:{rangedDamage:0.35}}) },
+  { id:'rateMult',  roll:()=>({mult:{attackSpeed:0.30}}) },
+  { id:'hpMult',    roll:()=>({mult:{maxHp:0.40}}) },
+  { id:'freeUp',    roll:()=>({flat:{freeUpgradeChance:0.10}}) },
+  { id:'gameSpeed', roll:()=>({special:{gameSpeed:0.25}}) },     <span class="c">// "more coins/min"</span>
+  { id:'waveReq',   roll:()=>({special:{perkWaveReq:-0.20}}) },  <span class="c">// the must-pick</span>
+  { id:'ultimate',  roll:(owned)=>grantRandomUnownedUltimate(owned) },
+  <span class="c">// trade-offs: big up / small down, like The Tower's "trade-off" perks</span>
+];
+
+<span class="c">// offer logic</span>
+nextPerkWave = 200; step = 50;     <span class="c">// after each pick: nextPerkWave += step·(1+count/…)</span>
+onWaveStart(n): if n &gt;= nextPerkWave &amp;&amp; !state.run.perkOffer:
+  state.run.perkOffer = pick3(rng, ownedPerks);   <span class="c">// deterministic via run rng — pauses for choice</span></pre>
+    <p class="muted">Because perk offers are drawn from the <b>seeded run RNG</b>, offline catch-up and replays
+      stay deterministic; the UI just surfaces the pending offer when the player is watching, and an
+      auto-pick rule resolves it during pure offline simulation.</p>
+  </section>
+
+  <!-- ============================================================= -->
+  <section class="sec" id="tricks">
+    <h2>8 · Tricks — ultimate weapons, modules, bots, guardian</h2>
+    <p class="lede">The "build identity" layer. Good news: our <code>sim/abilities.js</code> already models
+      cooldown-driven effects (black hole, meteor, golden window) — exactly The Tower's ultimate-weapon
+      shape. We promote it from hard-coded effects to a managed, unlockable, upgradable slot system.</p>
+    <table>
+      <tr><th>Trick</th><th>Maps to</th><th>Plan</th></tr>
+      <tr><td><b>Ultimate Weapons</b><br><span class="muted">Black Hole, Death Wave, Golden Tower, Smart Missiles, Chain Lightning, Inner Land Mines, Poison Swamp…</span></td>
+        <td><code>abilities.js</code> effects</td>
+        <td>Define an <code>A.ULTIMATES</code> list; each has unlock cost (stones/coins), a small upgrade tree
+          (cooldown / duration / power), and emits the existing effect kinds. In-run they fire on cooldown;
+          labs/perks tune them.</td></tr>
+      <tr><td><b>Modules</b><br><span class="muted">Cannon / Armor / Generator / Core</span></td>
+        <td>new <code>sim/modules.js</code></td>
+        <td>Four equip slots, rarities, rolled sub-stats, fusion/level-up. Drops from bosses; merge dupes.
+          Enters <code>computeStats</code> as another flat/mult source. Heavier system — schedule late.</td></tr>
+      <tr><td><b>Bots</b><br><span class="muted">Coin / Flame / Thunder / Amplify</span></td>
+        <td><code>abilities.js</code> + a hero-like agent</td>
+        <td>Small autonomous entities in <code>state.bots[]</code> that orbit/patrol and apply effects.
+          Reuse enemy/hero movement code. Optional, build-defining.</td></tr>
+      <tr><td><b>Guardian</b></td><td>new entity</td><td>A second auto-attacker / fetcher. Lowest priority; a stretch trick.</td></tr>
+    </table>
+    <div class="note">Sequencing: ship <b>Ultimate Weapons</b> first (cheap — the engine exists), then
+      <b>Bots</b>, then <b>Modules</b> (the big one), then <b>Guardian</b>. None of these are needed to
+      prove the core loop; they're the "expand from a solid basis" payoff.</div>
+  </section>
+
+  <!-- ============================================================= -->
+  <section class="sec" id="economy">
+    <h2>9 · Economy — cash, coins, gems, cells</h2>
+    <p class="lede">The Tower's currencies map almost 1:1 onto ours; we mainly need to add the missing
+      <i>rules</i> (decay, interest, ceilings) and one or two farmed currencies.</p>
+    <table>
+      <tr><th>The Tower</th><th>Ours</th><th>Role</th><th>Action</th></tr>
+      <tr><td>Cash</td><td><code>econ.gold</code></td><td>in-run, resets</td><td><span class="pill have">have</span> — add Cash Bonus × &amp; interest.</td></tr>
+      <tr><td>Coins</td><td><code>meta.cores</code> + <code>econ.bonusCores</code></td><td>persistent, earned during run</td>
+        <td>Already earned per kill/wave via the economic tab &amp; banked at end. <b>Make cores also pay for labs.</b></td></tr>
+      <tr><td>Gems</td><td><code>meta.tokens</code> → rename/extend</td><td>premium meta</td>
+        <td>Fund card pulls, <b>lab slots</b>, perk rerolls, respec. <b>Give it real sources</b> (milestones, boss first-kills).</td></tr>
+      <tr><td>Cells / Stones / Medals</td><td>new <code>meta.cells</code></td><td>farmed sinks</td>
+        <td>Drop from special enemies (vampire/scatter). Spend on <b>lab speed-ups</b> &amp; ultimate unlocks.</td></tr>
+    </table>
+    <h3 class="blk">New economy rules (in <code>core.js</code> cleanup / wave hooks)</h3>
+    <ul>
+      <li><b>Coins-per-kill ceiling + scaling:</b> base coin value per enemy type, multiplied by a capped
+        <code>coinsPerKill</code> bonus and lifted by a coin lab — so income scales but never explodes.</li>
+      <li><b>Coin decay:</b> an enemy that survives &gt; N waves loses 50% of its coin value — kills the
+        "kite one wave forever" exploit and forces forward progress.</li>
+      <li><b>Interest:</b> at each wave start, add <code>min(maxInterest, interestRate · bankedCash)</code> —
+        rewards saving for big buys, a classic idle-TD hook.</li>
+      <li><b>Cash vs coins split tuning:</b> cash income is generous (you should buy lots in-run); coin income
+        is stingy (permanent power is earned slowly). The ratio is the long-term pacing dial.</li>
+    </ul>
+  </section>
+
+  <!-- ============================================================= -->
+  <section class="sec" id="enemies">
+    <h2>10 · Enemy scaling &amp; the balance loop</h2>
+    <p class="lede">The whole point of the upgrade stack is to outrun an exponential enemy curve. Balance is
+      not a table of numbers — it's pinning enemy growth to the <i>ceiling</i> the player can reach, so the
+      wall always lands at the intended depth.</p>
+
+    <h3 class="blk">Keep the curve shape we have, retune the constants</h3>
+    <pre>enemyHP(wave,tier,enemyTier) = baseHP
+   · waveStr(wave)            <span class="c">// today: linear 1+0.08·(n−1)  →  switch to mild exponential</span>
+   · TIERS[enemyTier].stat    <span class="c">// weak/avg/hard/elite class multiplier</span>
+   · tierDifficulty(tier)     <span class="c">// 2^(tier−1): each game-tier doubles effective wave</span></pre>
+    <p>Today <code>waveStr</code> is <b>linear</b> (<code>1+0.08·(n−1)</code>). The player's power is
+      <b>multiplicative</b> (damage × rate × crit × labs × cards…), which compounds far faster than a line —
+      so right now the player eventually trivialises every wave. To create a real, recurring wall we move
+      enemy HP to <b>gently exponential</b> (e.g. <code>1.025<sup>n</sup></code> blended with the linear term)
+      so it tracks the player's compounding curve. The tier doubling stays as the coarse gate.</p>
+
+    <h3 class="blk">The balance identity we tune against</h3>
+    <div class="note"><b>Wall depth ≈ where player ceiling DPS = enemy HP growth.</b><br>
+      playerCeilingDPS(stat caps) ← set by <b>labs</b> (caps + scaling). enemyHP(wave) ← set by the curve
+      above. We choose the lab cap/scaling constants <i>so that</i>, with maxed-for-your-progress labs, the
+      wall sits ~50–100 waves past your current best. That gap is the carrot. Cores/coins income sets how
+      many runs it takes to buy the labs that move the wall — i.e. the <b>session count</b> between walls.</div>
+
+    <h3 class="blk">New enemy archetypes (data rows in <code>registries.js</code>)</h3>
+    <table>
+      <tr><th>Type</th><th>Behavior</th><th>Counters / teaches</th></tr>
+      <tr><td>Fast</td><td>high speed, low HP</td><td>attack speed / multishot</td></tr>
+      <tr><td>Tank</td><td>slow, very high HP</td><td>raw damage / rend</td></tr>
+      <tr><td>Protector</td><td>shields nearby enemies</td><td>focus fire / bounce</td></tr>
+      <tr><td>Splitter / Scatter</td><td>spawns smaller enemies on death</td><td>AoE ultimates; <b>drops cells</b></td></tr>
+      <tr><td>Vampire</td><td>heals from hero; <b>drops elite cells</b></td><td>burst damage; cell farming</td></tr>
+      <tr><td>Ranged / Boss</td><td><span class="pill have">have</span></td><td>range / sustained DPS</td></tr>
+    </table>
+    <p class="muted">Bosses on a fixed cadence (every ~10 waves, already present) gate <b>module/gem</b> drops,
+      tying the trick layer to enemy design. Elite/special enemies are the <b>cell</b> faucet that feeds lab
+      speed-ups — closing the loop between combat and the research economy.</p>
+  </section>
+
+  <!-- ============================================================= -->
+  <section class="sec" id="math">
+    <h2>11 · The full stat-composition formula</h2>
+    <p class="lede">Every layer in one expression. This is what <code>computeStats()</code> grows into. Order
+      matters: additive sources gather first, then multiplicative layers compound.</p>
+    <pre>level   = min( cap(id), perm[id] + run[id] )          <span class="c">// cap(id)=baseMax + labCapBonus(id)</span>
+base    = UPGRADES[id].value(level)
+
+effectiveStat(id) =
+    ( base
+      + Σ card.flat(id)
+      + Σ perk.flat(id)
+      + Σ module.flat(id) )
+    · ( 1 + Σ labScale(id) )           <span class="c">// labs: the slope</span>
+    · ( 1 + Σ enhancement(id) )        <span class="c">// workshop enhancements: 2nd tier</span>
+    · Π ( 1 + card.mult(id) )
+    · Π ( 1 + perk.mult(id) )
+    · Π ( 1 + module.mult(id) )
+
+<span class="c">// globals applied outside the per-stat block:</span>
+gameSpeed  = clamp( 1 + Σ labGameSpeed + Σ perkGameSpeed , 1, MAX )   <span class="c">// scales sim time → coins/min</span>
+permCost   = base.core.cost(n) · (1 − discount[cat])
+coinReward = baseCoin · min(coinCap, 1+coinsPerKill) · (1+coinLab) · decayFactor(age)</pre>
+    <p class="muted">We already have the additive/multiplicative resolution for cards in
+      <code>computeStats</code> (the <code>flat</code>/<code>mult</code> split). Labs, enhancements, perks and
+      modules slot into the <i>same</i> resolver as additional flat/mult/scale sources — so this is an
+      extension of existing code, not a rewrite.</p>
+  </section>
+
+  <!-- ============================================================= -->
+  <section class="sec" id="data">
+    <h2>12 · Data-model &amp; save-migration changes</h2>
+    <pre><span class="c">// meta (persistent) — add:</span>
+meta.labs        = {};   <span class="c">// {labId: level}</span>
+meta.research    = [];   <span class="c">// [{id, endsAt}] active research (wall-clock)</span>
+meta.labSlots    = 1;
+meta.enh         = {};   <span class="c">// {enhId: level} workshop enhancements</span>
+meta.discount    = {};   <span class="c">// {attack|defense|utility: pct}</span>
+meta.gems        = 0;    <span class="c">// (rename/extend tokens)</span>
+meta.cells       = 0;    <span class="c">// farmed lab-speed currency</span>
+meta.modules     = [];   <span class="c">// equipped + inventory</span>
+meta.ultimates   = {};   <span class="c">// {id: {unlocked, level}}</span>
+
+<span class="c">// state.run (per-run) — add:</span>
+state.run.perks     = [];     <span class="c">// chosen perk effects this run</span>
+state.run.perkOffer = null;   <span class="c">// pending 1-of-3 draft</span>
+state.econ.interest = 0;      <span class="c">// banked-cash interest accrual</span></pre>
+    <div class="note"><b>Migration:</b> our saves are plain JSON built by <code>createState</code>/the meta
+      default. Add a tiny <code>A.migrateMeta(meta)</code> that fills missing keys with defaults on load
+      (idempotent), and bump a <code>meta.ver</code>. No destructive changes — every new field is additive,
+      so existing saves keep working and simply start at the new defaults.</div>
+  </section>
+
+  <!-- ============================================================= -->
+  <section class="sec" id="roadmap">
+    <h2>13 · Phased build order</h2>
+    <p class="lede">Each phase is independently shippable and leaves the game playable. Phase 1 is the
+      keystone — it delivers the "scaling &amp; ceilings" the brief is really asking for.</p>
+
+    <div class="ph">
+      <h4>Phase 1 — Dynamic caps + Labs MVP <span class="tag">the keystone</span></h4>
+      <p class="muted">Make <code>max</code> dynamic; add <code>sim/labs.js</code> with ~8 starter labs
+        (damage cap+scale, attack-speed cap, health cap+scale, game speed, coin scale, lab speed); real-time
+        research with offline reconciliation; a Lab menu tab. Retune enemy <code>waveStr</code> toward mild
+        exponential so a wall actually exists.</p>
+      <p class="files">Touches: <code>sim/labs.js</code> (new), <code>sim/skills.js</code>
+        (<code>cap()</code>, <code>labScale</code> in <code>computeStats</code>), <code>sim/waves.js</code>
+        (curve), <code>sim/state.js</code> + meta defaults, <code>index.html</code> (research reconcile on
+        load/tick), <code>hud/hud.js</code> (Lab tab).</p>
+    </div>
+    <div class="ph">
+      <h4>Phase 2 — Workshop breadth + Utility tab</h4>
+      <p class="muted">Add the new <code>A.UPGRADES</code> rows. Pure-data ones (cash bonus, interest, free
+        upgrades, defense absolute) first; then the combat-mechanic ones (multishot, bounce, rend, wall,
+        thorns, rapid fire) with their sim behavior. Rename economic→utility.</p>
+      <p class="files">Touches: <code>sim/skills.js</code>, <code>sim/core.js</code>,
+        <code>sim/projectiles.js</code>, <code>renderers/canvas2d/renderer.js</code> (wall bar, bounce/rend FX).</p>
+    </div>
+    <div class="ph">
+      <h4>Phase 3 — Economy rules</h4>
+      <p class="muted">Coin-per-kill ceiling + scaling, coin decay, interest, cash bonus. Split gems/cells out
+        of tokens and give them sources. This makes the lab economy actually pace correctly.</p>
+      <p class="files">Touches: <code>sim/core.js</code> (cleanup/wave hooks), <code>sim/enemies.js</code>
+        (drop tables), meta.</p>
+    </div>
+    <div class="ph">
+      <h4>Phase 4 — Enhancements, discounts, respec</h4>
+      <p class="muted">Second multiplier tier behind a deep milestone; per-category discount upgrades; coins
+        respec. Small, high-impact, reuses Phase-1 plumbing.</p>
+      <p class="files">Touches: <code>sim/skills.js</code>, <code>hud/hud.js</code>.</p>
+    </div>
+    <div class="ph">
+      <h4>Phase 5 — Perks</h4>
+      <p class="muted"><code>sim/perks.js</code>, wave-gated 1-of-3 draft drawn from run RNG, auto-pick rule
+        for offline, growing wave requirement, perk effects into <code>computeStats</code>.</p>
+      <p class="files">Touches: <code>sim/perks.js</code> (new), <code>sim/core.js</code>,
+        <code>sim/skills.js</code>, <code>hud/hud.js</code> (draft overlay).</p>
+    </div>
+    <div class="ph">
+      <h4>Phase 6 — Enemy roster + balance pass</h4>
+      <p class="muted">Add fast/tank/protector/splitter/vampire rows &amp; behaviors; tie cell drops; do the
+        full balance pass pinning enemy HP to lab ceilings (§10). Boss cadence → module/gem drops.</p>
+      <p class="files">Touches: <code>sim/registries.js</code>, <code>sim/enemies.js</code>,
+        <code>sim/core.js</code>, <code>sim/waves.js</code>.</p>
+    </div>
+    <div class="ph">
+      <h4>Phase 7 — Trick layer</h4>
+      <p class="muted">Ultimate Weapons (promote <code>abilities.js</code> to a slot system) → Bots → Modules
+        → Guardian, in that order. Each is opt-in build identity on top of a complete loop.</p>
+      <p class="files">Touches: <code>sim/abilities.js</code>, <code>sim/modules.js</code> (new),
+        <code>sim/state.js</code> (bots), HUD.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================= -->
+  <section class="sec" id="risks">
+    <h2>14 · Risks &amp; open questions</h2>
+    <ul>
+      <li><b>Determinism vs real-time labs.</b> Labs must advance on wall-clock and stay <i>out</i> of the
+        seeded run sim, or offline replay breaks. Decision: labs are meta-state reconciled on load/menu tick,
+        never inside <code>Sim.step</code>. (Game-speed <i>does</i> enter the sim and must be folded into the
+        fixed-timestep + offline catch-up carefully.)</li>
+      <li><b>Curve retune is a real-balance change.</b> Switching <code>waveStr</code> to exponential will
+        invalidate current pacing; needs a sweep with the existing headless harness to place the first wall.</li>
+      <li><b>Currency identity.</b> Should <code>cores</code> stay one currency that funds both permanent
+        upgrades <i>and</i> labs (simpler), or split coins/cores? Recommend: cores = coins (fund both); tokens
+        → gems (premium/slots); add cells (farmed). <span class="muted">Worth a quick confirm before Phase 1.</span></li>
+      <li><b>Scope of Modules.</b> Modules are the heaviest system and least essential to the core loop —
+        keep them last and time-boxed.</li>
+      <li><b>UI density.</b> The HUD will grow a lot (labs, enhancements, perks, modules). Plan tabbed menus
+        early so it doesn't become unmanageable.</li>
+    </ul>
+  </section>
+
+  <section class="sec" id="sources">
+    <h2>Sources</h2>
+    <p class="src muted">Research drawn from The Tower — Idle Tower Defense community wikis &amp; guides:</p>
+    <ul class="src">
+      <li><a href="https://the-tower-idle-tower-defense.fandom.com/wiki/Workshop_Upgrades">Workshop Upgrades (Fandom)</a> · <a href="https://the-tower-idle-tower-defense.game-vault.net/wiki/Workshop">Workshop (Game-Vault)</a></li>
+      <li><a href="https://the-tower-idle-tower-defense.fandom.com/wiki/Lab_Upgrades">Lab Upgrades (Fandom)</a> · <a href="https://the-tower-idle-tower-defense.game-vault.net/wiki/Guide:Labs_Guide">Labs Guide</a></li>
+      <li><a href="https://the-tower-idle-tower-defense.fandom.com/wiki/Workshop_Enhancement">Workshop Enhancement</a> · <a href="https://the-tower-idle-tower-defense.fandom.com/wiki/Perks">Perks</a></li>
+      <li><a href="https://the-tower-idle-tower-defense.fandom.com/wiki/Enemies">Enemies</a> · <a href="https://the-tower-idle-tower-defense.fandom.com/wiki/Coins_Per_Kill_Bonus">Coins Per Kill Bonus</a></li>
+      <li><a href="https://tvtropes.org/pmwiki/pmwiki.php/VideoGame/TheTowerIdleTowerDefense">TV Tropes overview</a></li>
+    </ul>
+  </section>
+
+  <footer class="wrap" style="padding:20px 0 0">
+    Planning artifact · open directly in a browser, no build step. Lives in <code>plan/upgrades.html</code>.
+    Companion to <a href="skills.html">Skills</a>, <a href="enemies.html">Enemies</a> &amp; <a href="abilities.html">Abilities</a>.
+  </footer>
+</div>
+</body>
+</html>

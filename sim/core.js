@@ -42,7 +42,7 @@
     const w = this.s.wave, st = this.stats;
     w.n = n; w.maxWave = Math.max(w.maxWave, n);
     // economic per-wave income (gold is immediate; cores are banked at run end)
-    if (st.coinsPerWave) { this.s.econ.gold += st.coinsPerWave; this.s.econ.goldEarned += st.coinsPerWave; }
+    if (st.coinsPerWave) { const cw = Math.round(st.coinsPerWave * (st.cashMult || 1)); this.s.econ.gold += cw; this.s.econ.goldEarned += cw; }
     if (st.coresPerWave) this.s.econ.bonusCores += st.coresPerWave;
     const eff = this._effWave(n);
     w.count = A.waveCount(eff);
@@ -100,8 +100,11 @@
       if (this.s.fx.length > 32) this.s.fx.shift();
       return;
     }
+    // Armor: a flat soak applied per hit. A hit fully absorbed deals no damage at all.
+    const amt = amount - (st.armor || 0);
+    if (amt <= 0) return;
     h.sinceHit = 0;
-    h.hp -= amount; // integer model: no armor/shield mitigation
+    h.hp -= amt;
     if (h.hp <= 0) { h.hp = 0; this.s.alive = false; }
   };
 
@@ -178,7 +181,7 @@
       if (e.hp <= 0) {
         s.econ.kills++;
         const tg = A.TIERS[e.tier];
-        const g = Math.round(tg.reward * this.stats.goldFind * e.strMult * (s.rewardMult || 1));
+        const g = Math.round(tg.reward * this.stats.goldFind * e.strMult * (s.rewardMult || 1) * (this.stats.cashMult || 1));
         s.econ.gold += g; s.econ.goldEarned += g;
         if (this.stats.coresPerKill) s.econ.bonusCores += this.stats.coresPerKill; // economic per-kill cores
         s.econ.xp += Math.round(2 * tg.reward * e.strMult * this.stats.xpGain);
