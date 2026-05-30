@@ -36,8 +36,11 @@
     // ---- UTILITY ----
     { id: 'coinScale', cat: 'utility', kind: 'scale',   target: 'goldFind',     label: 'Coin Amplifier',
       per: 0.08, max: 40, coin: lcurve(80, 1.16),  time: lcurve(120, 1.20), gate: { wave: 50 } },
+    // Game Speed: 8 levels, +0.5x each → 5x at max. Research time doubles each level (1h→128h,
+    // ~255h to max) — the long-haul lever that compresses thousands of game-hours into real days.
+    // Headroom left for a later premium +1x (→6x). gameSpeed scales the loop's step count, not DT.
     { id: 'gameSpeed', cat: 'utility', kind: 'special', target: 'gameSpeed',    label: 'Game Speed',
-      per: 0.1,  max: 20, coin: lcurve(200, 1.25), time: lcurve(300, 1.25), gate: { wave: 50 } },
+      per: 0.5,  max: 8,  coin: lcurve(500, 2.0),  time: lcurve(3600, 2),   gate: { wave: 50 } },
     { id: 'labSpeed',  cat: 'utility', kind: 'special', target: 'labTime',      label: 'Research Speed',
       per: 0.02, max: 25, coin: lcurve(150, 1.20), time: lcurve(240, 1.22), gate: { wave: 100 } },
   ];
