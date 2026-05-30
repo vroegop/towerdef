@@ -44,6 +44,15 @@
     // economic per-wave income (gold is immediate; cores are banked at run end)
     if (st.coinsPerWave) { const cw = Math.round(st.coinsPerWave * (st.cashMult || 1)); this.s.econ.gold += cw; this.s.econ.goldEarned += cw; }
     if (st.coresPerWave) this.s.econ.bonusCores += st.coresPerWave;
+    // Interest: gain a capped fraction of banked cash each wave — rewards saving for big buys.
+    if (st.interest) {
+      const gain = Math.min(st.maxInterest || 0, Math.floor(this.s.econ.gold * st.interest));
+      if (gain > 0) {
+        this.s.econ.gold += gain; this.s.econ.goldEarned += gain;
+        this.s.fx.push({ seq: ++this.s.fxSeq, x: this.s.hero.x, y: this.s.hero.y, gold: gain });
+        if (this.s.fx.length > 32) this.s.fx.shift();
+      }
+    }
     const eff = this._effWave(n);
     w.count = A.waveCount(eff);
     w.toSpawn = w.count;

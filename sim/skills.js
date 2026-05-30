@@ -88,6 +88,12 @@
     { id: 'cashBonus',    tab: 'economic', icon: 'coin',  label: 'Cash Bonus', max: 10000, gated: true,
       value: (b) => 1 + b * 0.02,                    fmt: (b) => '×' + (1 + b * 0.02).toFixed(2), // global × on all gold income
       gold: curve(40, 1.55),   core: curve(10, 1.0018) },
+    { id: 'interest',     tab: 'economic', icon: 'coin',  label: 'Interest', max: 500, gated: true, // % of banked cash per wave
+      value: (b) => b * 0.002,                       fmt: (b) => (b * 0.002 * 100).toFixed(1) + '%/wave',
+      gold: curve(80, 1.6),    core: curve(20, 1.0018) },
+    { id: 'maxInterest',  tab: 'economic', icon: 'coin',  label: 'Max Interest', max: 10000, gated: true, // interest payout ceiling
+      value: (b) => 50 + b * 10,                     fmt: (b) => '≤' + (50 + b * 10),
+      gold: curve(40, 1.55),   core: curve(10, 1.0018) },
     { id: 'coresPerWave', tab: 'economic', icon: 'cores', label: 'Cores / Wave', max: 10000, gated: true,
       value: (b) => b,                               fmt: (b) => '+' + b,
       gold: curve(50, 1.6),    core: curve(10, 1.0018) },
@@ -259,6 +265,8 @@
       thorns:       U.thorns.value(b('thorns')),        // fraction of a landed hit reflected to the attacker
       lifesteal:    U.lifesteal.value(b('lifesteal')),  // fraction of damage dealt healed back to the hero
       cashMult:     U.cashBonus.value(b('cashBonus')),  // global × on all gold income
+      interest:     U.interest.value(b('interest')),    // fraction of banked cash paid at wave start
+      maxInterest:  U.maxInterest.value(b('maxInterest')), // ceiling on the interest payout
       coinsPerWave: U.coinsPerWave.value(b('coinsPerWave')),
       coresPerWave: U.coresPerWave.value(b('coresPerWave')),
       coresPerKill: U.coresPerKill.value(b('coresPerKill')),
