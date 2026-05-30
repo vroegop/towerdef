@@ -25,7 +25,7 @@
     this._waves(dt);
     this._hero(dt);
     this._enemies(dt);
-    A.tickProjectiles(s, dt);
+    A.tickProjectiles(s, dt, this.stats);
     A.tickEffects(s, dt);
     this._cleanup();
   };
@@ -144,6 +144,7 @@
         const dmg = this._rollDamage(st, Math.hypot(best.x - h.x, best.y - h.y));
         if (s.atkMode === 'lightning') { // dev: original instant hitscan, drawn as a beam
           best.hp -= dmg; best.hitFlash = 0.12; best.hitDmg = Math.round(dmg);
+          if (st.lifesteal) h.hp = Math.min(h.hpMax, h.hp + dmg * st.lifesteal);
           if (best.behavior === 'bounce') best.kb = Math.max(best.kb, 0.25);
         } else {
           A.fireProjectile(s, h, best, st, dmg); // travelling bullet: damage lands on impact

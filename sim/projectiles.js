@@ -28,8 +28,9 @@
     return null;
   }
 
-  A.tickProjectiles = function (state, dt) {
+  A.tickProjectiles = function (state, dt, stats) {
     if (!state.projectiles.length) return;
+    const h = state.hero, ls = (stats && stats.lifesteal) || 0;
     const keep = [];
     for (const p of state.projectiles) {
       const stepLen = A.BULLET_SPEED * dt;
@@ -41,6 +42,7 @@
         const e = hitEnemy(state, p);
         if (e) {
           e.hp -= p.dmg; e.hitFlash = 0.12; e.hitDmg = Math.round(p.dmg); // hitDmg: damage just dealt (renderer shows it)
+          if (ls && h) h.hp = Math.min(h.hpMax, h.hp + p.dmg * ls); // lifesteal: heal a share of damage dealt
           if (e.behavior === 'bounce') e.kb = Math.max(e.kb, 0.25); // same knockback the old hitscan applied
           dead = true; break;
         }

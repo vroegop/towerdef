@@ -74,6 +74,9 @@
     { id: 'thorns',       tab: 'defense', icon: 'shield', label: 'Thorns', max: 10000, // reflect = thorns × hit damage
       value: (b) => b * 0.05,                        fmt: (b) => '+' + (b * 0.05).toFixed(2) + '×',
       gold: curve(35, 1.55),   core: curve(8, 1.0018) },
+    { id: 'lifesteal',    tab: 'defense', icon: 'regen', label: 'Lifesteal', max: 500, // heal % of damage dealt, caps 25%
+      value: (b) => Math.min(0.25, b * 0.0005),      fmt: (b) => (Math.min(0.25, b * 0.0005) * 100).toFixed(1) + '%',
+      gold: curve(60, 1.6),    core: curve(15, 1.0018) },
 
     // ---- ECONOMIC (Tier 2+) ----
     { id: 'coinsPerWave', tab: 'economic', icon: 'coin',  label: 'Coins / Wave', max: 10000, gated: true,
@@ -254,6 +257,7 @@
       armor:        U.armor.value(b('armor')),          // flat damage soaked per hit
       defPct:       U.defPct.value(b('defPct')),        // multiplicative DR applied after armor
       thorns:       U.thorns.value(b('thorns')),        // fraction of a landed hit reflected to the attacker
+      lifesteal:    U.lifesteal.value(b('lifesteal')),  // fraction of damage dealt healed back to the hero
       cashMult:     U.cashBonus.value(b('cashBonus')),  // global × on all gold income
       coinsPerWave: U.coinsPerWave.value(b('coinsPerWave')),
       coresPerWave: U.coresPerWave.value(b('coresPerWave')),
