@@ -33,7 +33,7 @@ function avg(meta, n) { let w = 0; for (let i = 0; i < n; i++) w += simRun(JSON.
 
 const N = Number(process.argv[2]) || 4;
 const heavyPerm = { health: 300, rangedDamage: 300, attackSpeed: 150, regen: 150, critChance: 100, critDamage: 300, armor: 200 };
-const maxLabs = { dmgCap: 40, dmgScale: 50, hpCap: 40, hpScale: 50, rateCap: 30, coinScale: 40, gameSpeed: 10 };
+const maxLabs = { dmgScale: 50, rateScale: 50, critScale: 50, hpScale: 50, regenScale: 50, coinScale: 40, gameSpeed: 10 };
 const profiles = {
   'fresh                ': { cores: 0, perm: {}, tier: 1, cards: [] },
   'light perm           ': { cores: 0, perm: { health: 50, rangedDamage: 50, attackSpeed: 30, regen: 30 }, tier: 1, cards: [] },

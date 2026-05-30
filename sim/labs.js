@@ -17,24 +17,27 @@
   // Starter roster (Phase 1 MVP). `per` is the per-level effect; `max` the level cap;
   // `coin` is the cores price curve, `time` the wall-clock seconds curve; `gate.wave`
   // is the best-wave milestone that unlocks it. cat groups them in the Lab menu.
+  // Labs make your SKILLS more EFFECTIVE — they multiply the stat itself, not its level cap.
+  // (Caps almost never bind in practice: income limits you far below them. So the lab roster is
+  //  all 'scale' research plus two 'special' globals; the cap-lab machinery still exists for later.)
   A.LABS = [
     // ---- ATTACK ----
-    { id: 'dmgCap',    cat: 'attack',  kind: 'cap',     target: 'rangedDamage', label: 'Damage Capacity',
-      per: 500,  max: 60, coin: lcurve(50, 1.15),  time: lcurve(60, 1.18),  gate: { wave: 30 } },
     { id: 'dmgScale',  cat: 'attack',  kind: 'scale',   target: 'rangedDamage', label: 'Damage Amplifier',
-      per: 0.04, max: 50, coin: lcurve(80, 1.16),  time: lcurve(120, 1.20), gate: { wave: 60 } },
-    { id: 'rateCap',   cat: 'attack',  kind: 'cap',     target: 'attackSpeed',  label: 'Fire-Rate Capacity',
-      per: 50,   max: 40, coin: lcurve(60, 1.15),  time: lcurve(90, 1.18),  gate: { wave: 40 } },
+      per: 0.04, max: 50, coin: lcurve(60, 1.15),  time: lcurve(90, 1.18),  gate: { wave: 30 } },
+    { id: 'rateScale', cat: 'attack',  kind: 'scale',   target: 'fireRate',     label: 'Fire-Rate Amplifier',
+      per: 0.03, max: 50, coin: lcurve(70, 1.15),  time: lcurve(100, 1.18), gate: { wave: 45 } },
+    { id: 'critScale', cat: 'attack',  kind: 'scale',   target: 'critMult',     label: 'Crit Amplifier',
+      per: 0.03, max: 50, coin: lcurve(90, 1.16),  time: lcurve(140, 1.20), gate: { wave: 70 } },
     // ---- DEFENSE ----
-    { id: 'hpCap',     cat: 'defense', kind: 'cap',     target: 'health',       label: 'Health Capacity',
-      per: 500,  max: 60, coin: lcurve(50, 1.15),  time: lcurve(60, 1.18),  gate: { wave: 30 } },
     { id: 'hpScale',   cat: 'defense', kind: 'scale',   target: 'maxHp',        label: 'Health Amplifier',
-      per: 0.04, max: 50, coin: lcurve(80, 1.16),  time: lcurve(120, 1.20), gate: { wave: 80 } },
+      per: 0.04, max: 50, coin: lcurve(60, 1.15),  time: lcurve(90, 1.18),  gate: { wave: 30 } },
+    { id: 'regenScale',cat: 'defense', kind: 'scale',   target: 'regen',        label: 'Regen Amplifier',
+      per: 0.05, max: 50, coin: lcurve(70, 1.15),  time: lcurve(110, 1.19), gate: { wave: 60 } },
     // ---- UTILITY ----
-    { id: 'gameSpeed', cat: 'utility', kind: 'special', target: 'gameSpeed',    label: 'Game Speed',
-      per: 0.1,  max: 20, coin: lcurve(200, 1.25), time: lcurve(300, 1.25), gate: { wave: 50 } },
     { id: 'coinScale', cat: 'utility', kind: 'scale',   target: 'goldFind',     label: 'Coin Amplifier',
       per: 0.08, max: 40, coin: lcurve(80, 1.16),  time: lcurve(120, 1.20), gate: { wave: 50 } },
+    { id: 'gameSpeed', cat: 'utility', kind: 'special', target: 'gameSpeed',    label: 'Game Speed',
+      per: 0.1,  max: 20, coin: lcurve(200, 1.25), time: lcurve(300, 1.25), gate: { wave: 50 } },
     { id: 'labSpeed',  cat: 'utility', kind: 'special', target: 'labTime',      label: 'Research Speed',
       per: 0.02, max: 25, coin: lcurve(150, 1.20), time: lcurve(240, 1.22), gate: { wave: 100 } },
   ];
