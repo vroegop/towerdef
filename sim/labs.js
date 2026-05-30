@@ -22,19 +22,19 @@
     { id: 'dmgCap',    cat: 'attack',  kind: 'cap',     target: 'rangedDamage', label: 'Damage Capacity',
       per: 500,  max: 60, coin: lcurve(50, 1.15),  time: lcurve(60, 1.18),  gate: { wave: 30 } },
     { id: 'dmgScale',  cat: 'attack',  kind: 'scale',   target: 'rangedDamage', label: 'Damage Amplifier',
-      per: 0.02, max: 50, coin: lcurve(80, 1.16),  time: lcurve(120, 1.20), gate: { wave: 60 } },
+      per: 0.04, max: 50, coin: lcurve(80, 1.16),  time: lcurve(120, 1.20), gate: { wave: 60 } },
     { id: 'rateCap',   cat: 'attack',  kind: 'cap',     target: 'attackSpeed',  label: 'Fire-Rate Capacity',
       per: 50,   max: 40, coin: lcurve(60, 1.15),  time: lcurve(90, 1.18),  gate: { wave: 40 } },
     // ---- DEFENSE ----
     { id: 'hpCap',     cat: 'defense', kind: 'cap',     target: 'health',       label: 'Health Capacity',
       per: 500,  max: 60, coin: lcurve(50, 1.15),  time: lcurve(60, 1.18),  gate: { wave: 30 } },
     { id: 'hpScale',   cat: 'defense', kind: 'scale',   target: 'maxHp',        label: 'Health Amplifier',
-      per: 0.02, max: 50, coin: lcurve(80, 1.16),  time: lcurve(120, 1.20), gate: { wave: 80 } },
+      per: 0.04, max: 50, coin: lcurve(80, 1.16),  time: lcurve(120, 1.20), gate: { wave: 80 } },
     // ---- UTILITY ----
     { id: 'gameSpeed', cat: 'utility', kind: 'special', target: 'gameSpeed',    label: 'Game Speed',
       per: 0.1,  max: 20, coin: lcurve(200, 1.25), time: lcurve(300, 1.25), gate: { wave: 50 } },
     { id: 'coinScale', cat: 'utility', kind: 'scale',   target: 'goldFind',     label: 'Coin Amplifier',
-      per: 0.05, max: 40, coin: lcurve(80, 1.16),  time: lcurve(120, 1.20), gate: { wave: 50 } },
+      per: 0.08, max: 40, coin: lcurve(80, 1.16),  time: lcurve(120, 1.20), gate: { wave: 50 } },
     { id: 'labSpeed',  cat: 'utility', kind: 'special', target: 'labTime',      label: 'Research Speed',
       per: 0.02, max: 25, coin: lcurve(150, 1.20), time: lcurve(240, 1.22), gate: { wave: 100 } },
   ];

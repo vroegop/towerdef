@@ -27,8 +27,10 @@
   };
   // Strength = linear ramp × gentle exponential. Wave 1 is exactly ×1 (both terms = 1), so the
   // scripted first run and early game are unchanged; the exponential only bites at depth, where it
-  // races the player's compounding (multiplicative) power and creates the wall. NOTE: this is the
-  // mild Phase-1 placeholder — the full pin-to-lab-ceiling balance sweep happens in Phase 5.
+  // races the player's compounding (multiplicative) power and creates the wall.
+  // expBase 1.015 was chosen via tools/balance.js: gentler curves flatten the wall at ~120 (a
+  // survival ceiling, not a DPS one) and make labs irrelevant; 1.015 keeps the HP/DPS race live so
+  // perm levels and labs measurably push the wall outward (fresh→~2, light→~27, heavy→~101, +labs→~117).
   A.waveStr = function (n) { return (1 + A.WAVE.strPerWave * (n - 1)) * Math.pow(A.WAVE.expBase, n - 1); };
   A.waveSpeed = function (n) { return 1 + A.WAVE.speedPerWave * (n - 1); };
 
