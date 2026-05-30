@@ -144,21 +144,32 @@
     h.hpMax = st.maxHp; if (h.hp > h.hpMax) h.hp = h.hpMax;
     h.sinceHit += dt;
     if (st.regen > 0 && h.hp < h.hpMax) h.hp = Math.min(h.hpMax, h.hp + st.regen * dt);
-    // auto-attack nearest in range
+    // auto-attack the nearest enemies in range. Multishot can fan the shot to extra targets.
     h.atkCd -= dt;
     if (h.atkCd <= 0 && s.enemies.length) {
-      let best = null, bd = st.range;
-      for (const e of s.enemies) { const d = Math.hypot(e.x - h.x, e.y - h.y); if (d < bd) { bd = d; best = e; } }
-      if (best) {
-        const dmg = this._rollDamage(st, Math.hypot(best.x - h.x, best.y - h.y));
-        if (s.atkMode === 'lightning') { // dev: original instant hitscan, drawn as a beam
-          A.applyHit(s, best, dmg, st, this.rng);
-        } else {
-          A.fireProjectile(s, h, best, st, dmg); // travelling bullet: damage lands on impact
+      const maxExtra = st.msChance ? Math.max(0, Math.floor(st.msTargets || 0)) : 0;
+      const targets = this._nearestN(1 + maxExtra, st.range);
+      if (targets.length) {
+        // roll Multishot only when something is in range, so empty ticks don't consume the rng
+        let shots = 1;
+        if (st.msChance && this.rng.next() < st.msChance) shots = Math.min(targets.length, 1 + maxExtra);
+        for (let i = 0; i < shots; i++) {
+          const t = targets[i];
+          const dmg = this._rollDamage(st, Math.hypot(t.x - h.x, t.y - h.y)); // each shot rolls its own crit
+          if (s.atkMode === 'lightning') A.applyHit(s, t, dmg, st, this.rng);
+          else A.fireProjectile(s, h, t, st, dmg); // travelling bullet: damage lands on impact
         }
         h.atkCd = 1 / Math.max(0.1, st.fireRate);
       }
     }
+  };
+
+  // up to `n` nearest enemies within `range`, sorted nearest-first (deterministic order).
+  Sim.prototype._nearestN = function (n, range) {
+    const h = this.s.hero, arr = [];
+    for (const e of this.s.enemies) { const d = Math.hypot(e.x - h.x, e.y - h.y); if (d < range) arr.push([d, e]); }
+    arr.sort((a, b) => a[0] - b[0] || a[1].id - b[1].id);
+    const out = []; for (let i = 0; i < n && i < arr.length; i++) out.push(arr[i][1]); return out;
   };
 
   Sim.prototype._enemies = function (dt) {

@@ -62,6 +62,12 @@
     { id: 'rendMult',     tab: 'attack',  icon: 'burst', label: 'Rend Power', max: 1000, // bonus damage per Rend stack
       value: (b) => b * 0.002,                       fmt: (b) => '+' + (b * 0.002 * 100).toFixed(1) + '%/stack',
       gold: curve(90, 1.6),    core: curve(25, 1.0018) },
+    { id: 'msChance',     tab: 'attack',  icon: 'bow',   label: 'Multishot', max: 1000, // chance to fan extra shots
+      value: (b) => Math.min(1, b * 0.001),         fmt: (b) => (Math.min(1, b * 0.001) * 100).toFixed(1) + '%',
+      gold: curve(100, 1.6),   core: curve(25, 1.0018) },
+    { id: 'msTargets',    tab: 'attack',  icon: 'bow',   label: 'Multishot Targets', max: 8, // extra targets when it procs
+      value: (b) => 1 + b,                           fmt: (b) => '' + (1 + b),
+      gold: curve(250, 1.7),   core: curve(40, 1.02) },
 
     // ---- DEFENSE ----
     { id: 'health',       tab: 'defense', icon: 'heart', label: 'Health', max: 10000,
@@ -271,6 +277,8 @@
       superCrit:    U.superCrit.value(b('superCrit')),  // chance for a crit to crit again
       rendChance:   U.rendChance.value(b('rendChance')),// chance a hit applies a Rend stack
       rendMult:     U.rendMult.value(b('rendMult')),    // bonus damage taken per Rend stack
+      msChance:     U.msChance.value(b('msChance')),    // chance a shot fans to multiple targets
+      msTargets:    U.msTargets.value(b('msTargets')),  // how many targets a multishot proc hits
 
       dodge:        U.dodge.value(b('dodge')),
       armor:        U.armor.value(b('armor')),          // flat damage soaked per hit
