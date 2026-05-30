@@ -51,6 +51,7 @@
         bestWave: m.bestWave || 0, claimedMilestones: m.claimedMilestones || {}, tier: m.tier || 1, coreMult: m.coreMult || 1,
         tierBest: m.tierBest || {}, // furthest wave reached per tier (gates tier unlocks)
         tokens: m.tokens || 0, cards: m.cards || [], cardBuys: m.cardBuys || 0, starBuys: m.starBuys || 0,
+        totalWaves: m.totalWaves || 0, waveTokensGranted: m.waveTokensGranted || 0, // 1 token per 100 cumulative waves
       };
     }
     function saveMeta() { localStorage.setItem(METAK, JSON.stringify(meta)); }
@@ -138,7 +139,7 @@
 
     function goToMenu(opts) {
       mode = 'menu'; running = false; clearSave();
-      if (A.grantInitialCard(meta)) saveMeta(); // first card unlocks on reaching wave 30
+      if (A.grantInitialCard(meta)) saveMeta(); // own one of every card type (from the start)
       hud.hideHint();
       hud.showMenu(meta, opts || {});
     }
@@ -155,9 +156,14 @@
       const runTier = meta.tier || 1; // this run played at the selected tier; credit its furthest wave
       meta.tierBest = meta.tierBest || {};
       meta.tierBest[runTier] = Math.max(meta.tierBest[runTier] || 0, wave);
+      // card tokens: 1 per 100 waves, accumulated across separate runs (remainder carries over)
+      meta.totalWaves = (meta.totalWaves || 0) + wave;
+      const tokensDue = Math.floor(meta.totalWaves / 100) - (meta.waveTokensGranted || 0);
+      let tokens = 0;
+      if (tokensDue > 0) { tokens = tokensDue; meta.tokens = (meta.tokens || 0) + tokens; meta.waveTokensGranted = (meta.waveTokensGranted || 0) + tokens; }
       if (firstRunJustEnded) meta.hasPlayed = true;
       saveMeta();
-      return { cores, kills: sim.s.econ.kills, wave };
+      return { cores, kills: sim.s.econ.kills, wave, tokens };
     }
 
     // Live death: explode (renderer detects it), let enemies drift in for ~1s, then overview.
