@@ -10,7 +10,8 @@
     baseCount: 8,     // enemies in wave 1
     perWave: 5,       // added per wave...
     maxCount: 140,    // ...up to this ceiling (the upgradable "spawn cap")
-    strPerWave: 0.08, // +8% baseline strength per wave
+    strPerWave: 0.08, // +8% baseline strength per wave (the LINEAR term)
+    expBase: 1.015,   // gentle EXPONENTIAL term blended on top so a "wall" emerges at depth
     speedPerWave: 0.02,
   };
 
@@ -21,7 +22,11 @@
   A.waveCount = function (n) {
     return Math.min(A.WAVE.maxCount, A.WAVE.baseCount + A.WAVE.perWave * (n - 1));
   };
-  A.waveStr = function (n) { return 1 + A.WAVE.strPerWave * (n - 1); };
+  // Strength = linear ramp × gentle exponential. Wave 1 is exactly ×1 (both terms = 1), so the
+  // scripted first run and early game are unchanged; the exponential only bites at depth, where it
+  // races the player's compounding (multiplicative) power and creates the wall. NOTE: this is the
+  // mild Phase-1 placeholder — the full pin-to-lab-ceiling balance sweep happens in Phase 5.
+  A.waveStr = function (n) { return (1 + A.WAVE.strPerWave * (n - 1)) * Math.pow(A.WAVE.expBase, n - 1); };
   A.waveSpeed = function (n) { return 1 + A.WAVE.speedPerWave * (n - 1); };
 
   // Game tiers (distinct from enemy A.TIERS strength classes): each tier doubles the
