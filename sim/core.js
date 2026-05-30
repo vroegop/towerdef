@@ -144,6 +144,16 @@
     h.hpMax = st.maxHp; if (h.hp > h.hpMax) h.hp = h.hpMax;
     h.sinceHit += dt;
     if (st.regen > 0 && h.hp < h.hpMax) h.hp = Math.min(h.hpMax, h.hp + st.regen * dt);
+    // Rapid Fire: every RAPID_CHECK seconds, a chance to start a timed high-firerate burst.
+    if (st.rapidChance) {
+      s.run.rapidCheckCd = (s.run.rapidCheckCd || 0) - dt;
+      if (s.run.rapidCheckCd <= 0) {
+        s.run.rapidCheckCd = A.RAPID_CHECK;
+        if (this.rng.next() < st.rapidChance) s.run.rapidT = st.rapidDuration;
+      }
+    }
+    if (s.run.rapidT > 0) s.run.rapidT -= dt;
+    const burst = s.run.rapidT > 0;
     // auto-attack the nearest enemies in range. Multishot can fan the shot to extra targets.
     h.atkCd -= dt;
     if (h.atkCd <= 0 && s.enemies.length) {
@@ -159,7 +169,7 @@
           if (s.atkMode === 'lightning') A.applyHit(s, t, dmg, st, this.rng);
           else A.fireProjectile(s, h, t, st, dmg, this.rng); // travelling bullet: damage lands on impact
         }
-        h.atkCd = 1 / Math.max(0.1, st.fireRate);
+        h.atkCd = 1 / Math.max(0.1, st.fireRate * (burst ? A.RAPID_MULT : 1));
       }
     }
   };

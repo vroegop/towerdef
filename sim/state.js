@@ -26,7 +26,7 @@
       rewardMult: 1,
       wave: { n: 0, clock: A.WAVE.interval, toSpawn: 0, releaseTimer: 0, releaseGap: 1, count: 0, maxWave: 0 },
       econ: { gold: 0, xp: 0, level: 1, kills: 0, goldEarned: 0, bonusCores: 0 }, // bonusCores: economic core income this run
-      run: { levels: {} },       // core-stat levels bought this run (RESET each run)
+      run: { levels: {}, rapidT: 0, rapidCheckCd: A.RAPID_CHECK }, // levels + Rapid Fire burst timers (RESET each run)
       meta: meta || { cores: 0, perm: {} }, // PERMANENT (cores + permanent levels)
     };
   };

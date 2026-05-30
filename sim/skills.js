@@ -19,6 +19,8 @@
   A.MAX_RANGE_M = 1000;  // hard cap on range (metres)
   A.MAX_REND = 10;       // cap on Rend stacks an enemy can carry
   A.REND_DECAY = 4;      // seconds a Rend stack persists without a refresh
+  A.RAPID_CHECK = 5;     // seconds between Rapid Fire burst rolls
+  A.RAPID_MULT = 3;      // fire-rate multiplier during a Rapid Fire burst
 
   // cost factory: round(base · growth^n). growth > 1 → accelerating curve.
   const curve = (base, grow) => ({ base, grow, cost: (n) => Math.round(base * Math.pow(grow, n)) });
@@ -77,6 +79,12 @@
     { id: 'bounceRange',  tab: 'attack',  icon: 'range', label: 'Bounce Range', max: 10000, // px search radius for next hop
       value: (b) => 120 + b,                         fmt: (b) => Math.round((120 + b) / A.PX_PER_METER) + 'm',
       gold: curve(60, 1.5),    core: curve(10, 1.0018) },
+    { id: 'rapidChance',  tab: 'attack',  icon: 'rate',  label: 'Rapid Fire', max: 1000, // chance to start a burst each interval
+      value: (b) => Math.min(1, b * 0.001),         fmt: (b) => (Math.min(1, b * 0.001) * 100).toFixed(1) + '%',
+      gold: curve(100, 1.6),   core: curve(25, 1.0018) },
+    { id: 'rapidDuration',tab: 'attack',  icon: 'rate',  label: 'Rapid Duration', max: 480, // burst length (seconds)
+      value: (b) => 2 + b * 0.1,                     fmt: (b) => (2 + b * 0.1).toFixed(1) + 's',
+      gold: curve(120, 1.6),   core: curve(20, 1.0018) },
 
     // ---- DEFENSE ----
     { id: 'health',       tab: 'defense', icon: 'heart', label: 'Health', max: 10000,
@@ -291,6 +299,8 @@
       bounceChance: U.bounceChance.value(b('bounceChance')), // chance a shot ricochets
       bounceTargets:U.bounceTargets.value(b('bounceTargets')), // ricochet hops per shot
       bounceRange:  U.bounceRange.value(b('bounceRange')),// px search radius for the next hop
+      rapidChance:  U.rapidChance.value(b('rapidChance')),// chance to begin a Rapid Fire burst
+      rapidDuration:U.rapidDuration.value(b('rapidDuration')), // burst length in seconds
 
       dodge:        U.dodge.value(b('dodge')),
       armor:        U.armor.value(b('armor')),          // flat damage soaked per hit

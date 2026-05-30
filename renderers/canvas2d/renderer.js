@@ -231,7 +231,8 @@
         // range ring (decorative) — reads the true range from the snapshot
         ctx.strokeStyle = 'rgba(74,168,255,.12)'; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.arc(hsx, hsy, range * scale, 0, Math.PI * 2); ctx.stroke();
-        drawShape(ctx, 'circle', hsx, hsy, h.r * scale, '#4aa8ff', 0, 0, false);
+        const heroCol = (s.run && s.run.rapidT > 0) ? '#ffd24a' : '#4aa8ff'; // gold during a Rapid Fire burst
+        drawShape(ctx, 'circle', hsx, hsy, h.r * scale, heroCol, 0, 0, false);
         // hp ring
         const frac = h.hpMax > 0 ? h.hp / h.hpMax : 0;
         ctx.strokeStyle = frac > 0.3 ? '#3ddc84' : '#ff5d6c'; ctx.lineWidth = 3;
