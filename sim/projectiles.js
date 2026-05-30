@@ -19,6 +19,20 @@
     });
   };
 
+  // Apply one hit's damage to an enemy, folding in Rend (stack + scale), Lifesteal, and the
+  // ranged-enemy knockback. Shared by bullets and the lightning beam so both behave identically.
+  // `rng` (the sim PRNG) is optional; it drives the Rend stack roll for deterministic replay.
+  A.applyHit = function (state, e, baseDmg, stats, rng) {
+    if (rng && stats && stats.rendChance && rng.next() < stats.rendChance) {
+      e.rend = Math.min(A.MAX_REND, (e.rend || 0) + 1); e.rendT = A.REND_DECAY;
+    }
+    const dealt = baseDmg * (1 + (e.rend || 0) * ((stats && stats.rendMult) || 0));
+    e.hp -= dealt; e.hitFlash = 0.12; e.hitDmg = Math.round(dealt);
+    if (stats && stats.lifesteal && state.hero) state.hero.hp = Math.min(state.hero.hpMax, state.hero.hp + dealt * stats.lifesteal);
+    if (e.behavior === 'bounce') e.kb = Math.max(e.kb, 0.25);
+    return dealt;
+  };
+
   function hitEnemy(state, p) {
     for (const e of state.enemies) {
       if (e.hp <= 0) continue;
@@ -28,9 +42,8 @@
     return null;
   }
 
-  A.tickProjectiles = function (state, dt, stats) {
+  A.tickProjectiles = function (state, dt, stats, rng) {
     if (!state.projectiles.length) return;
-    const h = state.hero, ls = (stats && stats.lifesteal) || 0;
     const keep = [];
     for (const p of state.projectiles) {
       const stepLen = A.BULLET_SPEED * dt;
@@ -40,12 +53,7 @@
       for (let i = 0; i < subs; i++) {
         p.x += p.vx * sdt; p.y += p.vy * sdt; p.traveled += A.BULLET_SPEED * sdt;
         const e = hitEnemy(state, p);
-        if (e) {
-          e.hp -= p.dmg; e.hitFlash = 0.12; e.hitDmg = Math.round(p.dmg); // hitDmg: damage just dealt (renderer shows it)
-          if (ls && h) h.hp = Math.min(h.hpMax, h.hp + p.dmg * ls); // lifesteal: heal a share of damage dealt
-          if (e.behavior === 'bounce') e.kb = Math.max(e.kb, 0.25); // same knockback the old hitscan applied
-          dead = true; break;
-        }
+        if (e) { A.applyHit(state, e, p.dmg, stats, rng); dead = true; break; }
         if (p.traveled >= p.maxDist) { dead = true; break; }
       }
       if (!dead) keep.push(p);

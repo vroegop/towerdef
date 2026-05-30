@@ -34,6 +34,7 @@
       x, y, vx: 0, vy: 0, facing: 0,
       strMult, hpMax: hp, hp, dmg,
       speed, range: def.range, state: 'approach', atkCd: 0, kb: 0, hitFlash: 0, hitDmg: 0,
+      rend: 0, rendT: 0, // Rend stacks + decay timer (Rend Armor upgrade)
       bornWave: waveN, veteran: false,
     };
   };

@@ -17,6 +17,8 @@
   A.PX_PER_METER = 4;
   A.BASE_RANGE_M = 50;   // default attack radius before any Range upgrade
   A.MAX_RANGE_M = 1000;  // hard cap on range (metres)
+  A.MAX_REND = 10;       // cap on Rend stacks an enemy can carry
+  A.REND_DECAY = 4;      // seconds a Rend stack persists without a refresh
 
   // cost factory: round(base · growth^n). growth > 1 → accelerating curve.
   const curve = (base, grow) => ({ base, grow, cost: (n) => Math.round(base * Math.pow(grow, n)) });
@@ -54,6 +56,12 @@
     { id: 'superCrit',    tab: 'attack',  icon: 'burst', label: 'Super Crit', max: 1000, // up to +100% chance to crit-again
       value: (b) => Math.min(1, b * 0.001),         fmt: (b) => (Math.min(1, b * 0.001) * 100).toFixed(1) + '%',
       gold: curve(80, 1.6),    core: curve(25, 1.0018) },
+    { id: 'rendChance',   tab: 'attack',  icon: 'crit',  label: 'Rend Chance', max: 1000, // chance a hit stacks Rend
+      value: (b) => Math.min(1, b * 0.001),         fmt: (b) => (Math.min(1, b * 0.001) * 100).toFixed(1) + '%',
+      gold: curve(90, 1.6),    core: curve(25, 1.0018) },
+    { id: 'rendMult',     tab: 'attack',  icon: 'burst', label: 'Rend Power', max: 1000, // bonus damage per Rend stack
+      value: (b) => b * 0.002,                       fmt: (b) => '+' + (b * 0.002 * 100).toFixed(1) + '%/stack',
+      gold: curve(90, 1.6),    core: curve(25, 1.0018) },
 
     // ---- DEFENSE ----
     { id: 'health',       tab: 'defense', icon: 'heart', label: 'Health', max: 10000,
@@ -261,6 +269,8 @@
       critChance:   U.critChance.value(b('critChance')),
       critMult:     U.critDamage.value(b('critDamage')),
       superCrit:    U.superCrit.value(b('superCrit')),  // chance for a crit to crit again
+      rendChance:   U.rendChance.value(b('rendChance')),// chance a hit applies a Rend stack
+      rendMult:     U.rendMult.value(b('rendMult')),    // bonus damage taken per Rend stack
 
       dodge:        U.dodge.value(b('dodge')),
       armor:        U.armor.value(b('armor')),          // flat damage soaked per hit

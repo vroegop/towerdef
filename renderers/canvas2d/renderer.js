@@ -180,6 +180,12 @@
           if (settings.damageNumbers && e.hitDmg) spawnFloat(esx, esy - e.r * scale - 4, '' + e.hitDmg, '#ffffff', 13);
         }
         seen.set(e.id, e.hitFlash);
+        // Rend stacks: small magenta pips above the enemy (more pips = more bonus damage taken)
+        if (e.rend > 0) {
+          ctx.fillStyle = '#e64cff';
+          const py = esy - e.r * scale - 9;
+          for (let i = 0; i < e.rend; i++) { ctx.beginPath(); ctx.arc(esx - (e.rend - 1) * 2.5 + i * 5, py, 1.7, 0, Math.PI * 2); ctx.fill(); }
+        }
         // enemy health bar (only once damaged) — gradient track with the HP value inside
         if (settings.enemyHp && e.hp < e.hpMax && e.hp > 0) {
           const bh = 12, bw = Math.max(30, e.r * scale * 2 + 8), by = esy - e.r * scale - bh - 5;

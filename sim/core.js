@@ -25,7 +25,7 @@
     this._waves(dt);
     this._hero(dt);
     this._enemies(dt);
-    A.tickProjectiles(s, dt, this.stats);
+    A.tickProjectiles(s, dt, this.stats, this.rng);
     A.tickEffects(s, dt);
     this._cleanup();
   };
@@ -152,9 +152,7 @@
       if (best) {
         const dmg = this._rollDamage(st, Math.hypot(best.x - h.x, best.y - h.y));
         if (s.atkMode === 'lightning') { // dev: original instant hitscan, drawn as a beam
-          best.hp -= dmg; best.hitFlash = 0.12; best.hitDmg = Math.round(dmg);
-          if (st.lifesteal) h.hp = Math.min(h.hpMax, h.hp + dmg * st.lifesteal);
-          if (best.behavior === 'bounce') best.kb = Math.max(best.kb, 0.25);
+          A.applyHit(s, best, dmg, st, this.rng);
         } else {
           A.fireProjectile(s, h, best, st, dmg); // travelling bullet: damage lands on impact
         }
@@ -167,6 +165,7 @@
     const h = this.s.hero, st = this.stats;
     for (const e of this.s.enemies) {
       if (e.hitFlash > 0) e.hitFlash -= dt;
+      if (e.rend > 0) { e.rendT -= dt; if (e.rendT <= 0) e.rend = 0; } // Rend stacks decay over time
       const dx = h.x - e.x, dy = h.y - e.y, d = Math.hypot(dx, dy) || 1;
       e.facing = Math.atan2(dy, dx);
       const touch = h.r + e.r;
