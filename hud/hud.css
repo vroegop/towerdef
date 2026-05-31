@@ -8,8 +8,8 @@
 .hud .stat { display: flex; align-items: center; gap: 6px; }
 .hud .stat b { color: #fff; font-variant-numeric: tabular-nums; }
 .hud .stat .lbl { color: #8b93a7; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-right: 4px; }
-/* reserve width so the readouts don't jiggle as values change (~5 chars HP, ~7 gold) */
-.hud .stat.hp b { display: inline-block; min-width: 5ch; }
+/* reserve width so the gold readout doesn't jiggle as it changes (~7 chars). HP no longer
+   needs this — its value is inset in a fixed-width bar (see the HP bar block below). */
 .hud .stat.gold b { display: inline-block; min-width: 7ch; }
 .hud .gold b { color: #ffd24a; }
 .hud .wave b { color: #e64cff; }
@@ -386,10 +386,32 @@
 .hud .csr .csv { display: inline-flex; align-items: center; gap: 5px; color: #c3cad8; font-variant-numeric: tabular-nums; }
 .hud .csr .csv b { color: #fff; }
 
-/* ---- HP bar in the topbar (keeps the numeric readout) ---- */
-.hud .stat.hp { display: flex; align-items: center; gap: 7px; }
-.hud .hpbar { width: 64px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.12); overflow: hidden; }
-.hud .hpbar i { display: block; height: 100%; width: 100%; background: #3ddc84; transition: width .15s linear, background .2s; }
+/* ---- HP bar in the topbar: one integrated pill. A red→green gradient (anchored to the
+       full bar, like the enemy bars) is revealed by clipping to the current HP; a translucent
+       "damage trail" drains a beat behind each hit; the value sits inset in the bar; and the
+       whole pill pulses red when low. ---- */
+.hud .stat.hp { display: flex; align-items: center; }
+.hud .hpbar { --hpw: 140px; position: relative; width: var(--hpw); height: 18px; border-radius: 9px;
+  background: rgba(255,255,255,.09); overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,.45); }
+/* damage trail — behind the fill, lingers then catches up, so a lost chunk flashes after a hit */
+.hud .hptrail { position: absolute; left: 0; top: 0; bottom: 0; width: 100%;
+  background: rgba(255,255,255,.5); transition: width .5s cubic-bezier(.4,0,.2,1) .15s; }
+/* fill — a full-bar-width gradient revealed by clipping its wrapper to the current fraction */
+.hud .hpclip { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; overflow: hidden;
+  transition: width .16s linear; }
+.hud .hpfill { display: block; width: var(--hpw); height: 100%;
+  background: linear-gradient(90deg, #e5484d 0%, #ffd23f 50%, #3fc34d 100%); }
+/* heart cap + inset value, painted over the fill */
+.hud .hpheart { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); display: flex;
+  color: #fff; filter: drop-shadow(0 1px 1px rgba(0,0,0,.7)); pointer-events: none; }
+.hud .stat.hp .hpnum { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+  text-align: center; color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .3px;
+  font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px rgba(0,0,0,.95); pointer-events: none; }
+/* low-HP danger pulse */
+.hud .stat.hp.low .hpbar { animation: hppulse 1s ease-in-out infinite; }
+@keyframes hppulse {
+  0%,100% { box-shadow: inset 0 1px 2px rgba(0,0,0,.45), 0 0 0 rgba(255,93,108,0); }
+  50%     { box-shadow: inset 0 1px 2px rgba(0,0,0,.45), 0 0 9px rgba(255,93,108,.75); } }
 
 /* ---- wave countdown: a narrow vertical bar on the right edge that fills, then drops ---- */
 .hud .wavebar { position: absolute; right: 0; top: 16%; bottom: 16%; width: 5px;

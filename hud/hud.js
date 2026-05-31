@@ -62,7 +62,12 @@
     root.innerHTML =
       '<div class="topbar" id="h-top">' +
       '  <div class="stat wave"><span class="lbl">Wave</span><b id="h-wave">1</b></div>' +
-      '  <div class="stat hp">' + icon('heart', 15, 'hp') + '<b id="h-hp">1</b><span class="hpbar"><i id="h-hpfill"></i></span></div>' +
+      '  <div class="stat hp"><span class="hpbar">' +
+      '<span class="hptrail" id="h-hptrail"></span>' +
+      '<span class="hpclip" id="h-hpclip"><i class="hpfill"></i></span>' +
+      '<span class="hpheart">' + icon('heart', 11) + '</span>' +
+      '<b class="hpnum" id="h-hp">1</b>' +
+      '</span></div>' +
       '  <div class="stat gold">' + icon('coin', 15, 'gold') + '<b id="h-gold">0</b></div>' +
       '  <a class="iconbtn protolink" id="h-proto" href="huds/_prototype-hud-gallery.html" target="_blank" rel="noopener" title="HUD design prototypes">' + icon('gallery', 20) + '</a>' +
       '  <button class="iconbtn" id="h-chart" title="Stats">' + icon('chart', 20) + '</button>' +
@@ -235,11 +240,14 @@
       $('#h-wave').textContent = s.wave.n;
       $('#h-hp').textContent = abbr(Math.ceil(s.hero.hp)) + '/' + abbr(Math.ceil(s.hero.hpMax));
       $('#h-gold').textContent = abbr(s.econ.gold);
-      // HP bar (mirrors the hero's hp ring colour)
+      // HP bar: a red→green gradient revealed by clipping to the current fraction (mirrors
+      // the enemy bars), with a translucent "damage trail" that drains a beat behind each
+      // hit and a low-HP danger pulse. The value lives inside the bar.
       const hpf = s.hero.hpMax > 0 ? Math.max(0, Math.min(1, s.hero.hp / s.hero.hpMax)) : 0;
-      const hpfill = $('#h-hpfill');
-      hpfill.style.width = (hpf * 100) + '%';
-      hpfill.style.background = hpf > 0.3 ? '#3ddc84' : '#ff5d6c';
+      const hpPct = (hpf * 100) + '%';
+      $('#h-hpclip').style.width = hpPct;
+      $('#h-hptrail').style.width = hpPct;
+      $('.stat.hp').classList.toggle('low', hpf > 0 && hpf <= 0.3);
       // wave countdown bar (hidden during the scripted first run, which has no wave clock)
       const wbar = $('#h-wavebar');
       if (s.firstRun) wbar.style.display = 'none';
