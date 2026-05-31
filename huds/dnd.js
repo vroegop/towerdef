@@ -45,7 +45,15 @@
 .hud.theme-dnd .stat.hp b { color: var(--ink); font-family: 'Cinzel', serif; }
 .hud.theme-dnd .iconbtn { color: var(--ink-dim); }
 .hud.theme-dnd .iconbtn:hover { color: var(--ink); }
-.hud.theme-dnd .iconbtn.protolink { color: var(--accent); }
+.hud.theme-dnd .protolink { color: var(--accent); }
+
+/* side menu: a small parchment rail pinned in the margin */
+.hud.theme-dnd .sidemenu { background: var(--parch); background-image: radial-gradient(circle at 70% 8%, var(--parch-lt), #e3d3b0 70%);
+  border: 3px double #7a5a2a; }
+.hud.theme-dnd .sideitem { color: var(--ink); }
+.hud.theme-dnd .sideitem .ic { color: var(--ink-dim); }
+.hud.theme-dnd .sideitem:hover { background: rgba(122,74,26,.12); }
+.hud.theme-dnd .sideitem:hover .ic { color: var(--ink); }
 .hud.theme-dnd .hpbar { background: rgba(42,26,8,.18); border: 1px solid var(--rule); }
 .hud.theme-dnd .hpbar i { background: #6a8a3a; }
 

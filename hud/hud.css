@@ -2,22 +2,39 @@
    (5 mobile bottom tabs + framed Hero avatar). */
 .hud { position: fixed; inset: 0; pointer-events: none; font: 14px system-ui, sans-serif; color: #d8deea; z-index: 20; }
 
-/* ---- in-game top stats (no box: just icon + value over the arena) ---- */
-.hud .topbar { position: absolute; top: 10px; left: 12px; right: 12px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
-  text-shadow: 0 1px 3px rgba(0,0,0,.85); }
-.hud .stat { display: flex; align-items: center; gap: 6px; }
+/* ---- in-game top header (no box: just icon + value over the arena) ----
+   nowrap + reserved widths keep every control in a fixed spot across devices and themes (whose
+   fonts differ in width); the menu toggle is always pinned to the right edge. */
+.hud .topbar { position: absolute; top: 10px; left: 12px; right: 12px; display: flex; gap: 16px; flex-wrap: nowrap; align-items: center;
+  overflow: hidden; text-shadow: 0 1px 3px rgba(0,0,0,.85); }
+.hud .stat { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
 .hud .stat b { color: #fff; font-variant-numeric: tabular-nums; }
 .hud .stat .lbl { color: #8b93a7; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-right: 4px; }
-/* reserve width so the readouts don't jiggle as values change (~5 chars HP, ~7 gold) */
-.hud .stat.hp b { display: inline-block; min-width: 5ch; }
+/* reserve width so the gold readout doesn't jiggle as it changes (~7 chars). HP no longer
+   needs this — its value is inset in a fixed-width bar (see the HP bar block below). */
 .hud .stat.gold b { display: inline-block; min-width: 7ch; }
 .hud .gold b { color: #ffd24a; }
 .hud .wave b { color: #e64cff; }
-.hud .iconbtn { margin-left: auto; pointer-events: auto; background: transparent; border: 0;
+.hud .iconbtn { pointer-events: auto; background: transparent; border: 0;
   color: #8b93a7; padding: 4px; cursor: pointer; display: flex; align-items: center; }
-.hud .iconbtn + .iconbtn { margin-left: 8px; } /* keep the right-side icon group together */
 .hud .iconbtn:hover { color: #fff; }
-.hud .iconbtn.protolink { color: #7ad0ff; } /* design-prototype gallery link (opens huds/_prototype-hud-gallery.html) */
+.hud .topbar .menutoggle { margin-left: auto; flex: 0 0 auto; } /* always pinned to the right edge */
+.hud .protolink { color: #7ad0ff; } /* design-prototype gallery link (opens huds/_prototype-hud-gallery.html) */
+
+/* ---- side menu: a narrow, one-icon-wide rail pinned under the header toggle. It is only as tall as
+       its content (icon buttons + padding), so it never blocks the arena. Toggled by the header menu
+       button; each icon opens a self-dismissing modal/panel rather than an always-on side panel. ---- */
+.hud .sidemenu { position: absolute; top: 46px; right: 10px; z-index: 50;
+  display: flex; flex-direction: column; gap: 4px; padding: 6px; pointer-events: auto;
+  background: rgba(15,18,27,.97); border: 1px solid #262c3d; border-radius: 10px; backdrop-filter: blur(8px);
+  transform-origin: top right; transform: scale(.9); opacity: 0; visibility: hidden;
+  transition: transform .14s ease, opacity .14s ease, visibility .14s; }
+.hud .sidemenu.open { transform: scale(1); opacity: 1; visibility: visible; box-shadow: 0 10px 28px rgba(0,0,0,.45); }
+.hud .sideitem { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px;
+  background: transparent; border: 0; color: #d8deea; cursor: pointer; padding: 0; border-radius: 7px; text-decoration: none; }
+.hud .sideitem:hover { background: rgba(74,168,255,.12); }
+.hud .sideitem .ic { color: #8b93a7; flex: 0 0 auto; }
+.hud .sideitem:hover .ic { color: #d8deea; }
 
 /* in-game stats panel */
 .hud .statswrap { position: absolute; inset: 0; z-index: 45; display: flex; align-items: flex-start; justify-content: center;
@@ -509,10 +526,32 @@
   background-size: 320% 320%; animation: rv-sheen 3s linear infinite, rv-fadein .9s both; }
 @keyframes rv-sheen { 0% { background-position: 0% 50%; } 100% { background-position: 320% 50%; } }
 
-/* ---- HP bar in the topbar (keeps the numeric readout) ---- */
-.hud .stat.hp { display: flex; align-items: center; gap: 7px; }
-.hud .hpbar { width: 64px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.12); overflow: hidden; }
-.hud .hpbar i { display: block; height: 100%; width: 100%; background: #3ddc84; transition: width .15s linear, background .2s; }
+/* ---- HP bar in the topbar: one integrated pill. A red→green gradient (anchored to the
+       full bar, like the enemy bars) is revealed by clipping to the current HP; a translucent
+       "damage trail" drains a beat behind each hit; the value sits inset in the bar; and the
+       whole pill pulses red when low. ---- */
+.hud .stat.hp { display: flex; align-items: center; }
+.hud .hpbar { --hpw: 120px; position: relative; width: var(--hpw); height: 18px; border-radius: 9px;
+  background: rgba(255,255,255,.09); overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,.45); }
+/* damage trail — behind the fill, lingers then catches up, so a lost chunk flashes after a hit */
+.hud .hptrail { position: absolute; left: 0; top: 0; bottom: 0; width: 100%;
+  background: rgba(255,255,255,.42); transition: width .5s cubic-bezier(.4,0,.2,1) .15s; }
+/* fill — a full-bar-width gradient revealed by clipping its wrapper to the current fraction */
+.hud .hpclip { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; overflow: hidden;
+  transition: width .16s linear; }
+.hud .hpfill { display: block; width: var(--hpw); height: 100%;
+  background: linear-gradient(90deg, #ca3f44 0%, #e0b937 50%, #37ac44 100%); }
+/* heart cap + inset value, painted over the fill */
+.hud .hpheart { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); display: flex;
+  color: #fff; filter: drop-shadow(0 1px 1px rgba(0,0,0,.7)); pointer-events: none; }
+.hud .stat.hp .hpnum { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+  text-align: center; color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .3px;
+  font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px rgba(0,0,0,.95); pointer-events: none; }
+/* low-HP danger pulse */
+.hud .stat.hp.low .hpbar { animation: hppulse 1s ease-in-out infinite; }
+@keyframes hppulse {
+  0%,100% { box-shadow: inset 0 1px 2px rgba(0,0,0,.45), 0 0 0 rgba(255,93,108,0); }
+  50%     { box-shadow: inset 0 1px 2px rgba(0,0,0,.45), 0 0 9px rgba(255,93,108,.75); } }
 
 /* ---- wave countdown: a narrow vertical bar on the right edge that fills, then drops ---- */
 .hud .wavebar { position: absolute; right: 0; top: 16%; bottom: 16%; width: 5px;

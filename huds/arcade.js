@@ -51,7 +51,14 @@
 .hud.theme-arcade .stat.hp b { color: var(--pink); }
 .hud.theme-arcade .iconbtn { color: var(--dim); }
 .hud.theme-arcade .iconbtn:hover { color: var(--ink); }
-.hud.theme-arcade .iconbtn.protolink { color: var(--teal); }
+.hud.theme-arcade .protolink { color: var(--teal); }
+
+/* side menu: a chunky cabinet rail */
+.hud.theme-arcade .sidemenu { background: var(--panel); border: 3px solid #fff; border-radius: 0; backdrop-filter: none; }
+.hud.theme-arcade .sideitem { color: var(--ink); border-radius: 0; }
+.hud.theme-arcade .sideitem .ic { color: var(--dim); }
+.hud.theme-arcade .sideitem:hover { background: rgba(255,210,63,.12); }
+.hud.theme-arcade .sideitem:hover .ic { color: var(--ink); }
 .hud.theme-arcade .hpbar { background: #000; border: 2px solid #fff; border-radius: 0; height: 10px; }
 .hud.theme-arcade .hpbar i { background: var(--teal); }
 

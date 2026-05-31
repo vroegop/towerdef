@@ -50,6 +50,7 @@
       fwd: '<path d="M9 5l7 7-7 7"/>',
       gear: '<circle cx="12" cy="12" r="3.2"/><path d="M19.4 13a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.7 8.6a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
       gallery: '<rect x="3" y="3" width="7.5" height="7.5" rx="1.2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.2"/>',
+      menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
     };
     function icon(name, size, cls) {
       size = size || 16;
@@ -60,14 +61,27 @@
     const cores = (size) => icon('cores', size || 14, 'core');
 
     root.innerHTML =
+      // Fixed header: game info on the left, a single menu toggle pinned right. No wrapping, so
+      // the layout is identical on every device and across themes (whose fonts have varying widths).
       '<div class="topbar" id="h-top">' +
       '  <div class="stat wave"><span class="lbl">Wave</span><b id="h-wave">1</b></div>' +
-      '  <div class="stat hp">' + icon('heart', 15, 'hp') + '<b id="h-hp">1</b><span class="hpbar"><i id="h-hpfill"></i></span></div>' +
+      '  <div class="stat hp"><span class="hpbar">' +
+      '<span class="hptrail" id="h-hptrail"></span>' +
+      '<span class="hpclip" id="h-hpclip"><i class="hpfill"></i></span>' +
+      '<span class="hpheart">' + icon('heart', 11) + '</span>' +
+      '<b class="hpnum" id="h-hp">1</b>' +
+      '</span></div>' +
       '  <div class="stat gold">' + icon('coin', 15, 'gold') + '<b id="h-gold">0</b></div>' +
-      '  <a class="iconbtn protolink" id="h-proto" href="huds/_prototype-hud-gallery.html" target="_blank" rel="noopener" title="HUD design prototypes">' + icon('gallery', 20) + '</a>' +
-      '  <button class="iconbtn" id="h-chart" title="Stats">' + icon('chart', 20) + '</button>' +
-      '  <button class="iconbtn" id="h-settings-btn" title="Settings">' + icon('gear', 20) + '</button>' +
+      '  <button class="iconbtn menutoggle" id="h-menu-btn" title="Menu">' + icon('menu', 22) + '</button>' +
       '</div>' +
+      // Persistent side menu: a narrow, one-icon-wide rail that opens from the menu toggle and stays
+      // open (game interactions never auto-dismiss it). It is only as tall as its content, so it stays
+      // unintrusive — each icon opens a self-dismissing modal instead of a big always-on panel.
+      '<aside class="sidemenu" id="h-sidemenu">' +
+      '  <button class="sideitem" id="h-set" title="Settings">' + icon('gear', 20) + '</button>' +
+      '  <button class="sideitem" id="h-chart" title="Run Stats">' + icon('chart', 20) + '</button>' +
+      '  <a class="sideitem protolink" id="h-proto" href="huds/_prototype-hud-gallery.html" target="_blank" rel="noopener" title="Designs">' + icon('gallery', 20) + '</a>' +
+      '</aside>' +
       '<div class="wavebar" id="h-wavebar" title="Next wave"><i id="h-wavefill"></i></div>' +
       '<div class="statswrap hide" id="h-stats"><div class="statscard" id="h-statscard"></div></div>' +
       '<div class="ghint hide" id="h-ghint"></div>' +
@@ -329,11 +343,14 @@
       $('#h-wave').textContent = s.wave.n;
       $('#h-hp').textContent = abbr(Math.ceil(s.hero.hp)) + '/' + abbr(Math.ceil(s.hero.hpMax));
       $('#h-gold').textContent = abbr(s.econ.gold);
-      // HP bar (mirrors the hero's hp ring colour)
+      // HP bar: a red→green gradient revealed by clipping to the current fraction (mirrors
+      // the enemy bars), with a translucent "damage trail" that drains a beat behind each
+      // hit and a low-HP danger pulse. The value lives inside the bar.
       const hpf = s.hero.hpMax > 0 ? Math.max(0, Math.min(1, s.hero.hp / s.hero.hpMax)) : 0;
-      const hpfill = $('#h-hpfill');
-      hpfill.style.width = (hpf * 100) + '%';
-      hpfill.style.background = hpf > 0.3 ? '#3ddc84' : '#ff5d6c';
+      const hpPct = (hpf * 100) + '%';
+      $('#h-hpclip').style.width = hpPct;
+      $('#h-hptrail').style.width = hpPct;
+      $('.stat.hp').classList.toggle('low', hpf > 0 && hpf <= 0.3);
       // wave countdown bar (hidden during the scripted first run, which has no wave clock)
       const wbar = $('#h-wavebar');
       if (s.firstRun) wbar.style.display = 'none';
@@ -414,25 +431,33 @@
       { key: 'damageNumbers', label: 'Damage numbers', icon: 'burst' },
     ];
     const setmodal = $('#h-setmodal'), setmodalInner = $('#h-setmodal-inner');
+    // Toggle rows are built from one source, reused by the in-game side-rail gear and the
+    // between-games menu gear (both open the same centered modal, mutating the shared `settings`).
+    const settingsRowsHtml = () => SETTINGS_DEF.map((o) =>
+      '<button class="setrow' + (settings[o.key] ? ' on' : '') + '" data-set="' + o.key + '">' +
+      '<span class="sl">' + icon(o.icon, 16, o.cls || '') + '<span>' + o.label + '</span></span>' +
+      '<span class="switch"><i></i></span></button>').join('');
+    const wireSettingsRows = (el) => el.querySelectorAll('[data-set]').forEach((b) => b.addEventListener('click', () => {
+      const k = b.dataset.set; settings[k] = !settings[k];
+      b.classList.toggle('on', settings[k]);
+      handlers.onSaveSettings && handlers.onSaveSettings();
+    }));
     function openSettings() {
-      let h = '<div class="statshead"><h2>Settings</h2><button class="iconclose" id="h-set-close" title="Close">' + icon('close', 18) + '</button></div><div class="setbody">';
-      for (const o of SETTINGS_DEF) {
-        h += '<button class="setrow' + (settings[o.key] ? ' on' : '') + '" data-set="' + o.key + '">' +
-          '<span class="sl">' + icon(o.icon, 16, o.cls || '') + '<span>' + o.label + '</span></span>' +
-          '<span class="switch"><i></i></span></button>';
-      }
-      setmodalInner.innerHTML = h + '</div>';
+      setmodalInner.innerHTML = '<div class="statshead"><h2>Settings</h2><button class="iconclose" id="h-set-close" title="Close">' +
+        icon('close', 18) + '</button></div><div class="setbody">' + settingsRowsHtml() + '</div>';
       $('#h-set-close').addEventListener('click', () => setmodal.classList.add('hide'));
-      setmodalInner.querySelectorAll('[data-set]').forEach((b) => b.addEventListener('click', () => {
-        const k = b.dataset.set; settings[k] = !settings[k];
-        b.classList.toggle('on', settings[k]);
-        handlers.onSaveSettings && handlers.onSaveSettings();
-      }));
+      wireSettingsRows(setmodalInner);
       setmodal.classList.remove('hide');
     }
     setmodal.addEventListener('click', (e) => { if (e.target === setmodal) setmodal.classList.add('hide'); });
-    $('#h-settings-btn').addEventListener('click', openSettings);
     $('#h-menugear').addEventListener('click', openSettings);
+
+    // ---------- side menu: a narrow icon rail, toggled by the header button; no auto-dismiss ----------
+    // Each rail icon opens a self-dismissing modal (Settings) or panel (Run Stats), so the unintrusive
+    // rail can stay open without a big panel hogging the screen.
+    const sidemenu = $('#h-sidemenu');
+    $('#h-menu-btn').addEventListener('click', () => sidemenu.classList.toggle('open'));
+    $('#h-set').addEventListener('click', openSettings);
 
     // ---------- MENU ----------
     const menuEl = $('#h-menu'), menuContent = $('#h-menu-content'), menuTabsEl = $('#h-menu-tabs');
@@ -751,6 +776,7 @@
       lastMeta = meta; lastOpts = opts || {}; menuTab = 'hero'; modal.classList.add('hide');
       renderMenu();
       menuEl.classList.add('show');
+      sidemenu.classList.remove('open'); // the side menu is in-game chrome; the menu screen has its own gear
       tabbarEl.style.display = 'none'; topEl.style.display = 'none';
     }
     function refreshMenu(meta) { if (meta) lastMeta = meta; if (menuEl.classList.contains('show')) renderMenu(); }
@@ -778,6 +804,7 @@
         '</div>';
       $('#h-over-close').addEventListener('click', () => handlers.onToWorkshop && handlers.onToWorkshop());
       overEl.classList.remove('hide');
+      sidemenu.classList.remove('open');
       tabbarEl.style.display = 'none'; topEl.style.display = 'none';
     }
     function hideOverview() { overEl.classList.add('hide'); $('#h-stats').classList.add('hide'); }
