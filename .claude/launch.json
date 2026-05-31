@@ -3,8 +3,14 @@
   "configurations": [
     {
       "name": "arena",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["serve.py"],
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 8778
+    },
+    {
+      "name": "arena-dist",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "preview"],
       "port": 8778
     }
   ]
