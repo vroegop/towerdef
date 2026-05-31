@@ -125,7 +125,7 @@ export function createDevMenu(cfg: { handlers?: HudHandlers; hudHost?: HudHost }
   };
 }
 
-// the remembered HUD selection (so a prototype stays selected across reloads), read by main.ts
+// the remembered HUD selection (so a chosen skin stays selected across reloads), read by main.ts
 export function savedHud(): string | null {
   try {
     return localStorage.getItem(HUD_KEY);
