@@ -143,10 +143,14 @@
 .hud.theme-dnd .card.tier-gold { border-color: var(--gold-ink); box-shadow: 0 0 12px rgba(154,106,26,.3); }
 .hud.theme-dnd .card.tier-chroma { border-color: #8a3aaa; box-shadow: 0 0 14px rgba(138,58,170,.3); }
 .hud.theme-dnd .card.locked { border: 2px dashed var(--rule); background: var(--parch-dk); }
-.hud.theme-dnd .card-img { background: radial-gradient(circle at 50% 42%, rgba(122,74,26,.12), rgba(0,0,0,.06)); }
-.hud.theme-dnd .cstat .cl { color: var(--ink-dim); }
-.hud.theme-dnd .cstat b { color: var(--ink); }
-.hud.theme-dnd .card-name { font-family: 'Cinzel', serif; }
+.hud.theme-dnd .card-img { box-shadow: inset 0 0 0 1px rgba(122,74,26,.25); }
+.hud.theme-dnd .card-band { opacity: .22; }
+.hud.theme-dnd .card-name { font-family: 'Cinzel', serif; color: var(--ink); text-shadow: none; }
+.hud.theme-dnd .card-desc { color: var(--ink-dim); border-top-color: rgba(122,74,26,.25); }
+.hud.theme-dnd .cmhead .cm-title b { color: var(--ink); }
+.hud.theme-dnd .cmhead .cm-title span, .hud.theme-dnd .cm-sub { color: var(--ink-dim); }
+.hud.theme-dnd .cardbtn .cb-t { color: var(--ink); }
+.hud.theme-dnd .cardbtn .cb-s { color: var(--ink-dim); }
 
 /* labs → spell research scrolls */
 .hud.theme-dnd .lab { background: var(--parch-lt); border: 1px solid var(--rule); }

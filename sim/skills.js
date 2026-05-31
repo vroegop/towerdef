@@ -256,36 +256,51 @@
   A.CARD_SLOTS = 20;
   A.CARD_ORDER = ['damage', 'power', 'haste', 'crit', 'execute', 'vitality', 'regrowth', 'phantom', 'fortune',
     'bramble', 'volley', 'ricochet', 'sunder', 'eagle', 'compound'];
+  // plain-language explanation of what each card actually does (shown in the card detail view, so a
+  // label like "Speed" reads as "Attack faster — more shots per second" instead of a bare stat name).
+  A.CARD_INFO = {
+    damage: 'Each shot hits harder.', power: 'Multiplies all of your ranged damage.',
+    haste: 'Attack faster — more shots per second.', crit: 'Chance for a shot to critically strike.',
+    execute: 'Critical hits deal extra bonus damage.', vitality: 'Raises your maximum health.',
+    regrowth: 'Regenerate a little health every second.', phantom: 'Chance to dodge an incoming hit entirely.',
+    fortune: 'Earn more coins from every kill.', bramble: 'Reflect a share of damage back to attackers.',
+    volley: 'Chance to loose an extra projectile.', ricochet: 'Shots can bounce to a nearby enemy.',
+    sunder: 'Shred enemy armor so attacks bite deeper.', eagle: 'Extends how far you can attack.',
+    compound: 'Earn interest on your banked coins.',
+  };
   A.cardValue = (id, stars) => (A.CARDS[id] ? A.CARDS[id].value(stars) : 0);
   A.cardsUnlocked = (meta) => true; // cards available from the start
   A.grantInitialCard = function (meta) {
-    // own one of every card type from the start (each at 1 star) so all types are testable
+    // Players start with an EMPTY collection and unlock cards by drawing them — the first draw of any
+    // card type plays the locked-card flip reveal. (Kept as a hook so callers stay unchanged; no-op now.)
     meta.cards = meta.cards || [];
-    let added = false;
-    for (const id of A.CARD_ORDER) {
-      if (!meta.cards.find((c) => c.id === id)) { meta.cards.push({ id, stars: 1 }); added = true; }
-    }
-    return added;
+    return false;
   };
   A.starSlot = (i, stars) => (stars >= i + 11 ? 'chroma' : stars >= i + 6 ? 'gold' : stars >= i + 1 ? 'white' : 'empty');
 
   A.buyCardCost = (meta) => 5 + 5 * (meta.cardBuys || 0);
   A.upgradeCost = (meta) => 5 + 5 * (meta.starBuys || 0);
+  // Buy/upgrade now return a RESULT describing the transition so the HUD can play the right reveal:
+  //   { id, before, after, unlocked }  (or null when the action can't happen / can't be afforded).
   A.buyCard = function (meta) { // spend tokens -> random card (dupe becomes a star)
     const cost = A.buyCardCost(meta); if ((meta.tokens || 0) < cost) return null;
     const ids = Object.keys(A.CARDS), id = ids[Math.floor(Math.random() * ids.length)];
     meta.cards = meta.cards || [];
     const owned = meta.cards.find((c) => c.id === id);
-    if (owned) owned.stars = Math.min(A.MAX_STARS, (owned.stars || 0) + 1);
-    else meta.cards.push({ id, stars: 1 });
-    meta.tokens -= cost; meta.cardBuys = (meta.cardBuys || 0) + 1; return id;
+    let before, after, unlocked = false;
+    if (owned) { before = owned.stars || 0; owned.stars = Math.min(A.MAX_STARS, before + 1); after = owned.stars; }
+    else { before = 0; after = 1; unlocked = true; meta.cards.push({ id, stars: 1 }); }
+    meta.tokens -= cost; meta.cardBuys = (meta.cardBuys || 0) + 1;
+    return { id, before, after, unlocked };
   };
   A.upgradeRandomCard = function (meta) { // spend tokens -> +1 star on a random owned card
     const pool = (meta.cards || []).filter((c) => (c.stars || 0) < A.MAX_STARS);
     if (!pool.length) return null;
     const cost = A.upgradeCost(meta); if ((meta.tokens || 0) < cost) return null;
     const c = pool[Math.floor(Math.random() * pool.length)];
-    c.stars = (c.stars || 0) + 1; meta.tokens -= cost; meta.starBuys = (meta.starBuys || 0) + 1; return c.id;
+    const before = c.stars || 0; c.stars = before + 1;
+    meta.tokens -= cost; meta.starBuys = (meta.starBuys || 0) + 1;
+    return { id: c.id, before, after: c.stars, unlocked: false };
   };
 
   // ---- tier / milestones (cores rewards for furthest-wave progress in the current tier) ----
