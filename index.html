@@ -32,6 +32,10 @@
   <!-- RENDER / HUD -->
   <script src="renderers/canvas2d/renderer.js"></script>
   <script src="hud/hud.js"></script>
+  <!-- themed HUD skins (eager): each reuses the themeable core in hud/hud.js. Must load AFTER
+       hud.js (defines A.createThemedHud) and BEFORE registry.js (references the skin factories). -->
+  <script src="huds/dnd.js"></script>
+  <script src="huds/arcade.js"></script>
   <!-- swappable-HUD infrastructure: registry + host (error boundary) + plug-and-play dev menu -->
   <script src="hud/registry.js"></script>
   <script src="hud/host.js"></script>

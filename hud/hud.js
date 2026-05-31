@@ -3,9 +3,14 @@
    a spotlight tutorial, a milestones modal, and a DEV panel.
    Handlers: onBuyRun, onBuyPerm, onClaimMilestone, onStartRun, onDev, onFF. */
 (function (A) {
-  A.Hud = function (root, handlers) {
+  // The HUD is a single themeable core: identical structure + wiring for every theme, restyled
+  // by a scoping class (`theme.cls`) + an injected override stylesheet (`theme.css`). `A.Hud`
+  // (Classic) passes no theme, so it renders + behaves exactly as before and stays the safe
+  // synchronous fallback. `A.createThemedHud(theme)` produces D&D / Arcade skins from the same core.
+  function buildHud(root, handlers, theme) {
     handlers = handlers || {};
-    root.className = 'hud';
+    theme = theme || {};
+    root.className = 'hud' + (theme.cls ? ' ' + theme.cls : '');
 
     // ---------- inline SVG outline icons (no UTF8 glyphs anywhere in the UI) ----------
     const PATHS = {
@@ -79,6 +84,11 @@
       '<div class="tut-dim hide" id="h-spot"></div><div class="tut-thought hide" id="h-thought"></div>' +
       '<div class="lk-tip hide" id="h-lktip"></div>';
     // NOTE: the DEV panel was lifted out to hud/devmenu.js (host-level) so it survives HUD swaps.
+
+    // A themed skin ships its OWN override stylesheet, injected here (inside root, so the host's
+    // root.innerHTML='' on swap removes it cleanly). Scoped to `.hud.<theme.cls>`, it out-specifies
+    // the base hud.css without touching it. Classic passes no theme → no extra style, no scope class.
+    if (theme.css) root.insertAdjacentHTML('afterbegin', '<style class="theme-style">' + theme.css + '</style>');
 
     const $ = (id) => root.querySelector(id);
     const fmt = (n) => (typeof n === 'number' ? n.toLocaleString() : n);
@@ -683,5 +693,10 @@
     }, 1000);
 
     return { update, showMenu, refreshMenu, hideMenu, showOverview, hideOverview, showHint, hideHint, setMeta, root };
-  };
+  }
+
+  // Classic: the original, un-themed HUD. Synchronous, always-available, the host's crash fallback.
+  A.Hud = function (root, handlers) { return buildHud(root, handlers, null); };
+  // Factory for a themed skin: same core + wiring, restyled by `theme = { cls, css }`.
+  A.createThemedHud = function (theme) { return function (root, handlers) { return buildHud(root, handlers, theme); }; };
 })(window.ARENA = window.ARENA || {});

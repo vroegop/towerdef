@@ -1,16 +1,23 @@
 /* hud/registry.js — the list of swappable HUDs.
    Each entry: { label, load } where load() returns a HUD FACTORY (root, handlers) => instance,
-   OR a Promise of one (so prototypes can be lazily `import()`ed only when first selected).
+   OR a Promise of one (the host awaits load(), so a lazy `import()` would work too).
    The dev menu renders this list; the HUD host (host.js) calls load() + the factory inside an
-   error boundary, so a missing/broken prototype can never take down the running game.
+   error boundary, so a missing/broken HUD can never take down the running game.
 
-   Add a prototype: drop huds/<name>.js (an ES module `export default (root, handlers) => ...`)
-   and add one line here. See huds/minimal.js for the reference implementation. */
+   Add a skin: the lightweight way is to reuse the themeable core — `A.createThemedHud({ cls, css })`
+   in a huds/<name>.js included via <script> in index.html (see huds/dnd.js / huds/arcade.js) — then
+   add one line here. A fully bespoke HUD can instead supply its own factory (root, handlers) => ...
+   with the same method surface as A.Hud (update/showMenu/.../setMeta). */
 (function (A) {
+  // All HUDs eager-load: classic is defined in hud/hud.js, the themed skins in huds/<id>.js,
+  // each included via a plain <script> in index.html BEFORE the registry. load() therefore
+  // returns the factory synchronously (no import()) — eager by request; the bundles are small.
   A.HUDS = {
-    classic: { label: 'Classic', load: () => A.Hud }, // the original HUD; always available, loads sync
-    minimal: { label: 'Minimal', load: () => import('../huds/minimal.js').then((m) => m.default) },
+    classic: { label: 'Classic', load: () => A.Hud },             // original look; the host's crash fallback
+    dnd:     { label: 'D&D',     load: () => A.createDndHud },     // parchment character-sheet skin
+    arcade:  { label: 'Arcade',  load: () => A.createArcadeHud },  // CRT-cabinet pixel skin
   };
-  // Booted synchronously by the host, so it MUST be a sync-loading entry (classic qualifies).
+  // Booted synchronously by the host, so it MUST be a sync-loading entry. Default to Classic for now;
+  // the devmenu remembers any other pick in localStorage (arena.hud) and index.html re-applies it.
   A.DEFAULT_HUD = 'classic';
 })(window.ARENA = window.ARENA || {});
