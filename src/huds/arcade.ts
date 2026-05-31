@@ -77,8 +77,8 @@ const CSS = `
 .hud.theme-arcade .menutabs button.locked { color: #44446a; }
 .hud.theme-arcade .statshead { border-bottom: 4px solid #fff; }
 .hud.theme-arcade .statshead h2, .hud.theme-arcade .modal h2 { color: var(--accent); text-shadow: 2px 2px 0 var(--crimson); font-size: 14px; }
-.hud.theme-arcade .menuproto, .hud.theme-arcade .menugear { color: var(--teal); }
-.hud.theme-arcade .menuproto:hover, .hud.theme-arcade .menugear:hover { color: var(--ink); }
+.hud.theme-arcade .menuproto { color: var(--teal); }
+.hud.theme-arcade .menuproto:hover { color: var(--ink); }
 
 /* every framed surface = white-bezel cabinet card with hard shadow */
 .hud.theme-arcade .statscard,

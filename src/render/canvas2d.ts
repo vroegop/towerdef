@@ -71,55 +71,18 @@ function drawShape(ctx: Ctx, shape: string, x: number, y: number, r: number, col
   ctx.restore();
 }
 
-// rounded-rect path builder (calls beginPath); falls back if ctx.roundRect is missing
-function roundRectPath(ctx: Ctx, x: number, y: number, w: number, h: number, r: number): void {
-  ctx.beginPath();
-  if (ctx.roundRect) {
-    ctx.roundRect(x, y, w, h, r);
-    return;
-  }
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
-// health bar with a red→yellow→green gradient track and the HP value readable inside it.
-function drawHealthBar(ctx: Ctx, cx: number, topY: number, w: number, h: number, frac: number, label: string): void {
+// thin health bar: solid red for current HP, white for the HP lost. No number, no gradient.
+function drawHealthBar(ctx: Ctx, cx: number, topY: number, w: number, h: number, frac: number): void {
   frac = Math.max(0, Math.min(1, frac));
-  const x = cx - w / 2,
-    y = topY,
-    r = Math.min(h / 2, 4);
-  roundRectPath(ctx, x, y, w, h, r);
-  ctx.fillStyle = 'rgba(0,0,0,.6)';
-  ctx.fill();
-  if (frac > 0) {
-    ctx.save();
-    roundRectPath(ctx, x, y, w, h, r);
-    ctx.clip();
-    const g = ctx.createLinearGradient(x, 0, x + w, 0);
-    g.addColorStop(0, '#e5484d');
-    g.addColorStop(0.5, '#ffd23f');
-    g.addColorStop(1, '#3fc34d');
-    ctx.fillStyle = g;
-    ctx.fillRect(x, y, w * frac, h);
-    ctx.restore();
-  }
-  roundRectPath(ctx, x, y, w, h, r);
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = 'rgba(0,0,0,.75)';
-  ctx.stroke();
-  ctx.font = '700 ' + Math.round(h * 0.74) + 'px system-ui, -apple-system, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.lineJoin = 'round';
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = 'rgba(0,0,0,.9)';
-  ctx.strokeText(label, cx, y + h / 2 + 0.5);
+  const x = cx - w / 2;
+  // white track = the HP that has been lost
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(label, cx, y + h / 2 + 0.5);
+  ctx.fillRect(x, topY, w, h);
+  // solid red = the HP that remains
+  if (frac > 0) {
+    ctx.fillStyle = '#e5484d';
+    ctx.fillRect(x, topY, w * frac, h);
+  }
 }
 
 export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<Settings>): Renderer {
@@ -284,10 +247,10 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
         }
       }
       if (cfg.enemyHp && e.hp < e.hpMax && e.hp > 0) {
-        const bh = 12,
+        const bh = 3,
           bw = Math.max(30, e.r * scale * 2 + 8),
           by = esy - e.r * scale - bh - 5;
-        drawHealthBar(ctx, esx, by, bw, bh, e.hp / e.hpMax, '' + Math.ceil(e.hp));
+        drawHealthBar(ctx, esx, by, bw, bh, e.hp / e.hpMax);
       }
     }
 

@@ -70,8 +70,8 @@ const CSS = `
 .hud.theme-dnd .statshead, .hud.theme-dnd .modal h2 { font-family: 'Cinzel Decorative', serif; }
 .hud.theme-dnd .statshead { border-bottom: 2px solid var(--rule); }
 .hud.theme-dnd .statshead h2 { color: var(--ink); }
-.hud.theme-dnd .menuproto, .hud.theme-dnd .menugear { color: var(--accent); }
-.hud.theme-dnd .menuproto:hover, .hud.theme-dnd .menugear:hover { color: var(--ink); }
+.hud.theme-dnd .menuproto { color: var(--accent); }
+.hud.theme-dnd .menuproto:hover { color: var(--ink); }
 
 /* chips / cores chip / earnings — framed ledger entries */
 .hud.theme-dnd .chip,

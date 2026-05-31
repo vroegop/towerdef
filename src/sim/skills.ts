@@ -122,7 +122,6 @@ function capOf(meta: Meta, id: string): number {
   const up = UP_BY_ID[id];
   return up.max + labCapBonus(meta, id);
 }
-export const upgradeCap = (meta: Meta, id: string): number => capOf(meta, id);
 
 // perm + run levels for an upgrade, capped at its (lab-liftable) cap.
 export function boughtOf(state: State, id: string): number {
@@ -185,7 +184,6 @@ export const CARD_INFO: Record<string, string> = {
   sunder: 'Shred enemy armor so attacks bite deeper.', eagle: 'Extends how far you can attack.',
   compound: 'Earn interest on your banked coins.',
 };
-export const cardValue = (id: string, stars: number): number => (CARDS[id] ? CARDS[id].value(stars) : 0);
 export const cardsUnlocked = (_meta: Meta): boolean => true; // cards available from the start
 export function grantInitialCard(meta: Meta): boolean {
   // Players start with an EMPTY collection and unlock cards by drawing them — the first draw of any

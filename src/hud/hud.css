@@ -68,9 +68,9 @@
 .hud .over-rewards .rew b { color: #ff2e4e; font-size: 18px; display: inline-flex; align-items: center; gap: 4px; }
 .hud .over-rewards .rew b.tok { color: #5fd0ff; }
 .hud .over-sub { text-align: center; color: #8b93a7; font-size: 13px; padding: 4px 16px 14px; }
-.hud .over-stats { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin: 0; border: 0; border-top: 1px solid #2a3550; border-radius: 0;
+.hud .over-back { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin: 0; border: 0; border-top: 1px solid #2a3550; border-radius: 0;
   padding: 13px; font: inherit; font-weight: 700; cursor: pointer; background: #1c2030; color: #d8deea; }
-.hud .over-stats:hover { background: #232838; color: #fff; }
+.hud .over-back:hover { background: #232838; color: #fff; }
 
 /* ---- in-game bottom 3-tab bar ---- */
 .hud .tabbar { position: absolute; left: 0; right: 0; bottom: 0; pointer-events: auto;
@@ -177,14 +177,15 @@
 
 /* permanent upgrades list */
 .hud .permlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 8px; }
-.hud .perm { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: space-between;
-  gap: 4px; background: #151823; border: 1px solid #262c3d; border-radius: 4px; padding: 8px 5px; margin: 0;
+.hud .perm { aspect-ratio: 1; display: grid; grid-template-rows: auto 1fr auto;
+  gap: 4px; background: #151823; border: 1px solid #262c3d; border-radius: 4px; padding: 8px; margin: 0;
   cursor: pointer; font: inherit; color: #d8deea; text-align: center; }
 .hud .perm:hover:not(:disabled):not(.cant) { border-color: #ffd24a; }
 .hud .perm:disabled, .hud .perm.cant { opacity: .4; cursor: default; }
 .hud .perm.tut { border-color: #ffd24a; box-shadow: 0 0 0 3px rgba(255,210,74,.15); }
-.hud .perm .ptop { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.hud .perm .pname { font-size: 10px; line-height: 1.1; font-weight: 700; }
+.hud .perm .phead { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.hud .perm .phead .ic { color: #8b93a7; }
+.hud .perm .pname { align-self: center; font-size: 11px; line-height: 1.15; font-weight: 700; }
 .hud .perm .pcur { font-size: 17px; font-weight: 800; color: #fff; }
 .hud .perm .pcost { color: #ff2e4e; font-size: 11px; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
 
@@ -544,10 +545,7 @@
 .hud .tabbar.pulse { animation: tabpulse 1.2s ease-in-out infinite; }
 @keyframes tabpulse { 0%,100% { box-shadow: 0 0 0 rgba(74,168,255,0); } 50% { box-shadow: 0 -4px 20px rgba(74,168,255,.55); } }
 
-/* ---- settings: gear buttons + modal with toggle rows ---- */
-.hud .menugear { position: absolute; top: 12px; right: 14px; z-index: 5; pointer-events: auto; background: transparent;
-  border: 0; color: #8b93a7; cursor: pointer; padding: 4px; display: flex; }
-.hud .menugear:hover { color: #fff; }
+/* ---- menu "Designs" link + settings modal with toggle rows (the settings gear lives in the in-game side rail) ---- */
 .hud .menuproto { position: absolute; top: 12px; left: 14px; z-index: 5; pointer-events: auto; color: #7ad0ff;
   cursor: pointer; padding: 4px; display: flex; align-items: center; gap: 5px; text-decoration: none;
   font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }

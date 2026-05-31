@@ -98,7 +98,6 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     '<div class="tabbar" id="h-tabbar"><div id="h-tabcontent"></div><div class="tabs" id="h-tabs"></div></div>' +
     '<div class="menu" id="h-menu">' +
     '  <a class="menuproto" id="h-menuproto" href="huds/_prototype-hud-gallery.html" target="_blank" rel="noopener" title="HUD design prototypes">' + icon('gallery', 20) + '<span>Designs</span></a>' +
-    '  <button class="menugear" id="h-menugear" title="Settings">' + icon('gear', 22) + '</button>' +
     '  <div class="menu-content" id="h-menu-content"></div>' +
     '  <div class="menutabs" id="h-menu-tabs"></div>' +
     '  <div class="modal hide" id="h-modal"><div class="modal-inner" id="h-modal-inner"></div></div>' +
@@ -534,7 +533,6 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   setmodal.addEventListener('click', (e) => {
     if (e.target === setmodal) setmodal.classList.add('hide');
   });
-  $('#h-menugear').addEventListener('click', openSettings);
 
   // ---------- side menu: a narrow icon rail, toggled by the header button; no auto-dismiss ----------
   // Each rail icon opens a self-dismissing modal (Settings) or panel (Run Stats), so the unintrusive
@@ -674,9 +672,9 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         afford = (meta.cores || 0) >= cost;
       const isTut = tutoring && menuUpTab === 'attack' && i === 0 && bought === 0;
       html += '<button class="perm' + (isTut ? ' tut' : '') + (afford && !maxed ? '' : ' cant') + '" data-perm="' + up.id + '"' + (maxed ? ' disabled' : '') + '>' +
-        '<span class="ptop">' + icon(up.icon, 18) + '<span class="pname">' + up.label + '</span></span>' +
-        '<span class="pcur">' + cur + '</span>' +
-        '<span class="pcost">' + (maxed ? 'MAX' : cost + ' ' + cores(12)) + '</span></button>';
+        '<span class="phead">' + icon(up.icon, 18) + '<span class="pcost">' + (maxed ? 'MAX' : cost + ' ' + cores(12)) + '</span></span>' +
+        '<span class="pname">' + up.label + '</span>' +
+        '<span class="pcur">' + cur + '</span></button>';
     });
     return html;
   }
@@ -974,7 +972,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     modal.classList.add('hide');
     renderMenu();
     menuEl.classList.add('show');
-    sidemenu.classList.remove('open'); // the side menu is in-game chrome; the menu screen has its own gear
+    sidemenu.classList.remove('open'); // the side menu is in-game chrome — Settings lives there, not on the menu screen
     tabbarEl.style.display = 'none';
     topEl.style.display = 'none';
   }
@@ -1002,7 +1000,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     if (e.cells) rew += '<div class="rew"><span>Cells</span><b class="cell">+' + e.cells + ' ' + icon('cell', 15, 'cell') + '</b></div>';
     const row = (label: string, val: string): string => '<div class="strow"><span>' + label + '</span><b>' + val + '</b></div>';
     overCard.innerHTML =
-      '<div class="statshead"><h2>Run Over</h2><button class="iconclose" id="h-over-close" title="Workshop">' + icon('close', 18) + '</button></div>' +
+      '<div class="statshead"><h2>Run Over</h2></div>' +
       '<div class="over-rewards">' + rew + '</div>' +
       '<div class="statsbody">' +
       row('Kills', fmt(e.kills || 0)) +
@@ -1010,8 +1008,9 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       row('Foes per wave', fmt(waveCount((e.wave || 1) * tierDifficulty(tier)))) +
       row('Core multiplier', 'x' + coreMult(tier).toFixed(1)) +
       row('Total cores', fmt(meta.cores || 0)) +
-      '</div>';
-    $('#h-over-close').addEventListener('click', () => handlers.onToWorkshop && handlers.onToWorkshop());
+      '</div>' +
+      '<button class="over-back" id="h-over-back">' + icon('back', 16) + ' Back to the Workshop</button>';
+    $('#h-over-back').addEventListener('click', () => handlers.onToWorkshop && handlers.onToWorkshop());
     overEl.classList.remove('hide');
     sidemenu.classList.remove('open');
     tabbarEl.style.display = 'none';
