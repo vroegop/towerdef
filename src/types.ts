@@ -52,7 +52,6 @@ export interface Meta {
   tokens: number;
   cards: CardInstance[];
   cardBuys: number;
-  starBuys: number;
   totalWaves: number;
   waveTokensGranted: number;
   labs: Record<string, number>;
@@ -296,7 +295,6 @@ export interface HudHandlers {
   onClaimMilestone?: (wave: number) => number;
   onSetTier?: (t: number) => boolean;
   onBuyCard?: () => CardDrawResult | null;
-  onUpgradeCard?: () => CardDrawResult | null;
   onStartResearch?: (id: string) => boolean;
   onCancelResearch?: (id: string) => boolean;
   onRushResearch?: (id: string) => boolean;

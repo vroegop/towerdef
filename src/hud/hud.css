@@ -166,29 +166,6 @@
 .hud .ic.hp { color: #ff5d6c; } /* heart (HP) */
 .hud .startsq .ic { vertical-align: middle; }
 
-/* ---- cards tab ---- */
-.hud .cardbtns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 0 auto 16px; }
-.hud .cardbtn { display: inline-flex; align-items: center; gap: 8px; background: #1c2030; border: 1px solid #2a3550;
-  color: #d8deea; border-radius: 4px; padding: 11px 16px; font: inherit; font-weight: 700; cursor: pointer; }
-.hud .cardbtn:hover:not(:disabled):not(.cant) { border-color: #5fd0ff; }
-.hud .cardbtn:disabled, .hud .cardbtn.cant { opacity: .4; cursor: default; }
-.hud .cardbtn .ct { color: #5fd0ff; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; }
-.hud .cardgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
-.hud .card { background: linear-gradient(180deg, #161b2a, #0e1119); border: 2px solid #3a445f;
-  border-radius: 6px; padding: 12px; text-align: center; }
-.hud .card.tier-gold { border-color: #ffd24a; box-shadow: 0 0 14px rgba(255,210,74,.18); }
-.hud .card.tier-chroma { border-color: #9b8cff; box-shadow: 0 0 16px rgba(120,160,255,.28); }
-.hud .card .card-name { font-weight: 800; letter-spacing: .5px; }
-.hud .card .card-art { margin: 10px auto 8px; height: 84px; display: flex; align-items: center; justify-content: center;
-  border-radius: 5px; background: radial-gradient(circle at 50% 40%, rgba(255,255,255,.06), rgba(0,0,0,.25)); }
-.hud .card .card-art .ic { vertical-align: middle; }
-.hud .card .card-val { color: #c3cad8; font-size: 12.5px; min-height: 16px; }
-.hud .card .stars { display: flex; justify-content: center; gap: 2px; margin-top: 8px; flex-wrap: wrap; }
-.hud .star { display: inline-block; }
-.hud .card.locked { border: 2px dashed #2a3550; background: #0d1019; opacity: .7; display: flex; flex-direction: column; justify-content: center; }
-.hud .card.locked .card-art { color: #4a5168; background: none; }
-.hud .card.locked .card-val { color: #4a5168; }
-
 /* upgrade subtabs (attack / defense / economic) inside the Upgrades menu */
 .hud .subtabs { display: flex; gap: 6px; justify-content: center; margin: 0 auto 14px; max-width: 640px; }
 .hud .subtabs .subtab { position: relative; flex: 1; max-width: 120px; display: flex; align-items: center; justify-content: center;

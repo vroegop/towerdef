@@ -28,7 +28,6 @@ export const RICH_META = {
     { id: 'vitality', stars: 9 },
   ],
   cardBuys: 4,
-  starBuys: 6,
   totalWaves: 1840,
   waveTokensGranted: 18,
   labs: { dmgScale: 12, hpScale: 8, gameSpeed: 2 },

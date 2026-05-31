@@ -8,7 +8,7 @@ import { Sim, tickDying } from './sim/core';
 import { createState } from './sim/state';
 import { migrateMeta, reconcileResearch, claimCheckIn, startResearch, cancelResearch, rushResearch, buyLabSlot } from './sim/labs';
 import { gameSpeed } from './sim/labs';
-import { buyRunUpgrade, buyPerm, claimMilestone, buyCard, upgradeRandomCard, grantInitialCard, FIRST_PERM_COST } from './sim/skills';
+import { buyRunUpgrade, buyPerm, claimMilestone, buyCard, grantInitialCard, FIRST_PERM_COST } from './sim/skills';
 import { MAX_TIER, tierUnlocked, coreMult } from './sim/waves';
 import { makeEnemy } from './sim/enemies';
 import { BULLET_SPEED, BULLET_R } from './sim/projectiles';
@@ -60,7 +60,6 @@ function loadMeta(): Meta {
     tokens: m.tokens || 0,
     cards: m.cards || [],
     cardBuys: m.cardBuys || 0,
-    starBuys: m.starBuys || 0,
     totalWaves: m.totalWaves || 0,
     waveTokensGranted: m.waveTokensGranted || 0,
     labs: m.labs || {},
@@ -117,11 +116,6 @@ const handlers: HudHandlers = {
   },
   onBuyCard: () => {
     const r = buyCard(meta);
-    if (r) saveMeta();
-    return r;
-  },
-  onUpgradeCard: () => {
-    const r = upgradeRandomCard(meta);
     if (r) saveMeta();
     return r;
   },

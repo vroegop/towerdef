@@ -197,21 +197,28 @@ export const starSlot = (i: number, stars: number): string =>
   stars >= i + 11 ? 'chroma' : stars >= i + 6 ? 'gold' : stars >= i + 1 ? 'white' : 'empty';
 
 export const buyCardCost = (meta: Meta): number => 5 + 5 * (meta.cardBuys || 0);
-export const upgradeCost = (meta: Meta): number => 5 + 5 * (meta.starBuys || 0);
-// Buy/upgrade now return a RESULT describing the transition so the HUD can play the right reveal:
-//   { id, before, after, unlocked }  (or null when the action can't happen / can't be afforded).
+// A single draw returns a RESULT describing the transition so the HUD can play the right reveal:
+//   { id, before, after, unlocked }  — or null when the draw can't happen (everything is already
+// maxed) or can't be afforded.
+//
+// The draw pool is every NON-MAXED card: un-owned cards, plus owned cards below MAX_STARS. Drawing
+// an un-owned card unlocks it at 1 star; drawing one you already own adds a star. Maxed cards are
+// excluded from the pool, so a draw never wastes tokens on a card that can no longer improve.
 export function buyCard(meta: Meta): CardDrawResult | null {
-  // spend tokens -> random card (dupe becomes a star)
+  meta.cards = meta.cards || [];
+  const pool = Object.keys(CARDS).filter((id) => {
+    const c = meta.cards.find((x) => x.id === id);
+    return !c || (c.stars || 0) < MAX_STARS;
+  });
+  if (!pool.length) return null; // every card maxed — nothing left to draw
   const cost = buyCardCost(meta);
   if ((meta.tokens || 0) < cost) return null;
-  const ids = Object.keys(CARDS);
-  const id = ids[Math.floor(Math.random() * ids.length)];
-  meta.cards = meta.cards || [];
+  const id = pool[Math.floor(Math.random() * pool.length)];
   const owned = meta.cards.find((c) => c.id === id);
   let before: number, after: number, unlocked = false;
   if (owned) {
     before = owned.stars || 0;
-    owned.stars = Math.min(MAX_STARS, before + 1);
+    owned.stars = before + 1; // pool excludes maxed cards, so this never exceeds MAX_STARS
     after = owned.stars;
   } else {
     before = 0;
@@ -222,19 +229,6 @@ export function buyCard(meta: Meta): CardDrawResult | null {
   meta.tokens -= cost;
   meta.cardBuys = (meta.cardBuys || 0) + 1;
   return { id, before, after, unlocked };
-}
-export function upgradeRandomCard(meta: Meta): CardDrawResult | null {
-  // spend tokens -> +1 star on a random owned card
-  const pool = (meta.cards || []).filter((c) => (c.stars || 0) < MAX_STARS);
-  if (!pool.length) return null;
-  const cost = upgradeCost(meta);
-  if ((meta.tokens || 0) < cost) return null;
-  const c = pool[Math.floor(Math.random() * pool.length)];
-  const before = c.stars || 0;
-  c.stars = before + 1;
-  meta.tokens -= cost;
-  meta.starBuys = (meta.starBuys || 0) + 1;
-  return { id: c.id, before, after: c.stars, unlocked: false };
 }
 
 // ---- tier / milestones (cores rewards for furthest-wave progress in the current tier) ----

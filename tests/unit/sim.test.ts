@@ -9,12 +9,13 @@ import { createState } from '../../src/sim/state';
 import { migrateMeta } from '../../src/sim/labs';
 import { buyPerm, permCost, computeStats, waveStrSafe } from './helpers';
 import { waveCount, waveStr, tierUnlocked, coreMult } from '../../src/sim/waves';
+import { buyCard, buyCardCost, MAX_STARS, CARD_ORDER } from '../../src/sim/skills';
 import type { Meta } from '../../src/types';
 
 function freshMeta(over: Partial<Meta> = {}): Meta {
   return migrateMeta({
     cores: 0, perm: {}, hasPlayed: true, bestWave: 0, claimedMilestones: {}, tier: 1, coreMult: 1,
-    tierBest: {}, tokens: 0, cards: [], cardBuys: 0, starBuys: 0, totalWaves: 0, waveTokensGranted: 0,
+    tierBest: {}, tokens: 0, cards: [], cardBuys: 0, totalWaves: 0, waveTokensGranted: 0,
     labs: {}, research: [], labSlots: 1, cells: 0, lastCheckIn: 0, ultimates: {}, ver: 0, ...over,
   });
 }
@@ -138,5 +139,50 @@ describe('labs scale stats', () => {
     const labbed = computeStats(createState(1, freshMeta({ labs: { dmgScale: 10 } }), false));
     expect(labbed.rangedDamage).toBeCloseTo(base.rangedDamage * (1 + 0.04 * 10));
     expect(waveStrSafe()).toBe(true);
+  });
+});
+
+describe('card draws (buyCard)', () => {
+  // Card draws use Math.random, so we make them deterministic by collapsing the non-maxed pool to a
+  // SINGLE candidate (max out every other card). The drawn card is then forced, no matter the roll.
+  it('unlocks an un-owned card when it is the only non-maxed option', () => {
+    const cards = CARD_ORDER.slice(1).map((id) => ({ id, stars: MAX_STARS }));
+    const meta = freshMeta({ cards, tokens: 999 });
+    const r = buyCard(meta);
+    expect(r).not.toBeNull();
+    expect(r!.id).toBe(CARD_ORDER[0]);
+    expect(r!.unlocked).toBe(true);
+    expect(r!.before).toBe(0);
+    expect(r!.after).toBe(1);
+  });
+
+  it('adds a star to a card you already own when it is the only non-maxed option', () => {
+    const cards = CARD_ORDER.map((id) => ({ id, stars: MAX_STARS }));
+    cards[0] = { id: CARD_ORDER[0], stars: 3 };
+    const meta = freshMeta({ cards, tokens: 999 });
+    const r = buyCard(meta);
+    expect(r!.id).toBe(CARD_ORDER[0]);
+    expect(r!.unlocked).toBe(false);
+    expect(r!.before).toBe(3);
+    expect(r!.after).toBe(4);
+  });
+
+  it('never draws a maxed card: returns null when every card is already maxed', () => {
+    const cards = CARD_ORDER.map((id) => ({ id, stars: MAX_STARS }));
+    const meta = freshMeta({ cards, tokens: 999 });
+    expect(buyCard(meta)).toBeNull();
+  });
+
+  it('refuses to buy when tokens are insufficient', () => {
+    expect(buyCard(freshMeta({ cards: [], tokens: 0 }))).toBeNull();
+  });
+
+  it('deducts the cost and counts the buy', () => {
+    const cards = CARD_ORDER.slice(1).map((id) => ({ id, stars: MAX_STARS }));
+    const meta = freshMeta({ cards, tokens: 999, cardBuys: 0 });
+    const cost = buyCardCost(meta);
+    buyCard(meta);
+    expect(meta.tokens).toBe(999 - cost);
+    expect(meta.cardBuys).toBe(1);
   });
 });

@@ -5,7 +5,7 @@ import type { CardDef, CardDrawResult, CardInstance, Hud as HudInstance, HudFact
 import { WAVE, waveCount, tierDifficulty, coreMult, MAX_TIER, TIER_UNLOCK_WAVE, tierUnlocked } from '../sim/waves';
 import {
   UPGRADES, UP_BY_ID, upgradesIn, economyUnlocked, boughtOf, permBought, runUpgradeCost, runAtMax, permCost, permAtMax,
-  CARDS, CARD_INFO, MAX_STARS, CARD_ORDER, CARD_SLOTS, starSlot, buyCardCost, upgradeCost, cardsUnlocked, MILESTONES, milestoneReward,
+  CARDS, CARD_INFO, MAX_STARS, CARD_ORDER, CARD_SLOTS, starSlot, buyCardCost, cardsUnlocked, MILESTONES, milestoneReward,
   claimableCount, TAB_DEFS, FIRST_PERM_COST,
 } from '../sim/skills';
 import {
@@ -836,19 +836,19 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         html += '<div class="locked-tab">' + icon('lock', 46) + '<div class="lockmsg">Reach wave 30 to unlock cards</div></div>';
       } else {
         const owned = meta.cards || [];
-        const bc = buyCardCost(meta),
-          uc = upgradeCost(meta);
-        const allMax = owned.length && owned.every((c) => (c.stars || 0) >= MAX_STARS);
+        const bc = buyCardCost(meta);
+        // A draw is impossible only once every card type is owned AND maxed (the non-maxed pool is
+        // empty) — mirrors buyCard()'s own guard so the button greys out instead of shaking.
+        const allMaxed = Object.keys(CARDS).every((id) => {
+          const c = owned.find((x) => x.id === id);
+          return c && (c.stars || 0) >= MAX_STARS;
+        });
         html += '<div class="cores-chip token-chip">' + icon('token', 15, 'token') + ' <b>' + (meta.tokens || 0) + '</b></div>';
         html += '<div class="cardbtns">' +
-          '<button class="cardbtn draw' + ((meta.tokens || 0) < bc ? ' cant' : '') + '" id="h-buycard">' +
+          '<button class="cardbtn draw' + ((meta.tokens || 0) < bc || allMaxed ? ' cant' : '') + '" id="h-buycard"' + (allMaxed ? ' disabled' : '') + '>' +
           '<span class="cb-ic">' + icon('cards', 26) + '</span>' +
-          '<span class="cb-tx"><span class="cb-t">Draw Card</span><span class="cb-s">New card, or +1 star on a dupe</span></span>' +
+          '<span class="cb-tx"><span class="cb-t">Draw Card</span><span class="cb-s">' + (allMaxed ? 'Every card maxed!' : 'New card, or +1 star on one you own') + '</span></span>' +
           '<span class="cb-cost">' + bc + ' ' + icon('token', 13, 'token') + '</span></button>' +
-          '<button class="cardbtn star' + ((meta.tokens || 0) < uc || allMax ? ' cant' : '') + '" id="h-upcard"' + (!owned.length || allMax ? ' disabled' : '') + '>' +
-          '<span class="cb-ic">' + icon('star', 26, 'gold') + '</span>' +
-          '<span class="cb-tx"><span class="cb-t">Add Star</span><span class="cb-s">+1 star on a random card</span></span>' +
-          '<span class="cb-cost">' + uc + ' ' + icon('token', 13, 'token') + '</span></button>' +
           '</div>';
         html += '<div class="cardgrid">' + cardGridHtml(meta) + '</div>';
       }
@@ -920,14 +920,6 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
           renderMenu();
           revealCard(r);
         } else shake(bb);
-      });
-      const ub = $('#h-upcard');
-      if (ub) ub.addEventListener('click', () => {
-        const r = handlers.onUpgradeCard && handlers.onUpgradeCard();
-        if (r) {
-          renderMenu();
-          revealCard(r);
-        } else shake(ub);
       });
       menuContent.querySelectorAll<HTMLElement>('.card[data-card]').forEach((el) => el.addEventListener('click', () => openCardModal(el.dataset.card!)));
     } else if (menuTab === 'labs') {
