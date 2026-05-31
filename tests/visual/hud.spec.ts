@@ -41,7 +41,8 @@ for (const hud of HUDS) {
       // Start a run then immediately exit it to reach the overview deterministically.
       await page.locator('#h-start').click();
       await page.waitForTimeout(300);
-      // open the run stats panel and use its Exit-run button (banks + shows overview)
+      // open the side-menu rail, then the Run Stats panel, and use its Exit-run button (banks + shows overview)
+      await page.locator('#h-menu-btn').click();
       await page.locator('#h-chart').click();
       await page.waitForSelector('#h-stats-exit', { state: 'visible' });
       await page.locator('#h-stats-exit').click();
@@ -63,4 +64,8 @@ test('in-game top bar + upgrade dock', async ({ page }) => {
   await expect(page.locator('#h-top')).toHaveScreenshot('classic-ingame-topbar.png');
   // upgrade dock
   await expect(page.locator('#h-tabbar')).toHaveScreenshot('classic-ingame-dock.png');
+  // side-menu rail (opened from the header menu toggle) — part of the redesigned in-game chrome
+  await page.locator('#h-menu-btn').click();
+  await page.waitForTimeout(150);
+  await expect(page.locator('#h-sidemenu')).toHaveScreenshot('classic-ingame-sidemenu.png');
 });

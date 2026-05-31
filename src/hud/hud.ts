@@ -1,11 +1,11 @@
 /* src/hud/hud.ts — in-game HUD (top stats + 3-tab upgrade bar), the between-games MENU
    (5 bottom tabs), a spotlight tutorial, a milestones modal, and a settings modal.
    Handlers: onBuyRun, onBuyPerm, onClaimMilestone, onStartRun, onDev, onFF. */
-import type { CardInstance, Hud as HudInstance, HudFactory, HudHandlers, MenuOpts, Meta, Settings, State, ThemeDef, EarnSummary, UpgradeDef } from '../types';
+import type { CardDef, CardDrawResult, CardInstance, Hud as HudInstance, HudFactory, HudHandlers, MenuOpts, Meta, Settings, State, ThemeDef, EarnSummary, UpgradeDef } from '../types';
 import { WAVE, waveCount, tierDifficulty, coreMult, MAX_TIER, TIER_UNLOCK_WAVE, tierUnlocked } from '../sim/waves';
 import {
   UPGRADES, UP_BY_ID, upgradesIn, economyUnlocked, boughtOf, permBought, runUpgradeCost, runAtMax, permCost, permAtMax,
-  CARDS, MAX_STARS, CARD_ORDER, CARD_SLOTS, starSlot, buyCardCost, upgradeCost, cardsUnlocked, MILESTONES, milestoneReward,
+  CARDS, CARD_INFO, MAX_STARS, CARD_ORDER, CARD_SLOTS, starSlot, buyCardCost, upgradeCost, cardsUnlocked, MILESTONES, milestoneReward,
   claimableCount, TAB_DEFS, FIRST_PERM_COST,
 } from '../sim/skills';
 import {
@@ -58,6 +58,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     fwd: '<path d="M9 5l7 7-7 7"/>',
     gear: '<circle cx="12" cy="12" r="3.2"/><path d="M19.4 13a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.7 8.6a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     gallery: '<rect x="3" y="3" width="7.5" height="7.5" rx="1.2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.2"/>',
+    menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
   };
   function icon(name: string, size?: number, cls?: string): string {
     size = size || 16;
@@ -70,14 +71,27 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   const cores = (size?: number): string => icon('cores', size || 14, 'core');
 
   root.innerHTML =
+    // Fixed header: game info on the left, a single menu toggle pinned right. No wrapping, so
+    // the layout is identical on every device and across themes (whose fonts have varying widths).
     '<div class="topbar" id="h-top">' +
     '  <div class="stat wave"><span class="lbl">Wave</span><b id="h-wave">1</b></div>' +
-    '  <div class="stat hp">' + icon('heart', 15, 'hp') + '<b id="h-hp">1</b><span class="hpbar"><i id="h-hpfill"></i></span></div>' +
+    '  <div class="stat hp"><span class="hpbar">' +
+    '<span class="hptrail" id="h-hptrail"></span>' +
+    '<span class="hpclip" id="h-hpclip"><i class="hpfill"></i></span>' +
+    '<span class="hpheart">' + icon('heart', 11) + '</span>' +
+    '<b class="hpnum" id="h-hp">1</b>' +
+    '</span></div>' +
     '  <div class="stat gold">' + icon('coin', 15, 'gold') + '<b id="h-gold">0</b></div>' +
-    '  <a class="iconbtn protolink" id="h-proto" href="huds/_prototype-hud-gallery.html" target="_blank" rel="noopener" title="HUD design prototypes">' + icon('gallery', 20) + '</a>' +
-    '  <button class="iconbtn" id="h-chart" title="Stats">' + icon('chart', 20) + '</button>' +
-    '  <button class="iconbtn" id="h-settings-btn" title="Settings">' + icon('gear', 20) + '</button>' +
+    '  <button class="iconbtn menutoggle" id="h-menu-btn" title="Menu">' + icon('menu', 22) + '</button>' +
     '</div>' +
+    // Persistent side menu: a narrow, one-icon-wide rail that opens from the menu toggle and stays
+    // open (game interactions never auto-dismiss it). It is only as tall as its content, so it stays
+    // unintrusive — each icon opens a self-dismissing modal instead of a big always-on panel.
+    '<aside class="sidemenu" id="h-sidemenu">' +
+    '  <button class="sideitem" id="h-set" title="Settings">' + icon('gear', 20) + '</button>' +
+    '  <button class="sideitem" id="h-chart" title="Run Stats">' + icon('chart', 20) + '</button>' +
+    '  <a class="sideitem protolink" id="h-proto" href="huds/_prototype-hud-gallery.html" target="_blank" rel="noopener" title="Designs">' + icon('gallery', 20) + '</a>' +
+    '</aside>' +
     '<div class="wavebar" id="h-wavebar" title="Next wave"><i id="h-wavefill"></i></div>' +
     '<div class="statswrap hide" id="h-stats"><div class="statscard" id="h-statscard"></div></div>' +
     '<div class="ghint hide" id="h-ghint"></div>' +
@@ -128,6 +142,16 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   root.insertAdjacentHTML('beforeend', '<div class="cardmodal hide" id="h-cardmodal"><div class="cardmodal-inner" id="h-cardmodal-inner"></div></div>');
   $('#h-cardmodal').addEventListener('click', () => $('#h-cardmodal').classList.add('hide'));
 
+  // card REVEAL overlay — the "what did I get?" theatre played after a draw/upgrade (flip + star fly-in /
+  // gold glow / chroma spin). Click anywhere to dismiss; the grid underneath has already re-rendered.
+  root.insertAdjacentHTML('beforeend', '<div class="reveal hide" id="h-reveal"><div class="reveal-stage" id="h-reveal-stage"></div></div>');
+  let revealTimers: ReturnType<typeof setTimeout>[] = [];
+  $('#h-reveal').addEventListener('click', () => {
+    revealTimers.forEach(clearTimeout);
+    revealTimers = [];
+    $('#h-reveal').classList.add('hide');
+  });
+
   const STARP = 'M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6z';
   const STAT_ICON: Record<string, string> = { rangedDamage: 'bow', attackSpeed: 'rate', health: 'heart', regen: 'regen',
     critChance: 'crit', critDamage: 'burst', dodge: 'dodge', coins: 'coin',
@@ -154,25 +178,118 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     }
     return h + '</div>';
   }
+  const tierOf = (stars: number): string => (stars >= 11 ? 'chroma' : stars >= 6 ? 'gold' : 'white');
+  // one-line readable effect for a card at its current stars (e.g. "+10% attack speed")
+  function cardDescText(def: CardDef, stars: number): string {
+    const v = def.value(stars || 0);
+    return def.desc ? def.desc(v) : def.fmt ? def.fmt(v) : '+' + v;
+  }
   function cardHtml(card: CardInstance): string {
     const def = CARDS[card.id];
     if (!def) return '';
-    const v = def.value(card.stars || 0);
-    const tier = card.stars >= 11 ? 'chroma' : card.stars >= 6 ? 'gold' : 'white';
-    let stats = '';
-    for (const e of def.effects) {
-      const ic = STAT_ICON[e.stat] || 'burst';
-      stats += '<span class="cstat">' + icon(ic, 15) + '<span class="cl">' + (STAT_LABEL[e.stat] || e.stat) + '</span><b>' + (def.fmt ? def.fmt(v) : '+' + v) + '</b></span>';
-    }
+    const stars = card.stars || 0;
     return (
-      '<div class="card tier-' + tier + '" data-card="' + card.id + '">' +
-      '<div class="card-img" style="color:' + def.tint + '">' + icon(def.art, 52) + '</div>' +
-      starsHtml(card.stars || 0) +
-      '<div class="card-stats">' + stats + '</div></div>'
+      '<div class="card tier-' + tierOf(stars) + '" data-card="' + card.id + '" style="--tint:' + def.tint + '">' +
+      '<div class="card-band"></div>' +
+      '<div class="card-name">' + def.name + '</div>' +
+      '<div class="card-img">' + icon(def.art, 50) + '</div>' +
+      starsHtml(stars) +
+      '<div class="card-desc">' + cardDescText(def, stars) + '</div></div>'
     );
   }
   function lockedCardHtml(): string {
-    return '<div class="card locked"><div class="card-img">' + icon('lock', 36) + '</div><div class="card-name">Locked</div></div>';
+    return '<div class="card locked"><div class="card-img">' + icon('lock', 34) + '</div><div class="card-name">Locked</div></div>';
+  }
+  // a fixed 5-slot star row for the reveal theatre. `change` marks the ONE slot mid-transition
+  // (white fly-in / white→gold / gold→chroma); the rest are drawn at their final tier.
+  function revealStarSlots(stars: number, change: { idx: number; type: string } | null): string {
+    let h = '<div class="rc-stars">';
+    for (let i = 0; i < 5; i++) {
+      const t = starSlot(i, stars); // 'empty' | 'white' | 'gold' | 'chroma'
+      if (change && i === change.idx) {
+        if (change.type === 'white') {
+          h += '<span class="rstar fly">' + starSvg('white') + '</span>';
+        } else {
+          const from = change.type === 'gold' ? 'white' : 'gold';
+          h += '<span class="rstar morph to-' + change.type + '">' +
+            '<span class="glow"></span>' +
+            '<span class="sf from">' + starSvg(from) + '</span>' +
+            '<span class="sf to">' + starSvg(change.type) + '</span></span>';
+        }
+      } else if (t === 'empty') {
+        h += '<span class="rstar empty">' + starSvg('white') + '</span>';
+      } else {
+        h += '<span class="rstar">' + starSvg(t) + '</span>';
+      }
+    }
+    return h + '</div>';
+  }
+  // Play the reveal for a buy/upgrade RESULT { id, before, after, unlocked }. Detects which star slot
+  // changed and to what tier, then sequences: (optional) locked-card flip → the matching star animation
+  // → (at 15 stars) the whole card going chromatic while its stats fade.
+  function revealCard(r: CardDrawResult): void {
+    if (!r || !r.id) return;
+    const def = CARDS[r.id];
+    if (!def) return;
+    const before = r.before | 0,
+      after = r.after | 0,
+      unlocked = !!r.unlocked;
+    let change: { idx: number; type: string } | null = null;
+    if (after > before) {
+      if (after <= 5) change = { idx: after - 1, type: 'white' };
+      else if (after <= 10) change = { idx: after - 6, type: 'gold' };
+      else change = { idx: after - 11, type: 'chroma' };
+    }
+    const full = after >= MAX_STARS && after > before; // reached the 5th chrome star this draw
+    const banner = full
+      ? 'Fully Chromatic!'
+      : unlocked
+        ? 'New Card!'
+        : change && change.type === 'gold'
+          ? 'Gold Star!'
+          : change && change.type === 'chroma'
+            ? 'Chromatic Star!'
+            : change
+              ? 'Star Up!'
+              : def.name;
+
+    const front =
+      '<div class="rc-face rc-front">' +
+      '<div class="card-band"></div>' +
+      '<div class="rc-name">' + def.name + '</div>' +
+      '<div class="rc-img">' + icon(def.art, 84) + '</div>' +
+      revealStarSlots(after, change) +
+      '<div class="rc-desc">' + cardDescText(def, after) + '</div>' +
+      '<div class="rc-info">' + (CARD_INFO[r.id] || '') + '</div>' +
+      '</div>';
+    const cardInner = unlocked
+      ? '<div class="rc-flip"><div class="rc-face rc-back">' + icon('lock', 56) + '<span>Locked</span></div>' + front + '</div>'
+      : front;
+
+    const stage = $('#h-reveal-stage');
+    stage.innerHTML =
+      '<div class="reveal-banner">' + banner + '</div>' +
+      '<div class="revealcard tier-' + tierOf(after) + '" style="--tint:' + def.tint + '">' + cardInner + '</div>' +
+      '<div class="reveal-hint">Tap to continue</div>';
+    $('#h-reveal').classList.remove('hide');
+
+    const rc = stage.querySelector('.revealcard') as HTMLElement,
+      frontEl = stage.querySelector('.rc-front') as HTMLElement;
+    revealTimers.forEach(clearTimeout);
+    revealTimers = [];
+    const at = (ms: number, fn: () => void): number => revealTimers.push(setTimeout(fn, ms));
+    // the star animations are gated behind `.go` so they hold until the card is face-up
+    const go = (): void => {
+      frontEl.classList.add('go');
+      // chromatic morph runs ~1.2s; only then does a maxed card dissolve its stats and turn chromatic
+      if (full) at(change && change.type === 'chroma' ? 1250 : 950, () => rc.classList.add('full'));
+    };
+    if (unlocked) {
+      at(500, () => (stage.querySelector('.rc-flip') as HTMLElement).classList.add('flipped')); // flip after half a second
+      at(500 + 680, go); // ...then, once face-up, fly the first star in
+    } else {
+      requestAnimationFrame(() => requestAnimationFrame(go));
+    }
   }
   function cardGridHtml(meta: Meta): string {
     const owned = meta.cards || [];
@@ -197,7 +314,13 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         '<span class="csv">' + icon(STAT_ICON[e0.stat] || 'burst', 14) +
         (STAT_LABEL[e0.stat] || e0.stat) + ' <b>' + (def.fmt ? def.fmt(def.value(s)) : '+' + def.value(s)) + '</b></span></div>';
     }
-    $('#h-cardmodal-inner').innerHTML = '<div class="cmhead" style="color:' + def.tint + '">' + icon(def.art, 32) + '</div>' + rows;
+    const info = CARD_INFO[id] || '';
+    $('#h-cardmodal-inner').innerHTML =
+      '<div class="cmhead" style="--tint:' + def.tint + '">' +
+      '<div class="cm-medal">' + icon(def.art, 30) + '</div>' +
+      '<div class="cm-title"><b>' + def.name + '</b>' + (info ? '<span>' + info + '</span>' : '') + '</div>' +
+      '</div>' +
+      '<div class="cm-sub">Bonus per star · <b>' + stars + '</b>/' + MAX_STARS + '</div>' + rows;
     $('#h-cardmodal').classList.remove('hide');
   }
 
@@ -271,10 +394,14 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     $('#h-wave').textContent = String(s.wave.n);
     $('#h-hp').textContent = abbr(Math.ceil(s.hero.hp)) + '/' + abbr(Math.ceil(s.hero.hpMax));
     $('#h-gold').textContent = abbr(s.econ.gold);
+    // HP bar: a red→green gradient revealed by clipping to the current fraction (mirrors the enemy
+    // bars), with a translucent "damage trail" that drains a beat behind each hit and a low-HP danger
+    // pulse. The value lives inside the bar.
     const hpf = s.hero.hpMax > 0 ? Math.max(0, Math.min(1, s.hero.hp / s.hero.hpMax)) : 0;
-    const hpfill = $('#h-hpfill');
-    hpfill.style.width = hpf * 100 + '%';
-    hpfill.style.background = hpf > 0.3 ? '#3ddc84' : '#ff5d6c';
+    const hpPct = hpf * 100 + '%';
+    $('#h-hpclip').style.width = hpPct;
+    $('#h-hptrail').style.width = hpPct;
+    $<HTMLElement>('.stat.hp').classList.toggle('low', hpf > 0 && hpf <= 0.3);
     const wbar = $('#h-wavebar');
     if (s.firstRun) wbar.style.display = 'none';
     else {
@@ -378,16 +505,17 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   ];
   const setmodal = $('#h-setmodal'),
     setmodalInner = $('#h-setmodal-inner');
-  function openSettings(): void {
-    let h = '<div class="statshead"><h2>Settings</h2><button class="iconclose" id="h-set-close" title="Close">' + icon('close', 18) + '</button></div><div class="setbody">';
-    for (const o of SETTINGS_DEF) {
-      h += '<button class="setrow' + (settings[o.key] ? ' on' : '') + '" data-set="' + o.key + '">' +
+  // Toggle rows are built from one source, reused by the in-game side-rail gear and the
+  // between-games menu gear (both open the same centered modal, mutating the shared `settings`).
+  const settingsRowsHtml = (): string =>
+    SETTINGS_DEF.map(
+      (o) =>
+        '<button class="setrow' + (settings[o.key] ? ' on' : '') + '" data-set="' + o.key + '">' +
         '<span class="sl">' + icon(o.icon, 16, o.cls || '') + '<span>' + o.label + '</span></span>' +
-        '<span class="switch"><i></i></span></button>';
-    }
-    setmodalInner.innerHTML = h + '</div>';
-    $('#h-set-close').addEventListener('click', () => setmodal.classList.add('hide'));
-    setmodalInner.querySelectorAll<HTMLElement>('[data-set]').forEach((b) =>
+        '<span class="switch"><i></i></span></button>',
+    ).join('');
+  const wireSettingsRows = (el: HTMLElement): void =>
+    el.querySelectorAll<HTMLElement>('[data-set]').forEach((b) =>
       b.addEventListener('click', () => {
         const k = b.dataset.set as keyof Settings;
         settings[k] = !settings[k];
@@ -395,13 +523,25 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         handlers.onSaveSettings && handlers.onSaveSettings();
       }),
     );
+  function openSettings(): void {
+    setmodalInner.innerHTML =
+      '<div class="statshead"><h2>Settings</h2><button class="iconclose" id="h-set-close" title="Close">' +
+      icon('close', 18) + '</button></div><div class="setbody">' + settingsRowsHtml() + '</div>';
+    $('#h-set-close').addEventListener('click', () => setmodal.classList.add('hide'));
+    wireSettingsRows(setmodalInner);
     setmodal.classList.remove('hide');
   }
   setmodal.addEventListener('click', (e) => {
     if (e.target === setmodal) setmodal.classList.add('hide');
   });
-  $('#h-settings-btn').addEventListener('click', openSettings);
   $('#h-menugear').addEventListener('click', openSettings);
+
+  // ---------- side menu: a narrow icon rail, toggled by the header button; no auto-dismiss ----------
+  // Each rail icon opens a self-dismissing modal (Settings) or panel (Run Stats), so the unintrusive
+  // rail can stay open without a big panel hogging the screen.
+  const sidemenu = $('#h-sidemenu');
+  $('#h-menu-btn').addEventListener('click', () => sidemenu.classList.toggle('open'));
+  $('#h-set').addEventListener('click', openSettings);
 
   // ---------- MENU ----------
   const menuEl = $('#h-menu'),
@@ -698,9 +838,17 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         const owned = meta.cards || [];
         const bc = buyCardCost(meta),
           uc = upgradeCost(meta);
+        const allMax = owned.length && owned.every((c) => (c.stars || 0) >= MAX_STARS);
+        html += '<div class="cores-chip token-chip">' + icon('token', 15, 'token') + ' <b>' + (meta.tokens || 0) + '</b></div>';
         html += '<div class="cardbtns">' +
-          '<button class="cardbtn' + ((meta.tokens || 0) < bc ? ' cant' : '') + '" id="h-buycard" title="Buy card">' + icon('cards', 26) + '</button>' +
-          '<button class="cardbtn' + ((meta.tokens || 0) < uc ? ' cant' : '') + '" id="h-upcard" title="Add star"' + (!owned.length ? ' disabled' : '') + '>' + icon('star', 26, 'gold') + '</button>' +
+          '<button class="cardbtn draw' + ((meta.tokens || 0) < bc ? ' cant' : '') + '" id="h-buycard">' +
+          '<span class="cb-ic">' + icon('cards', 26) + '</span>' +
+          '<span class="cb-tx"><span class="cb-t">Draw Card</span><span class="cb-s">New card, or +1 star on a dupe</span></span>' +
+          '<span class="cb-cost">' + bc + ' ' + icon('token', 13, 'token') + '</span></button>' +
+          '<button class="cardbtn star' + ((meta.tokens || 0) < uc || allMax ? ' cant' : '') + '" id="h-upcard"' + (!owned.length || allMax ? ' disabled' : '') + '>' +
+          '<span class="cb-ic">' + icon('star', 26, 'gold') + '</span>' +
+          '<span class="cb-tx"><span class="cb-t">Add Star</span><span class="cb-s">+1 star on a random card</span></span>' +
+          '<span class="cb-cost">' + uc + ' ' + icon('token', 13, 'token') + '</span></button>' +
           '</div>';
         html += '<div class="cardgrid">' + cardGridHtml(meta) + '</div>';
       }
@@ -767,13 +915,19 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     } else if (menuTab === 'cards') {
       const bb = $('#h-buycard');
       if (bb) bb.addEventListener('click', () => {
-        if (handlers.onBuyCard && handlers.onBuyCard()) renderMenu();
-        else shake(bb);
+        const r = handlers.onBuyCard && handlers.onBuyCard();
+        if (r) {
+          renderMenu();
+          revealCard(r);
+        } else shake(bb);
       });
       const ub = $('#h-upcard');
       if (ub) ub.addEventListener('click', () => {
-        if (handlers.onUpgradeCard && handlers.onUpgradeCard()) renderMenu();
-        else shake(ub);
+        const r = handlers.onUpgradeCard && handlers.onUpgradeCard();
+        if (r) {
+          renderMenu();
+          revealCard(r);
+        } else shake(ub);
       });
       menuContent.querySelectorAll<HTMLElement>('.card[data-card]').forEach((el) => el.addEventListener('click', () => openCardModal(el.dataset.card!)));
     } else if (menuTab === 'labs') {
@@ -828,6 +982,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     modal.classList.add('hide');
     renderMenu();
     menuEl.classList.add('show');
+    sidemenu.classList.remove('open'); // the side menu is in-game chrome; the menu screen has its own gear
     tabbarEl.style.display = 'none';
     topEl.style.display = 'none';
   }
@@ -866,6 +1021,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       '</div>';
     $('#h-over-close').addEventListener('click', () => handlers.onToWorkshop && handlers.onToWorkshop());
     overEl.classList.remove('hide');
+    sidemenu.classList.remove('open');
     tabbarEl.style.display = 'none';
     topEl.style.display = 'none';
   }

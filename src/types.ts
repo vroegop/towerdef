@@ -232,6 +232,13 @@ export interface CardEffect {
   stat: string;
   kind: 'flat' | 'mult';
 }
+// The outcome of a card draw / star-up, returned to the HUD so it can play the matching reveal.
+export interface CardDrawResult {
+  id: string;
+  before: number;
+  after: number;
+  unlocked: boolean;
+}
 export interface CardDef {
   id: string;
   name: string;
@@ -288,8 +295,8 @@ export interface HudHandlers {
   onBuyPerm?: (id: string) => boolean;
   onClaimMilestone?: (wave: number) => number;
   onSetTier?: (t: number) => boolean;
-  onBuyCard?: () => string | null;
-  onUpgradeCard?: () => string | null;
+  onBuyCard?: () => CardDrawResult | null;
+  onUpgradeCard?: () => CardDrawResult | null;
   onStartResearch?: (id: string) => boolean;
   onCancelResearch?: (id: string) => boolean;
   onRushResearch?: (id: string) => boolean;
