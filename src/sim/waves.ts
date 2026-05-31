@@ -1,0 +1,55 @@
+/* src/sim/waves.ts — wave scheduling & difficulty curves (pure functions of wave number).
+   A wave starts every WAVE.interval seconds; its enemies spawn over the first spawnWindow
+   seconds. screenCap limits CONCURRENT enemies, so a bigger wave only adds pressure when
+   the arena isn't already full. Strength/speed baselines rise with wave number. */
+import type { Meta } from '../types';
+
+export const WAVE = {
+  interval: 30, // seconds between wave starts
+  spawnWindow: 25, // a wave's enemies all spawn within this many seconds of its start
+  screenCap: 200, // max concurrent enemies alive (the "screen cap" — stays fixed)
+  baseCount: 8, // enemies in wave 1
+  perWave: 5, // added per wave...
+  maxCount: 140, // ...up to this ceiling (the upgradable "spawn cap")
+  strPerWave: 0.08, // +8% baseline strength per wave (the LINEAR term)
+  expBase: 1.015, // gentle EXPONENTIAL term blended on top so a "wall" emerges at depth
+  speedPerWave: 0.02,
+};
+
+// First-run script: spawn a cluster on a fixed-radius ring so they converge together and a
+// no-input 1/1/1/1 hero dies at ~10s (deterministic across seeds). Tuned via headless harness.
+export const FIRST_RUN = { count: 10, gap: 0.05, speed: 42, radius: 500 };
+
+export const COIN_DECAY_WAVES = 3; // a survivor older than this many waves...
+export const COIN_DECAY_FACTOR = 0.5; // ...pays only this share of its coin value (anti-kite rule)
+
+export function waveCount(n: number): number {
+  return Math.min(WAVE.maxCount, WAVE.baseCount + WAVE.perWave * (n - 1));
+}
+// Strength = linear ramp × gentle exponential. Wave 1 is exactly ×1 (both terms = 1), so the
+// scripted first run and early game are unchanged; the exponential only bites at depth, where it
+// races the player's compounding (multiplicative) power and creates the wall.
+export function waveStr(n: number): number {
+  return (1 + WAVE.strPerWave * (n - 1)) * Math.pow(WAVE.expBase, n - 1);
+}
+export function waveSpeed(n: number): number {
+  return 1 + WAVE.speedPerWave * (n - 1);
+}
+
+// Game tiers (distinct from enemy TIERS strength classes): each tier doubles the
+// *effective* wave number, so tier 2 wave 4 plays like wave 8, tier 3 like wave 16, etc.
+export const MAX_TIER = 5;
+export const TIER_UNLOCK_WAVE = 300; // reach this wave in a tier to unlock the next one
+export function tierDifficulty(tier: number): number {
+  return Math.pow(2, (tier || 1) - 1);
+}
+// Core reward multiplier per tier: tier 1 is the 1x baseline; each higher tier adds +0.8x.
+export function coreMult(tier: number): number {
+  return 1 + 0.8 * ((tier || 1) - 1);
+}
+// Tier 1 is always open; tier N>1 needs TIER_UNLOCK_WAVE reached in the tier below.
+export function tierUnlocked(meta: Meta, tier: number): boolean {
+  if (tier <= 1) return true;
+  const prevBest = (meta && meta.tierBest && meta.tierBest[tier - 1]) || 0;
+  return prevBest >= TIER_UNLOCK_WAVE;
+}
