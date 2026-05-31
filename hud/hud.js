@@ -74,19 +74,13 @@
       '  <div class="stat gold">' + icon('coin', 15, 'gold') + '<b id="h-gold">0</b></div>' +
       '  <button class="iconbtn menutoggle" id="h-menu-btn" title="Menu">' + icon('menu', 22) + '</button>' +
       '</div>' +
-      // Persistent side menu: opens from the menu toggle and stays open until its collapse button is
-      // clicked — game interactions never auto-dismiss it. Houses settings + stats + design links.
+      // Persistent side menu: a narrow, one-icon-wide rail that opens from the menu toggle and stays
+      // open (game interactions never auto-dismiss it). It is only as tall as its content, so it stays
+      // unintrusive — each icon opens a self-dismissing modal instead of a big always-on panel.
       '<aside class="sidemenu" id="h-sidemenu">' +
-      '  <div class="sidemenu-head"><span class="sidemenu-title">Menu</span>' +
-      '    <button class="iconbtn" id="h-menu-collapse" title="Collapse">' + icon('close', 20) + '</button></div>' +
-      '  <nav class="sidemenu-body">' +
-      '    <div class="sidesec open" id="h-sec-settings">' +
-      '      <button class="sidesec-h" id="h-settings-btn">' + icon('gear', 18) + '<span>Settings</span><span class="caret">' + icon('fwd', 14) + '</span></button>' +
-      '      <div class="sidesec-b" id="h-settings-list"></div>' +
-      '    </div>' +
-      '    <button class="sideitem" id="h-chart">' + icon('chart', 18) + '<span>Run Stats</span></button>' +
-      '    <a class="sideitem protolink" id="h-proto" href="huds/_prototype-hud-gallery.html" target="_blank" rel="noopener">' + icon('gallery', 18) + '<span>Designs</span></a>' +
-      '  </nav>' +
+      '  <button class="sideitem" id="h-set" title="Settings">' + icon('gear', 20) + '</button>' +
+      '  <button class="sideitem" id="h-chart" title="Run Stats">' + icon('chart', 20) + '</button>' +
+      '  <a class="sideitem protolink" id="h-proto" href="huds/_prototype-hud-gallery.html" target="_blank" rel="noopener" title="Designs">' + icon('gallery', 20) + '</a>' +
       '</aside>' +
       '<div class="wavebar" id="h-wavebar" title="Next wave"><i id="h-wavefill"></i></div>' +
       '<div class="statswrap hide" id="h-stats"><div class="statscard" id="h-statscard"></div></div>' +
@@ -343,8 +337,8 @@
       { key: 'damageNumbers', label: 'Damage numbers', icon: 'burst' },
     ];
     const setmodal = $('#h-setmodal'), setmodalInner = $('#h-setmodal-inner');
-    // Toggle rows are built from one source and reused by the in-game side menu (inline submenu) and
-    // the between-games menu gear (centered modal). Both mutate the shared `settings` object.
+    // Toggle rows are built from one source, reused by the in-game side-rail gear and the
+    // between-games menu gear (both open the same centered modal, mutating the shared `settings`).
     const settingsRowsHtml = () => SETTINGS_DEF.map((o) =>
       '<button class="setrow' + (settings[o.key] ? ' on' : '') + '" data-set="' + o.key + '">' +
       '<span class="sl">' + icon(o.icon, 16, o.cls || '') + '<span>' + o.label + '</span></span>' +
@@ -354,12 +348,6 @@
       b.classList.toggle('on', settings[k]);
       handlers.onSaveSettings && handlers.onSaveSettings();
     }));
-    // In-game side menu: render the settings submenu once, then keep it in sync each time it opens.
-    const settingsList = $('#h-settings-list');
-    settingsList.innerHTML = settingsRowsHtml();
-    wireSettingsRows(settingsList);
-    const syncSideSettings = () => settingsList.querySelectorAll('[data-set]')
-      .forEach((b) => b.classList.toggle('on', !!settings[b.dataset.set]));
     function openSettings() {
       setmodalInner.innerHTML = '<div class="statshead"><h2>Settings</h2><button class="iconclose" id="h-set-close" title="Close">' +
         icon('close', 18) + '</button></div><div class="setbody">' + settingsRowsHtml() + '</div>';
@@ -370,15 +358,12 @@
     setmodal.addEventListener('click', (e) => { if (e.target === setmodal) setmodal.classList.add('hide'); });
     $('#h-menugear').addEventListener('click', openSettings);
 
-    // ---------- side menu: persistent until collapsed; no auto-dismiss on outside interaction ----------
+    // ---------- side menu: a narrow icon rail, toggled by the header button; no auto-dismiss ----------
+    // Each rail icon opens a self-dismissing modal (Settings) or panel (Run Stats), so the unintrusive
+    // rail can stay open without a big panel hogging the screen.
     const sidemenu = $('#h-sidemenu');
-    $('#h-menu-btn').addEventListener('click', () => {
-      const open = sidemenu.classList.toggle('open');
-      if (open) syncSideSettings();
-    });
-    $('#h-menu-collapse').addEventListener('click', () => sidemenu.classList.remove('open'));
-    // Settings is a collapsible submenu; its header toggles the section, it does not open the modal.
-    $('#h-settings-btn').addEventListener('click', () => $('#h-sec-settings').classList.toggle('open'));
+    $('#h-menu-btn').addEventListener('click', () => sidemenu.classList.toggle('open'));
+    $('#h-set').addEventListener('click', openSettings);
 
     // ---------- MENU ----------
     const menuEl = $('#h-menu'), menuContent = $('#h-menu-content'), menuTabsEl = $('#h-menu-tabs');

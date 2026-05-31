@@ -21,25 +21,20 @@
 .hud .topbar .menutoggle { margin-left: auto; flex: 0 0 auto; } /* always pinned to the right edge */
 .hud .protolink { color: #7ad0ff; } /* design-prototype gallery link (opens huds/_prototype-hud-gallery.html) */
 
-/* ---- persistent side menu (opens from the header toggle; closes only via its collapse button) ---- */
-.hud .sidemenu { position: absolute; top: 0; right: 0; bottom: 0; width: min(280px, 82vw); z-index: 50;
-  display: flex; flex-direction: column; pointer-events: auto;
-  background: rgba(15,18,27,.97); border-left: 1px solid #262c3d; backdrop-filter: blur(8px);
-  transform: translateX(100%); transition: transform .2s ease; }
-.hud .sidemenu.open { transform: translateX(0); box-shadow: -10px 0 28px rgba(0,0,0,.45); }
-.hud .sidemenu-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid #1f2740; }
-.hud .sidemenu-title { font-weight: 700; font-size: 15px; color: #fff; }
-.hud .sidemenu-body { flex: 1; overflow: auto; padding: 8px; display: flex; flex-direction: column; gap: 2px; }
-.hud .sideitem, .hud .sidesec-h { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
-  background: transparent; border: 0; color: #d8deea; font: inherit; cursor: pointer; padding: 11px 8px; border-radius: 5px; text-decoration: none; }
-.hud .sidesec-h { font-weight: 600; }
-.hud .sideitem:hover, .hud .sidesec-h:hover { background: rgba(74,168,255,.1); }
-.hud .sideitem .ic, .hud .sidesec-h > .ic { color: #8b93a7; flex: 0 0 auto; }
-.hud .sidesec-h .caret { margin-left: auto; opacity: .6; transition: transform .15s; display: inline-flex; }
-.hud .sidesec.open .sidesec-h .caret { transform: rotate(90deg); }
-.hud .sidesec-b { display: none; flex-direction: column; padding: 0 8px 4px; }
-.hud .sidesec.open .sidesec-b { display: flex; }
-.hud .sidemenu .setrow { padding: 9px 4px; }
+/* ---- side menu: a narrow, one-icon-wide rail pinned under the header toggle. It is only as tall as
+       its content (icon buttons + padding), so it never blocks the arena. Toggled by the header menu
+       button; each icon opens a self-dismissing modal/panel rather than an always-on side panel. ---- */
+.hud .sidemenu { position: absolute; top: 46px; right: 10px; z-index: 50;
+  display: flex; flex-direction: column; gap: 4px; padding: 6px; pointer-events: auto;
+  background: rgba(15,18,27,.97); border: 1px solid #262c3d; border-radius: 10px; backdrop-filter: blur(8px);
+  transform-origin: top right; transform: scale(.9); opacity: 0; visibility: hidden;
+  transition: transform .14s ease, opacity .14s ease, visibility .14s; }
+.hud .sidemenu.open { transform: scale(1); opacity: 1; visibility: visible; box-shadow: 0 10px 28px rgba(0,0,0,.45); }
+.hud .sideitem { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px;
+  background: transparent; border: 0; color: #d8deea; cursor: pointer; padding: 0; border-radius: 7px; text-decoration: none; }
+.hud .sideitem:hover { background: rgba(74,168,255,.12); }
+.hud .sideitem .ic { color: #8b93a7; flex: 0 0 auto; }
+.hud .sideitem:hover .ic { color: #d8deea; }
 
 /* in-game stats panel */
 .hud .statswrap { position: absolute; inset: 0; z-index: 45; display: flex; align-items: flex-start; justify-content: center;

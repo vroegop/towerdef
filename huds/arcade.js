@@ -53,13 +53,12 @@
 .hud.theme-arcade .iconbtn:hover { color: var(--ink); }
 .hud.theme-arcade .protolink { color: var(--teal); }
 
-/* side menu: a chunky cabinet panel */
-.hud.theme-arcade .sidemenu { background: var(--panel); border-left: 4px solid #fff; backdrop-filter: none; }
-.hud.theme-arcade .sidemenu-head { border-bottom: 4px solid #fff; }
-.hud.theme-arcade .sidemenu-title { color: var(--accent); text-shadow: 2px 2px 0 var(--crimson); }
-.hud.theme-arcade .sideitem, .hud.theme-arcade .sidesec-h { color: var(--ink); }
-.hud.theme-arcade .sideitem .ic, .hud.theme-arcade .sidesec-h > .ic { color: var(--dim); }
-.hud.theme-arcade .sideitem:hover, .hud.theme-arcade .sidesec-h:hover { background: rgba(255,210,63,.12); }
+/* side menu: a chunky cabinet rail */
+.hud.theme-arcade .sidemenu { background: var(--panel); border: 3px solid #fff; border-radius: 0; backdrop-filter: none; }
+.hud.theme-arcade .sideitem { color: var(--ink); border-radius: 0; }
+.hud.theme-arcade .sideitem .ic { color: var(--dim); }
+.hud.theme-arcade .sideitem:hover { background: rgba(255,210,63,.12); }
+.hud.theme-arcade .sideitem:hover .ic { color: var(--ink); }
 .hud.theme-arcade .hpbar { background: #000; border: 2px solid #fff; border-radius: 0; height: 10px; }
 .hud.theme-arcade .hpbar i { background: var(--teal); }
 
