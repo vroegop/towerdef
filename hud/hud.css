@@ -342,49 +342,172 @@
 .hud .ghint.hide { display: none; }
 .hud .ghint .k { background: #1c2030; border: 1px solid #262c3d; border-radius: 3px; padding: 1px 7px; font-family: ui-monospace, monospace; font-size: 12px; }
 
-/* ---- cards v2: square icon buttons, taller pokemon cards, arced glowing stars ---- */
+/* ---- cards v3: tactile "paper" cards, labelled draw/upgrade buttons, reveal theatre ---- */
 .hud .ic.cyan { color: #37d7ff; }
-.hud .cardbtns { display: flex; gap: 12px; justify-content: center; margin: 8px auto 18px; }
-.hud .cardbtn { width: 92px; height: 92px; display: flex; align-items: center; justify-content: space-between;
-  background: #1c2030; border: 1px solid #2a3550; border-radius: 4px; padding: 12px; cursor: pointer; font: inherit; }
-.hud .cardbtn:hover:not(:disabled):not(.cant) { border-color: #5fd0ff; }
-.hud .cardbtn:disabled, .hud .cardbtn.cant { opacity: .4; cursor: default; }
-.hud .cardbtn .ct { color: #5fd0ff; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; gap: 3px; }
-.hud .cardgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 14px; }
-.hud .card { background: linear-gradient(180deg, #161b2a, #0e1119); border: 2px solid #3a445f; border-radius: 6px;
-  padding: 10px; text-align: center; display: flex; flex-direction: column; gap: 8px; }
-.hud .card.tier-gold { border-color: #ffd24a; box-shadow: 0 0 14px rgba(255,210,74,.18); }
-.hud .card.tier-chroma { border-color: #9b8cff; box-shadow: 0 0 16px rgba(120,160,255,.28); }
-.hud .card-img { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 4px;
-  background: radial-gradient(circle at 50% 42%, rgba(255,255,255,.07), rgba(0,0,0,.3)); }
-.hud .card .stars { display: flex; justify-content: center; align-items: flex-start; gap: 3px; min-height: 24px; }
+.hud .token-chip { display: inline-flex; align-items: center; gap: 6px; }
+
+/* draw / upgrade: two clearly distinct labelled buttons, equal width, aligned in a row */
+.hud .cardbtns { display: flex; gap: 12px; justify-content: center; margin: 10px auto 18px; max-width: 460px; }
+.hud .cardbtn { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 10px; text-align: left;
+  background: linear-gradient(180deg, #1c2334, #141a28); border: 1px solid #2f3a52; border-radius: 10px;
+  padding: 10px 12px; cursor: pointer; font: inherit; color: #dfe5f0; transition: border-color .12s, transform .08s, box-shadow .12s; }
+.hud .cardbtn.draw:hover:not(:disabled):not(.cant) { border-color: #5fd0ff; box-shadow: 0 0 0 1px rgba(95,208,255,.35), 0 6px 16px rgba(0,0,0,.4); }
+.hud .cardbtn.star:hover:not(:disabled):not(.cant) { border-color: #ffd24a; box-shadow: 0 0 0 1px rgba(255,210,74,.35), 0 6px 16px rgba(0,0,0,.4); }
+.hud .cardbtn:active:not(:disabled):not(.cant) { transform: translateY(1px); }
+.hud .cardbtn:disabled, .hud .cardbtn.cant { opacity: .45; cursor: default; }
+.hud .cardbtn .cb-ic { flex: 0 0 auto; width: 42px; height: 42px; border-radius: 9px; display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,.05); color: #5fd0ff; }
+.hud .cardbtn.star .cb-ic { color: #ffd24a; }
+.hud .cardbtn .cb-tx { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
+.hud .cardbtn .cb-t { font-weight: 700; font-size: 13px; color: #fff; }
+.hud .cardbtn .cb-s { font-size: 10px; color: #8b93a7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud .cardbtn .cb-cost { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 3px; font-weight: 800; font-size: 13px; color: #ffd24a; }
+
+/* the collectible card: framed art medallion, name plate, fanned stars, plain-language effect line */
+.hud .cardgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
+.hud .card { --tint: #4aa8ff; position: relative; border-radius: 12px; cursor: pointer; overflow: hidden;
+  background: linear-gradient(180deg, #1a2233, #0e131e 72%, #0a0e16); border: 1px solid #38445e;
+  box-shadow: 0 5px 14px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.05);
+  display: flex; flex-direction: column; align-items: center; padding: 0 0 2px; transition: transform .12s, box-shadow .12s; }
+.hud .card:hover { transform: translateY(-3px); box-shadow: 0 12px 26px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.08); }
+.hud .card-band { position: absolute; top: 0; left: 0; right: 0; height: 38px; background: var(--tint); opacity: .14; pointer-events: none; }
+.hud .card.tier-gold { border-color: #ffd24a; box-shadow: 0 5px 16px rgba(0,0,0,.5), 0 0 16px rgba(255,210,74,.2); }
+.hud .card.tier-chroma { border-color: #9b8cff; box-shadow: 0 5px 16px rgba(0,0,0,.5), 0 0 18px rgba(140,160,255,.32); }
+.hud .card-name { position: relative; font-weight: 800; letter-spacing: .4px; text-align: center; font-size: 13px;
+  padding: 9px 6px 3px; color: #eef2f8; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+.hud .card-img { position: relative; width: 60px; height: 60px; margin: 3px auto 4px; border-radius: 50%; color: var(--tint);
+  display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
+.hud .card-img::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--tint); opacity: .16; }
+.hud .card-img::after { content: ''; position: absolute; inset: -3px; border-radius: 50%; box-shadow: 0 0 16px -3px var(--tint); }
+.hud .card-img .ic { position: relative; filter: drop-shadow(0 0 5px currentColor); }
+.hud .card .stars { display: flex; justify-content: center; align-items: flex-start; gap: 3px; min-height: 24px; margin-top: 2px; }
 .hud .starwrap { display: inline-flex; }
 .hud .star { display: block; }
 .hud .star.white { filter: drop-shadow(0 0 1.5px rgba(255,255,255,.7)); }
 .hud .star.gold { filter: drop-shadow(0 0 2px rgba(255,210,74,.85)); }
 .hud .star.chroma { filter: drop-shadow(0 0 2.5px rgba(150,150,255,.9)); }
-.hud .card-stats { display: flex; flex-direction: column; gap: 2px; align-items: center; font-size: 13px; color: #c3cad8; }
-.hud .cstat { display: inline-flex; align-items: center; gap: 4px; }
-.hud .cstat .cl { color: #8b93a7; }
-.hud .cstat b { color: #fff; }
-.hud .card-name { font-weight: 800; letter-spacing: .4px; text-align: left; font-size: 13px; }
-.hud .card.locked { border: 2px dashed #2a3550; background: #0d1019; opacity: .65; justify-content: center; }
-.hud .card.locked .card-img { background: none; color: #4a5168; }
-.hud .card.locked .card-name { color: #4a5168; font-weight: 600; text-align: center; }
+.hud .card-desc { margin: 5px 10px 9px; padding-top: 7px; border-top: 1px solid rgba(255,255,255,.08);
+  font-size: 11px; line-height: 1.3; color: #aeb6c6; text-align: center; min-height: 28px; }
+.hud .card.locked { cursor: default; border: 1px dashed #2a3550; background: #0d1019; box-shadow: none; opacity: .7;
+  justify-content: center; min-height: 150px; }
+.hud .card.locked .card-band { display: none; }
+.hud .card.locked .card-img { box-shadow: none; color: #4a5168; }
+.hud .card.locked .card-img::before, .hud .card.locked .card-img::after { display: none; }
+.hud .card.locked .card-img .ic { filter: none; }
+.hud .card.locked .card-name { color: #4a5168; font-weight: 600; }
 
 /* per-star card modal (click anywhere to close; dark overlay behind) */
 .hud .cardmodal { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center;
   background: rgba(6,8,14,.6); pointer-events: auto; }
 .hud .cardmodal.hide { display: none; }
-.hud .cardmodal-inner { background: #11151f; border: 1px solid #2a3550; border-radius: 6px; padding: 14px 16px;
-  width: min(290px, 86vw); max-height: 80vh; overflow: auto; }
-.hud .cmhead { display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
-.hud .cmhead .ic { width: 34px; height: 34px; }
+.hud .cardmodal-inner { background: #11151f; border: 1px solid #2a3550; border-radius: 10px; padding: 14px 16px;
+  width: min(300px, 86vw); max-height: 80vh; overflow: auto; }
+.hud .cmhead { --tint: #4aa8ff; display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.hud .cmhead .cm-medal { flex: 0 0 auto; width: 48px; height: 48px; border-radius: 50%; position: relative; color: var(--tint);
+  display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
+.hud .cmhead .cm-medal::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--tint); opacity: .16; }
+.hud .cmhead .cm-medal .ic { position: relative; filter: drop-shadow(0 0 5px currentColor); }
+.hud .cmhead .cm-title { display: flex; flex-direction: column; gap: 2px; }
+.hud .cmhead .cm-title b { font-size: 16px; font-weight: 800; color: #fff; }
+.hud .cmhead .cm-title span { font-size: 11.5px; line-height: 1.3; color: #aeb6c6; }
+.hud .cm-sub { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #6e768c; margin: 10px 0 4px; }
+.hud .cm-sub b { color: #c3cad8; }
 .hud .csr { display: flex; align-items: center; gap: 10px; padding: 5px 4px; border-bottom: 1px solid #1f2740; opacity: .4; }
 .hud .csr:last-child { border-bottom: 0; }
 .hud .csr.have { opacity: 1; }
 .hud .csr .csv { display: inline-flex; align-items: center; gap: 5px; color: #c3cad8; font-variant-numeric: tabular-nums; }
 .hud .csr .csv b { color: #fff; }
+
+/* ---- card REVEAL theatre: flip-to-unlock, star fly-in, gold glow, chroma spin ---- */
+.hud .reveal { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; background: rgba(5,7,12,.84); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); pointer-events: auto; }
+.hud .reveal.hide { display: none; }
+.hud .reveal-stage { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.hud .reveal-banner { font-size: 22px; font-weight: 800; letter-spacing: 1px; color: #ffd24a; text-shadow: 0 2px 12px rgba(0,0,0,.6);
+  animation: rv-banner .5s ease both; }
+.hud .reveal-hint { font-size: 12px; color: #8b93a7; animation: rv-fadein .5s 1.3s both; }
+@keyframes rv-banner { 0% { opacity: 0; transform: translateY(-14px) scale(.9); } 100% { opacity: 1; transform: none; } }
+@keyframes rv-fadein { from { opacity: 0; } to { opacity: 1; } }
+
+.hud .revealcard { --tint: #4aa8ff; position: relative; width: 232px; min-height: 336px; border-radius: 16px; overflow: hidden;
+  background: linear-gradient(180deg, #1c2436, #0e131e 72%, #0a0e16); border: 2px solid #45527a;
+  box-shadow: 0 18px 44px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06); perspective: 1100px;
+  animation: rv-pop .45s cubic-bezier(.2,.9,.25,1.4) both; }
+@keyframes rv-pop { 0% { opacity: 0; transform: scale(.7); } 100% { opacity: 1; transform: scale(1); } }
+.hud .revealcard.tier-gold { border-color: #ffd24a; box-shadow: 0 18px 44px rgba(0,0,0,.6), 0 0 24px rgba(255,210,74,.28); }
+.hud .revealcard.tier-chroma { border-color: #9b8cff; box-shadow: 0 18px 44px rgba(0,0,0,.6), 0 0 28px rgba(140,160,255,.4); }
+.hud .revealcard .card-band { position: absolute; top: 0; left: 0; right: 0; height: 52px; background: var(--tint); opacity: .16; pointer-events: none; }
+
+/* flip container (unlock only): back faces up, then rotates to reveal the front */
+.hud .rc-flip { position: relative; width: 100%; min-height: 336px; transform-style: preserve-3d; transition: transform .66s cubic-bezier(.4,.05,.2,1); }
+.hud .rc-flip.flipped { transform: rotateY(180deg); }
+.hud .rc-face { position: absolute; inset: 0; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+.hud .rc-back { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #6b7591;
+  background: repeating-linear-gradient(45deg, #161d2c 0 12px, #131927 12px 24px); border-radius: 14px; }
+.hud .rc-back span { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; }
+.hud .rc-flip .rc-front { transform: rotateY(180deg); }
+
+.hud .rc-front { display: flex; flex-direction: column; align-items: center; padding: 16px 16px 18px; }
+.hud .rc-name { position: relative; font-weight: 800; letter-spacing: .5px; font-size: 18px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+.hud .rc-img { position: relative; width: 96px; height: 96px; margin: 14px 0 10px; border-radius: 50%; color: var(--tint);
+  display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
+.hud .rc-img::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--tint); opacity: .18; }
+.hud .rc-img::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; box-shadow: 0 0 26px -2px var(--tint); }
+.hud .rc-img .ic { position: relative; filter: drop-shadow(0 0 7px currentColor); }
+.hud .rc-desc { margin-top: 12px; font-size: 15px; font-weight: 700; color: #fff; }
+.hud .rc-info { margin-top: 6px; font-size: 11.5px; line-height: 1.35; color: #aeb6c6; text-align: center; }
+
+/* reveal star row: five fixed slots so a flown-in star lands in place */
+.hud .rc-stars { display: flex; gap: 6px; align-items: center; justify-content: center; margin-top: 8px; min-height: 34px; }
+.hud .rc-stars .rstar { position: relative; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; }
+.hud .rc-stars .rstar svg.star { width: 28px; height: 28px; }
+.hud .rc-stars .rstar.empty { opacity: .14; }
+.hud .rc-stars .rstar.empty svg.star path { fill: #6b7591; }
+.hud .rc-stars .rstar .sf { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.hud .rc-stars .rstar .glow { position: absolute; inset: 0; border-radius: 50%; opacity: 0; pointer-events: none; }
+.hud .rc-stars .rstar.fly { opacity: 0; }              /* hidden until .go (also keeps it off during the flip) */
+.hud .rc-stars .rstar.morph .sf.to { opacity: 0; }
+.hud .rc-stars .rstar.morph { transform-style: preserve-3d; }
+
+/* a white star swoops in from off-screen, overshoots, and settles (Disney-style) + a landing sparkle */
+.hud .rc-front.go .rstar.fly { animation: rv-fly .95s cubic-bezier(.2,.7,.2,1.2) both; }
+.hud .rc-front.go .rstar.fly::after { content: ''; position: absolute; inset: -8px; border-radius: 50%; opacity: 0;
+  background: radial-gradient(circle, rgba(255,255,255,.95), transparent 60%); animation: rv-sparkle .6s .68s ease-out both; }
+@keyframes rv-fly {
+  0%   { opacity: 0; transform: translate(150px, -210px) rotate(260deg) scale(.15); }
+  55%  { opacity: 1; }
+  78%  { transform: translate(0,0) rotate(-14deg) scale(1.45); opacity: 1; }
+  100% { transform: translate(0,0) rotate(0) scale(1); opacity: 1; }
+}
+@keyframes rv-sparkle { 0% { opacity: 0; transform: scale(.2); } 45% { opacity: .9; } 100% { opacity: 0; transform: scale(2.2); } }
+
+/* white -> gold: white star flares to a bright glow, crossfades to gold, the glow fades, gold stays */
+.hud .rc-front.go .rstar.to-gold .glow { animation: rv-glow 1.5s ease-out both; }
+.hud .rc-front.go .rstar.to-gold .sf.from { animation: rv-fadeout 1s .45s both; }
+.hud .rc-front.go .rstar.to-gold .sf.to { animation: rv-fadein 1s .45s both; }
+@keyframes rv-glow {
+  0%   { opacity: 0; transform: scale(.6); box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+  28%  { opacity: 1; transform: scale(1.15); box-shadow: 0 0 20px 7px rgba(255,255,255,.95); }
+  55%  { opacity: 1; box-shadow: 0 0 24px 9px rgba(255,210,74,.95); }
+  100% { opacity: 0; transform: scale(1.35); box-shadow: 0 0 0 0 rgba(255,210,74,0); }
+}
+
+/* gold -> chroma: the whole star spins; gold crossfades to chrome mid-spin */
+.hud .rc-front.go .rstar.to-chroma { animation: rv-spin 1.2s ease-in-out both; }
+.hud .rc-front.go .rstar.to-chroma .sf.from { animation: rv-fadeout 1.2s both; }
+.hud .rc-front.go .rstar.to-chroma .sf.to { animation: rv-fadein 1.2s both; }
+@keyframes rv-spin { 0% { transform: rotateY(0); } 100% { transform: rotateY(360deg); } }
+@keyframes rv-fadeout { to { opacity: 0; } }
+@keyframes rv-fadein { from { opacity: 0; } to { opacity: 1; } }
+
+/* fifth chrome star: the stats dissolve and the whole card turns chromatic */
+.hud .revealcard.full .rc-desc, .hud .revealcard.full .rc-info, .hud .revealcard.full .rc-name { animation: rv-fadeout .7s both; }
+.hud .revealcard.full { animation: rv-chromacard 1s ease both; }
+@keyframes rv-chromacard { to { border-color: #cdbcff; box-shadow: 0 18px 44px rgba(0,0,0,.6), 0 0 34px rgba(150,160,255,.6), inset 0 0 46px rgba(120,160,255,.28); } }
+.hud .revealcard.full::after { content: ''; position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen;
+  background: linear-gradient(120deg, rgba(255,93,108,.3), rgba(255,210,74,.3), rgba(61,220,132,.3), rgba(74,168,255,.3), rgba(231,76,255,.3));
+  background-size: 320% 320%; animation: rv-sheen 3s linear infinite, rv-fadein .9s both; }
+@keyframes rv-sheen { 0% { background-position: 0% 50%; } 100% { background-position: 320% 50%; } }
 
 /* ---- HP bar in the topbar (keeps the numeric readout) ---- */
 .hud .stat.hp { display: flex; align-items: center; gap: 7px; }

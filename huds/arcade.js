@@ -170,9 +170,12 @@
 .hud.theme-arcade .card.tier-gold { border-color: var(--accent); }
 .hud.theme-arcade .card.tier-chroma { border-color: var(--pink); }
 .hud.theme-arcade .card.locked { border: 3px dashed var(--rule); background: #0c0c1a; box-shadow: none; }
-.hud.theme-arcade .card-img { background: #05060f; }
-.hud.theme-arcade .cstat .cl { color: var(--dim); }
-.hud.theme-arcade .cstat b { color: var(--ink); }
+.hud.theme-arcade .card { border-radius: 0; }
+.hud.theme-arcade .card-img { box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+.hud.theme-arcade .card-desc { color: var(--dim); border-top-color: rgba(255,255,255,.14); }
+.hud.theme-arcade .cardbtn { border-radius: 0; }
+.hud.theme-arcade .cardbtn .cb-ic { border-radius: 0; }
+.hud.theme-arcade .cardbtn .cb-s { color: var(--dim); }
 
 /* labs → cartridge research bay */
 .hud.theme-arcade .lab { background: var(--panel-dk); border: 3px solid #fff; box-shadow: 4px 4px 0 #000; }

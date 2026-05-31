@@ -117,6 +117,15 @@
     root.insertAdjacentHTML('beforeend', '<div class="cardmodal hide" id="h-cardmodal"><div class="cardmodal-inner" id="h-cardmodal-inner"></div></div>');
     root.querySelector('#h-cardmodal').addEventListener('click', () => root.querySelector('#h-cardmodal').classList.add('hide'));
 
+    // card REVEAL overlay — the "what did I get?" theatre played after a draw/upgrade (flip + star fly-in /
+    // gold glow / chroma spin). Click anywhere to dismiss; the grid underneath has already re-rendered.
+    root.insertAdjacentHTML('beforeend', '<div class="reveal hide" id="h-reveal"><div class="reveal-stage" id="h-reveal-stage"></div></div>');
+    let revealTimers = [];
+    root.querySelector('#h-reveal').addEventListener('click', () => {
+      revealTimers.forEach(clearTimeout); revealTimers = [];
+      root.querySelector('#h-reveal').classList.add('hide');
+    });
+
     const STARP = 'M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6z';
     const STAT_ICON = { rangedDamage: 'bow', attackSpeed: 'rate', health: 'heart', regen: 'regen',
       critChance: 'crit', critDamage: 'burst', dodge: 'dodge', coins: 'coin',
@@ -144,23 +153,102 @@
       }
       return h + '</div>';
     }
+    const tierOf = (stars) => (stars >= 11 ? 'chroma' : stars >= 6 ? 'gold' : 'white');
+    // one-line readable effect for a card at its current stars (e.g. "+10% attack speed")
+    function cardDescText(def, stars) {
+      const v = def.value(stars || 0);
+      return def.desc ? def.desc(v) : (def.fmt ? def.fmt(v) : '+' + v);
+    }
     function cardHtml(card) {
       const def = A.CARDS[card.id]; if (!def) return '';
-      const v = def.value(card.stars || 0);
-      const tier = card.stars >= 11 ? 'chroma' : card.stars >= 6 ? 'gold' : 'white';
-      let stats = '';
-      for (const e of def.effects) {
-        const ic = STAT_ICON[e.stat] || 'burst';
-        stats += '<span class="cstat">' + icon(ic, 15) +
-          '<span class="cl">' + (STAT_LABEL[e.stat] || e.stat) + '</span><b>' + (def.fmt ? def.fmt(v) : '+' + v) + '</b></span>';
-      }
-      return '<div class="card tier-' + tier + '" data-card="' + card.id + '">' +
-        '<div class="card-img" style="color:' + def.tint + '">' + icon(def.art, 52) + '</div>' +
-        starsHtml(card.stars || 0) +
-        '<div class="card-stats">' + stats + '</div></div>';
+      const stars = card.stars || 0;
+      return '<div class="card tier-' + tierOf(stars) + '" data-card="' + card.id + '" style="--tint:' + def.tint + '">' +
+        '<div class="card-band"></div>' +
+        '<div class="card-name">' + def.name + '</div>' +
+        '<div class="card-img">' + icon(def.art, 50) + '</div>' +
+        starsHtml(stars) +
+        '<div class="card-desc">' + cardDescText(def, stars) + '</div></div>';
     }
     function lockedCardHtml() {
-      return '<div class="card locked"><div class="card-img">' + icon('lock', 36) + '</div><div class="card-name">Locked</div></div>';
+      return '<div class="card locked"><div class="card-img">' + icon('lock', 34) + '</div><div class="card-name">Locked</div></div>';
+    }
+    // a fixed 5-slot star row for the reveal theatre. `change` = { idx, type } marks the ONE slot that
+    // is mid-transition (white fly-in / white→gold / gold→chroma); the rest are drawn at their final tier.
+    function revealStarSlots(stars, change) {
+      let h = '<div class="rc-stars">';
+      for (let i = 0; i < 5; i++) {
+        const t = A.starSlot(i, stars); // 'empty' | 'white' | 'gold' | 'chroma'
+        if (change && i === change.idx) {
+          if (change.type === 'white') {
+            h += '<span class="rstar fly">' + starSvg('white') + '</span>';
+          } else {
+            const from = change.type === 'gold' ? 'white' : 'gold';
+            h += '<span class="rstar morph to-' + change.type + '">' +
+              '<span class="glow"></span>' +
+              '<span class="sf from">' + starSvg(from) + '</span>' +
+              '<span class="sf to">' + starSvg(change.type) + '</span></span>';
+          }
+        } else if (t === 'empty') {
+          h += '<span class="rstar empty">' + starSvg('white') + '</span>';
+        } else {
+          h += '<span class="rstar">' + starSvg(t) + '</span>';
+        }
+      }
+      return h + '</div>';
+    }
+    // Play the reveal for a buy/upgrade RESULT { id, before, after, unlocked }. Detects which star slot
+    // changed and to what tier, then sequences: (optional) locked-card flip → the matching star animation
+    // → (at 15 stars) the whole card going chromatic while its stats fade.
+    function revealCard(r) {
+      if (!r || !r.id) return;
+      const def = A.CARDS[r.id]; if (!def) return;
+      const before = r.before | 0, after = r.after | 0, unlocked = !!r.unlocked;
+      let change = null;
+      if (after > before) {
+        if (after <= 5) change = { idx: after - 1, type: 'white' };
+        else if (after <= 10) change = { idx: after - 6, type: 'gold' };
+        else change = { idx: after - 11, type: 'chroma' };
+      }
+      const full = after >= A.MAX_STARS && after > before; // reached the 5th chrome star this draw
+      const banner = full ? 'Fully Chromatic!' : unlocked ? 'New Card!'
+        : change && change.type === 'gold' ? 'Gold Star!'
+          : change && change.type === 'chroma' ? 'Chromatic Star!'
+            : change ? 'Star Up!' : def.name;
+
+      const front =
+        '<div class="rc-face rc-front">' +
+        '<div class="card-band"></div>' +
+        '<div class="rc-name">' + def.name + '</div>' +
+        '<div class="rc-img">' + icon(def.art, 84) + '</div>' +
+        revealStarSlots(after, change) +
+        '<div class="rc-desc">' + cardDescText(def, after) + '</div>' +
+        '<div class="rc-info">' + (A.CARD_INFO && A.CARD_INFO[r.id] ? A.CARD_INFO[r.id] : '') + '</div>' +
+        '</div>';
+      const cardInner = unlocked
+        ? '<div class="rc-flip"><div class="rc-face rc-back">' + icon('lock', 56) + '<span>Locked</span></div>' + front + '</div>'
+        : front;
+
+      const stage = $('#h-reveal-stage');
+      stage.innerHTML = '<div class="reveal-banner">' + banner + '</div>' +
+        '<div class="revealcard tier-' + tierOf(after) + '" style="--tint:' + def.tint + '">' + cardInner + '</div>' +
+        '<div class="reveal-hint">Tap to continue</div>';
+      $('#h-reveal').classList.remove('hide');
+
+      const rc = stage.querySelector('.revealcard'), frontEl = stage.querySelector('.rc-front');
+      revealTimers.forEach(clearTimeout); revealTimers = [];
+      const at = (ms, fn) => revealTimers.push(setTimeout(fn, ms));
+      // the star animations are gated behind `.go` so they hold until the card is face-up
+      const go = () => {
+        frontEl.classList.add('go');
+        // chromatic morph runs ~1.2s; only then does a maxed card dissolve its stats and turn chromatic
+        if (full) at(change.type === 'chroma' ? 1250 : 950, () => rc.classList.add('full'));
+      };
+      if (unlocked) {
+        at(500, () => stage.querySelector('.rc-flip').classList.add('flipped')); // flip after half a second
+        at(500 + 680, go); // ...then, once face-up, fly the first star in
+      } else {
+        requestAnimationFrame(() => requestAnimationFrame(go));
+      }
     }
     function cardGridHtml(meta) {
       const owned = meta.cards || [];
@@ -184,7 +272,13 @@
           '<span class="csv">' + icon(STAT_ICON[e0.stat] || 'burst', 14) +
           (STAT_LABEL[e0.stat] || e0.stat) + ' <b>' + (def.fmt ? def.fmt(def.value(s)) : '+' + def.value(s)) + '</b></span></div>';
       }
-      $('#h-cardmodal-inner').innerHTML = '<div class="cmhead" style="color:' + def.tint + '">' + icon(def.art, 32) + '</div>' + rows;
+      const info = (A.CARD_INFO && A.CARD_INFO[id]) || '';
+      $('#h-cardmodal-inner').innerHTML =
+        '<div class="cmhead" style="--tint:' + def.tint + '">' +
+        '<div class="cm-medal">' + icon(def.art, 30) + '</div>' +
+        '<div class="cm-title"><b>' + def.name + '</b>' + (info ? '<span>' + info + '</span>' : '') + '</div>' +
+        '</div>' +
+        '<div class="cm-sub">Bonus per star · <b>' + stars + '</b>/' + A.MAX_STARS + '</div>' + rows;
       $('#h-cardmodal').classList.remove('hide');
     }
 
@@ -572,9 +666,17 @@
         } else {
           const owned = meta.cards || [];
           const bc = A.buyCardCost(meta), uc = A.upgradeCost(meta);
+          const allMax = owned.length && owned.every((c) => (c.stars || 0) >= A.MAX_STARS);
+          html += '<div class="cores-chip token-chip">' + icon('token', 15, 'token') + ' <b>' + (meta.tokens || 0) + '</b></div>';
           html += '<div class="cardbtns">' +
-            '<button class="cardbtn' + ((meta.tokens || 0) < bc ? ' cant' : '') + '" id="h-buycard" title="Buy card">' + icon('cards', 26) + '</button>' +
-            '<button class="cardbtn' + ((meta.tokens || 0) < uc ? ' cant' : '') + '" id="h-upcard" title="Add star"' + (!owned.length ? ' disabled' : '') + '>' + icon('star', 26, 'gold') + '</button>' +
+            '<button class="cardbtn draw' + ((meta.tokens || 0) < bc ? ' cant' : '') + '" id="h-buycard">' +
+            '<span class="cb-ic">' + icon('cards', 26) + '</span>' +
+            '<span class="cb-tx"><span class="cb-t">Draw Card</span><span class="cb-s">New card, or +1 star on a dupe</span></span>' +
+            '<span class="cb-cost">' + bc + ' ' + icon('token', 13, 'token') + '</span></button>' +
+            '<button class="cardbtn star' + (((meta.tokens || 0) < uc || allMax) ? ' cant' : '') + '" id="h-upcard"' + (!owned.length || allMax ? ' disabled' : '') + '>' +
+            '<span class="cb-ic">' + icon('star', 26, 'gold') + '</span>' +
+            '<span class="cb-tx"><span class="cb-t">Add Star</span><span class="cb-s">+1 star on a random card</span></span>' +
+            '<span class="cb-cost">' + uc + ' ' + icon('token', 13, 'token') + '</span></button>' +
             '</div>';
           html += '<div class="cardgrid">' + cardGridHtml(meta) + '</div>';
         }
@@ -622,8 +724,8 @@
             else shake(menuContent.querySelector('.cores-chip'));
           }));
       } else if (menuTab === 'cards') {
-        const bb = $('#h-buycard'); if (bb) bb.addEventListener('click', () => { if (handlers.onBuyCard && handlers.onBuyCard()) renderMenu(); else shake(bb); });
-        const ub = $('#h-upcard'); if (ub) ub.addEventListener('click', () => { if (handlers.onUpgradeCard && handlers.onUpgradeCard()) renderMenu(); else shake(ub); });
+        const bb = $('#h-buycard'); if (bb) bb.addEventListener('click', () => { const r = handlers.onBuyCard && handlers.onBuyCard(); if (r) { renderMenu(); revealCard(r); } else shake(bb); });
+        const ub = $('#h-upcard'); if (ub) ub.addEventListener('click', () => { const r = handlers.onUpgradeCard && handlers.onUpgradeCard(); if (r) { renderMenu(); revealCard(r); } else shake(ub); });
         menuContent.querySelectorAll('.card[data-card]').forEach((el) => el.addEventListener('click', () => openCardModal(el.dataset.card)));
       } else if (menuTab === 'labs') {
         menuContent.querySelectorAll('[data-labcat]').forEach((b) =>
