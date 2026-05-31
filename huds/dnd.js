@@ -45,7 +45,16 @@
 .hud.theme-dnd .stat.hp b { color: var(--ink); font-family: 'Cinzel', serif; }
 .hud.theme-dnd .iconbtn { color: var(--ink-dim); }
 .hud.theme-dnd .iconbtn:hover { color: var(--ink); }
-.hud.theme-dnd .iconbtn.protolink { color: var(--accent); }
+.hud.theme-dnd .protolink { color: var(--accent); }
+
+/* side menu: a parchment ledger slid in from the margin */
+.hud.theme-dnd .sidemenu { background: var(--parch); background-image: radial-gradient(circle at 70% 8%, var(--parch-lt), #e3d3b0 70%);
+  border-left: 3px double #7a5a2a; box-shadow: inset 3px 0 0 #8a6a3a; }
+.hud.theme-dnd .sidemenu-head { border-bottom: 2px solid var(--rule); }
+.hud.theme-dnd .sidemenu-title { color: var(--ink); font-family: 'Cinzel Decorative', serif; }
+.hud.theme-dnd .sideitem, .hud.theme-dnd .sidesec-h { color: var(--ink); }
+.hud.theme-dnd .sideitem .ic, .hud.theme-dnd .sidesec-h > .ic { color: var(--ink-dim); }
+.hud.theme-dnd .sideitem:hover, .hud.theme-dnd .sidesec-h:hover { background: rgba(122,74,26,.12); }
 .hud.theme-dnd .hpbar { background: rgba(42,26,8,.18); border: 1px solid var(--rule); }
 .hud.theme-dnd .hpbar i { background: #6a8a3a; }
 

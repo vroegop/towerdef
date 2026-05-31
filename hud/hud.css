@@ -2,10 +2,12 @@
    (5 mobile bottom tabs + framed Hero avatar). */
 .hud { position: fixed; inset: 0; pointer-events: none; font: 14px system-ui, sans-serif; color: #d8deea; z-index: 20; }
 
-/* ---- in-game top stats (no box: just icon + value over the arena) ---- */
-.hud .topbar { position: absolute; top: 10px; left: 12px; right: 12px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
-  text-shadow: 0 1px 3px rgba(0,0,0,.85); }
-.hud .stat { display: flex; align-items: center; gap: 6px; }
+/* ---- in-game top header (no box: just icon + value over the arena) ----
+   nowrap + reserved widths keep every control in a fixed spot across devices and themes (whose
+   fonts differ in width); the menu toggle is always pinned to the right edge. */
+.hud .topbar { position: absolute; top: 10px; left: 12px; right: 12px; display: flex; gap: 16px; flex-wrap: nowrap; align-items: center;
+  overflow: hidden; text-shadow: 0 1px 3px rgba(0,0,0,.85); }
+.hud .stat { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
 .hud .stat b { color: #fff; font-variant-numeric: tabular-nums; }
 .hud .stat .lbl { color: #8b93a7; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-right: 4px; }
 /* reserve width so the gold readout doesn't jiggle as it changes (~7 chars). HP no longer
@@ -13,11 +15,31 @@
 .hud .stat.gold b { display: inline-block; min-width: 7ch; }
 .hud .gold b { color: #ffd24a; }
 .hud .wave b { color: #e64cff; }
-.hud .iconbtn { margin-left: auto; pointer-events: auto; background: transparent; border: 0;
+.hud .iconbtn { pointer-events: auto; background: transparent; border: 0;
   color: #8b93a7; padding: 4px; cursor: pointer; display: flex; align-items: center; }
-.hud .iconbtn + .iconbtn { margin-left: 8px; } /* keep the right-side icon group together */
 .hud .iconbtn:hover { color: #fff; }
-.hud .iconbtn.protolink { color: #7ad0ff; } /* design-prototype gallery link (opens huds/_prototype-hud-gallery.html) */
+.hud .topbar .menutoggle { margin-left: auto; flex: 0 0 auto; } /* always pinned to the right edge */
+.hud .protolink { color: #7ad0ff; } /* design-prototype gallery link (opens huds/_prototype-hud-gallery.html) */
+
+/* ---- persistent side menu (opens from the header toggle; closes only via its collapse button) ---- */
+.hud .sidemenu { position: absolute; top: 0; right: 0; bottom: 0; width: min(280px, 82vw); z-index: 50;
+  display: flex; flex-direction: column; pointer-events: auto;
+  background: rgba(15,18,27,.97); border-left: 1px solid #262c3d; backdrop-filter: blur(8px);
+  transform: translateX(100%); transition: transform .2s ease; }
+.hud .sidemenu.open { transform: translateX(0); box-shadow: -10px 0 28px rgba(0,0,0,.45); }
+.hud .sidemenu-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid #1f2740; }
+.hud .sidemenu-title { font-weight: 700; font-size: 15px; color: #fff; }
+.hud .sidemenu-body { flex: 1; overflow: auto; padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+.hud .sideitem, .hud .sidesec-h { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  background: transparent; border: 0; color: #d8deea; font: inherit; cursor: pointer; padding: 11px 8px; border-radius: 5px; text-decoration: none; }
+.hud .sidesec-h { font-weight: 600; }
+.hud .sideitem:hover, .hud .sidesec-h:hover { background: rgba(74,168,255,.1); }
+.hud .sideitem .ic, .hud .sidesec-h > .ic { color: #8b93a7; flex: 0 0 auto; }
+.hud .sidesec-h .caret { margin-left: auto; opacity: .6; transition: transform .15s; display: inline-flex; }
+.hud .sidesec.open .sidesec-h .caret { transform: rotate(90deg); }
+.hud .sidesec-b { display: none; flex-direction: column; padding: 0 8px 4px; }
+.hud .sidesec.open .sidesec-b { display: flex; }
+.hud .sidemenu .setrow { padding: 9px 4px; }
 
 /* in-game stats panel */
 .hud .statswrap { position: absolute; inset: 0; z-index: 45; display: flex; align-items: flex-start; justify-content: center;
