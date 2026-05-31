@@ -1,0 +1,7 @@
+dist
+node_modules
+playwright-report
+test-results
+tests/visual/__screenshots__
+plan
+public

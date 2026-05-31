@@ -2,7 +2,10 @@
 .claude/worktrees/
 .DS_Store
 
-# dev-only deps (e.g. jsdom for tools/hud-smoke.js) — never committed; the game ships build-free
+# build tooling
 node_modules/
-package.json
-package-lock.json
+dist/
+
+# test artifacts (baselines under tests/visual/__screenshots__ ARE committed)
+playwright-report/
+test-results/
