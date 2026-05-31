@@ -62,6 +62,18 @@
     ctx.fillStyle = '#ffffff'; ctx.fillText(label, cx, y + h / 2 + 0.5);
   }
 
+  // Colour sampled from the same red→yellow→green ramp the health bars use, at fraction t.
+  // Lets the hero's HP ring shift smoothly by amount (matching the bar's leading-edge colour)
+  // instead of snapping between two colours.
+  const HP_RAMP = [[0xe5, 0x48, 0x4d], [0xff, 0xd2, 0x3f], [0x3f, 0xc3, 0x4d]];
+  function hpRampColor(t) {
+    t = Math.max(0, Math.min(1, t));
+    const seg = t < 0.5 ? 0 : 1, lt = (t - seg * 0.5) / 0.5;
+    const a = HP_RAMP[seg], b = HP_RAMP[seg + 1];
+    return 'rgb(' + Math.round(a[0] + (b[0] - a[0]) * lt) + ',' +
+      Math.round(a[1] + (b[1] - a[1]) * lt) + ',' + Math.round(a[2] + (b[2] - a[2]) * lt) + ')';
+  }
+
   A.Canvas2DRenderer = function (canvas, settings) {
     const ctx = canvas.getContext('2d');
     settings = settings || {};     // shared by reference with the settings modal; toggles take effect live
@@ -237,7 +249,7 @@
         drawShape(ctx, 'circle', hsx, hsy, h.r * scale, heroCol, 0, 0, false);
         // hp ring
         const frac = h.hpMax > 0 ? h.hp / h.hpMax : 0;
-        ctx.strokeStyle = frac > 0.3 ? '#3ddc84' : '#ff5d6c'; ctx.lineWidth = 3;
+        ctx.strokeStyle = hpRampColor(frac); ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(hsx, hsy, (h.r + 6) * scale, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac); ctx.stroke();
       } else if (heroWasAlive) {
         spawnShatter(hsx, hsy, '#4aa8ff', 24); // the hero "explodes" once, like an enemy but bigger
