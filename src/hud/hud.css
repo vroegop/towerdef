@@ -19,7 +19,6 @@
   color: #8b93a7; padding: 4px; cursor: pointer; display: flex; align-items: center; }
 .hud .iconbtn:hover { color: #fff; }
 .hud .topbar .menutoggle { margin-left: auto; flex: 0 0 auto; } /* always pinned to the right edge */
-.hud .protolink { color: #7ad0ff; } /* design-prototype gallery link (opens huds/_prototype-hud-gallery.html) */
 
 /* ---- side menu: a narrow, one-icon-wide rail pinned under the header toggle. It is only as tall as
        its content (icon buttons + padding), so it never blocks the arena. Toggled by the header menu
@@ -75,15 +74,22 @@
 /* ---- in-game bottom 3-tab bar ---- */
 .hud .tabbar { position: absolute; left: 0; right: 0; bottom: 0; pointer-events: auto;
   background: rgba(15,18,27,.94); border-top: 1px solid #262c3d; backdrop-filter: blur(8px); }
-.hud .tabcontent { padding: 10px 12px 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 640px; margin: 0 auto; }
+/* the dock grid is capped to a fraction of the viewport and scrolls — a long tab (e.g. ~16 attack
+   upgrades) never extends past the top of the screen on a phone. */
+.hud .tabcontent { padding: 10px 12px 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 640px; margin: 0 auto;
+  max-height: min(46vh, 360px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .hud .tabcontent.collapsed { display: none; }
 .hud .up { display: flex; justify-content: space-between; align-items: center; gap: 6px;
-  background: #1c2030; border: 1px solid #262c3d; color: #d8deea; border-radius: 4px; padding: 9px 12px; cursor: pointer; font: inherit; }
+  background: #1c2030; border: 1px solid #262c3d; color: #d8deea; border-radius: 4px; padding: 9px 12px; cursor: pointer; font: inherit;
+  min-width: 0; }
 .hud .up:hover:not(:disabled):not(.cant) { border-color: #4aa8ff; }
 .hud .up:disabled, .hud .up.cant { opacity: .4; cursor: default; }
-.hud .up .nm { font-weight: 600; flex: 1; }
+.hud .up .nm { font-weight: 600; flex: 1; min-width: 0; }
 .hud .up .delta, .hud .perm .delta { color: #8b93a7; font-size: 12.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.hud .up .cost { color: #ffd24a; font-variant-numeric: tabular-nums; }
+.hud .up .cost { color: #ffd24a; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* current/max level badge on an upgrade block */
+.hud .up .uplv { color: #6b7488; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hud .perm .plv { color: #8b93a7; font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .hud .tabs { display: flex; max-width: 640px; margin: 0 auto; }
 .hud .tabs button { flex: 1; pointer-events: auto; background: transparent; border: 0; border-top: 2px solid transparent;
   color: #8b93a7; padding: 10px 4px; font: inherit; font-weight: 600; cursor: pointer; }
@@ -94,6 +100,14 @@
 .hud .tablock { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 8px;
   color: #6b7488; padding: 14px 8px; font-size: 13px; }
 .hud .tablock .ic { color: #6b7488; }
+/* narrow phones: tighten the dock so two upgrade columns + their level/cost never clip out of view */
+@media (max-width: 460px) {
+  .hud .tabcontent { gap: 6px; padding: 8px 8px 5px; }
+  .hud .up { padding: 8px 9px; font-size: 13px; }
+  .hud .up .nm { font-size: 12.5px; }
+  .hud .up .delta { font-size: 11px; }
+  .hud .up .uplv { font-size: 10px; }
+}
 
 /* ---- between-games MENU ---- */
 .hud .menu { position: absolute; inset: 0; display: none; flex-direction: column; pointer-events: auto;
@@ -242,10 +256,9 @@
 .hud .menutabs button.tut { color: #ffd24a; border-top-color: #ffd24a; animation: tutpulse 1.2s ease-in-out infinite; }
 .hud .menutabs button.tut-off { opacity: .35; pointer-events: none; } /* gated out during a tutorial step */
 @keyframes tutpulse { 0%,100% { background: rgba(255,210,74,.05); } 50% { background: rgba(255,210,74,.18); } }
-/* corner count badges on the cards/upgrades tab buttons */
+/* corner count badge on the labs tab button (active-research count) */
 .hud .menutabs .tabbadge { position: absolute; bottom: 3px; display: inline-flex; align-items: center; gap: 2px;
   font-size: 9px; font-weight: 800; color: #d8deea; line-height: 1; pointer-events: none; }
-.hud .menutabs .tabbadge.bl { left: 5px; }
 .hud .menutabs .tabbadge.br { right: 5px; }
 /* tutorial: block interaction with the hero-tab content so only the upgrades tab advances */
 .hud .menu-content.tut-block { pointer-events: none; }
@@ -548,10 +561,6 @@
 .hud .menugear { position: absolute; top: 12px; right: 14px; z-index: 5; pointer-events: auto; background: transparent;
   border: 0; color: #8b93a7; cursor: pointer; padding: 4px; display: flex; }
 .hud .menugear:hover { color: #fff; }
-.hud .menuproto { position: absolute; top: 12px; left: 14px; z-index: 5; pointer-events: auto; color: #7ad0ff;
-  cursor: pointer; padding: 4px; display: flex; align-items: center; gap: 5px; text-decoration: none;
-  font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
-.hud .menuproto:hover { color: #fff; }
 .hud .setmodal { position: fixed; inset: 0; z-index: 70; display: flex; align-items: flex-start; justify-content: center;
   background: rgba(6,8,14,.6); pointer-events: auto; }
 .hud .setmodal.hide { display: none; }

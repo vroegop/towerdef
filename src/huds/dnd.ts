@@ -35,7 +35,6 @@ const CSS = `
 .hud.theme-dnd .stat.hp b { color: var(--ink); font-family: 'Cinzel', serif; }
 .hud.theme-dnd .iconbtn { color: var(--ink-dim); }
 .hud.theme-dnd .iconbtn:hover { color: var(--ink); }
-.hud.theme-dnd .protolink { color: var(--accent); }
 
 /* side menu: a small parchment rail pinned in the margin */
 .hud.theme-dnd .sidemenu { background: var(--parch); background-image: radial-gradient(circle at 70% 8%, var(--parch-lt), #e3d3b0 70%);
@@ -70,8 +69,26 @@ const CSS = `
 .hud.theme-dnd .statshead, .hud.theme-dnd .modal h2 { font-family: 'Cinzel Decorative', serif; }
 .hud.theme-dnd .statshead { border-bottom: 2px solid var(--rule); }
 .hud.theme-dnd .statshead h2 { color: var(--ink); }
-.hud.theme-dnd .menuproto, .hud.theme-dnd .menugear { color: var(--accent); }
-.hud.theme-dnd .menuproto:hover, .hud.theme-dnd .menugear:hover { color: var(--ink); }
+.hud.theme-dnd .menugear { color: var(--accent); }
+.hud.theme-dnd .menugear:hover { color: var(--ink); }
+
+/* framed surfaces (settings, run stats, run over, card detail) get a parchment backing so their
+   dark-default body never leaves ink text sitting on a dark panel — the old "unreadable settings" bug. */
+.hud.theme-dnd .setmodal-inner,
+.hud.theme-dnd .statscard,
+.hud.theme-dnd .over-card,
+.hud.theme-dnd .cardmodal-inner {
+  background: var(--parch);
+  background-image: radial-gradient(circle at 30% 8%, var(--parch-lt), #e3d3b0 70%);
+  border: 1px solid #8a6a3a; box-shadow: inset 0 0 0 3px #8a6a3a, 0 12px 30px rgba(0,0,0,.5);
+  color: var(--ink);
+}
+.hud.theme-dnd .iconclose { color: var(--ink-dim); }
+.hud.theme-dnd .iconclose:hover { color: var(--ink); }
+.hud.theme-dnd .setbody, .hud.theme-dnd .statsbody { color: var(--ink); }
+.hud.theme-dnd .cm-sub, .hud.theme-dnd .cmhead .cm-title span { color: var(--ink-dim); }
+.hud.theme-dnd .cm-sub b, .hud.theme-dnd .csr .csv, .hud.theme-dnd .csr .csv b { color: var(--ink); }
+.hud.theme-dnd .csr { border-bottom-color: rgba(122,74,26,.25); }
 
 /* chips / cores chip / earnings — framed ledger entries */
 .hud.theme-dnd .chip,
@@ -81,6 +98,25 @@ const CSS = `
 }
 .hud.theme-dnd .chip b { color: var(--ink); }
 .hud.theme-dnd .cores-chip b { color: var(--crimson); }
+
+/* hero "character sheet": the currency + max-wave chips become carved hexagonal ability-score stones.
+   The rim colour is the chip background; an inset hexagonal ::before paints the parchment face, so the
+   3px gap reads as an engraved border (clip-path can't take a border directly). */
+.hud.theme-dnd .chips { gap: 14px; }
+.hud.theme-dnd .chip {
+  position: relative; width: 80px; height: 88px; padding: 0; border: 0; border-radius: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  background: #7a5a2a; color: var(--ink-dim); text-align: center;
+  clip-path: polygon(50% 1%, 95% 25%, 95% 75%, 50% 99%, 5% 75%, 5% 25%);
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,.4));
+}
+.hud.theme-dnd .chip::before {
+  content: ''; position: absolute; inset: 3px; z-index: 0;
+  clip-path: polygon(50% 1%, 95% 25%, 95% 75%, 50% 99%, 5% 75%, 5% 25%);
+  background: radial-gradient(circle at 50% 32%, var(--parch-lt), #ddcaa2 78%);
+}
+.hud.theme-dnd .chip .ic { position: relative; z-index: 1; color: var(--accent); }
+.hud.theme-dnd .chip b { position: relative; z-index: 1; margin: 0; font-family: 'Cinzel', serif; font-size: 14px; line-height: 1.05; color: var(--ink); }
 .hud.theme-dnd .earncard .el { color: var(--ink-dim); font-family: 'Cinzel', serif; }
 .hud.theme-dnd .earncard .ev { color: var(--gold-ink); font-family: 'Cinzel', serif; }
 .hud.theme-dnd .earncard .ev span, .hud.theme-dnd .earncard .es { color: var(--ink-dim); }

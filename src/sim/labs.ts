@@ -175,11 +175,6 @@ export function checkInPending(meta: Meta, nowMs: number): number {
   const last = meta.lastCheckIn || nowMs;
   return Math.max(0, Math.min(CHECKIN_CAP, Math.floor((nowMs - last) / CHECKIN_MS)));
 }
-export function checkInNextMs(meta: Meta, nowMs: number): number {
-  const last = meta.lastCheckIn || nowMs;
-  if (checkInPending(meta, nowMs) >= CHECKIN_CAP) return 0;
-  return Math.max(0, CHECKIN_MS - ((nowMs - last) % CHECKIN_MS));
-}
 export function claimCheckIn(meta: Meta, nowMs: number): { claims: number; cells: number; tokens: number } | null {
   const n = checkInPending(meta, nowMs);
   if (n <= 0) return null;

@@ -5,12 +5,12 @@ import type { CardDef, CardDrawResult, CardInstance, Hud as HudInstance, HudFact
 import { WAVE, waveCount, tierDifficulty, coreMult, MAX_TIER, TIER_UNLOCK_WAVE, tierUnlocked } from '../sim/waves';
 import {
   UPGRADES, UP_BY_ID, upgradesIn, economyUnlocked, boughtOf, permBought, runUpgradeCost, runAtMax, permCost, permAtMax,
-  CARDS, CARD_INFO, MAX_STARS, CARD_ORDER, CARD_SLOTS, starSlot, buyCardCost, cardsUnlocked, MILESTONES, milestoneReward,
+  upgradeCap, CARDS, CARD_INFO, MAX_STARS, CARD_ORDER, CARD_SLOTS, starSlot, buyCardCost, cardsUnlocked, MILESTONES, milestoneReward,
   claimableCount, TAB_DEFS, FIRST_PERM_COST,
 } from '../sim/skills';
 import {
   labsIn, LAB_CATS, labLevel, labUnlocked, labsTabUnlocked, labCoinCost, labTimeSec, labAtMax, researchOf, researchRemaining,
-  researchProgress, freeSlots, rushCellCost, labSlotCost, MAX_SLOTS, checkInPending, checkInNextMs, CHECKIN_CELLS, CHECKIN_TOKENS,
+  researchProgress, freeSlots, rushCellCost, labSlotCost, MAX_SLOTS, checkInPending, CHECKIN_CELLS, CHECKIN_TOKENS,
 } from '../sim/labs';
 
 // The HUD is a single themeable core: identical structure + wiring for every theme, restyled
@@ -39,7 +39,6 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     burst: '<path d="M12 2v5M12 17v5M2 12h5M17 12h5M5.2 5.2l3.4 3.4M18.8 5.2l-3.4 3.4M5.2 18.8l3.4-3.4M18.8 18.8l-3.4-3.4"/>',
     bow: '<path d="M8 3a10 10 0 0 1 0 18"/><path d="M8 3v18"/><path d="M5 12h13"/><path d="M15 9l3 3-3 3"/><path d="M5 12l2.5-2M5 12l2.5 2"/>',
     bullseye: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.6"/>',
-    star: '<path d="M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6z"/>',
     rate: '<circle cx="12" cy="13" r="7"/><path d="M12 13V9.5"/><path d="M10 3h4M12 3v3"/>',
     heart: '<path d="M12 20s-6.5-4.3-6.5-9.3A3.7 3.7 0 0 1 12 8a3.7 3.7 0 0 1 6.5 2.7c0 5-6.5 9.3-6.5 9.3z"/>',
     regen: '<path d="M10 19s-4.8-3.2-4.8-6.7A2.6 2.6 0 0 1 10 10 2.6 2.6 0 0 1 14.8 12.3C14.8 15.8 10 19 10 19z"/><path d="M14 8.4A2.6 2.6 0 0 1 19 10.7c0 2.4-1.9 4.3-3.2 5.5"/>',
@@ -57,7 +56,6 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     dodge: '<path d="M3 8h11a3 3 0 1 1-3 3M3 12h15a3 3 0 1 0-3-3M3 16h9"/>',
     fwd: '<path d="M9 5l7 7-7 7"/>',
     gear: '<circle cx="12" cy="12" r="3.2"/><path d="M19.4 13a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.7 8.6a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
-    gallery: '<rect x="3" y="3" width="7.5" height="7.5" rx="1.2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.2"/>',
     menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
   };
   function icon(name: string, size?: number, cls?: string): string {
@@ -90,14 +88,12 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     '<aside class="sidemenu" id="h-sidemenu">' +
     '  <button class="sideitem" id="h-set" title="Settings">' + icon('gear', 20) + '</button>' +
     '  <button class="sideitem" id="h-chart" title="Run Stats">' + icon('chart', 20) + '</button>' +
-    '  <a class="sideitem protolink" id="h-proto" href="huds/_prototype-hud-gallery.html" target="_blank" rel="noopener" title="Designs">' + icon('gallery', 20) + '</a>' +
     '</aside>' +
     '<div class="wavebar" id="h-wavebar" title="Next wave"><i id="h-wavefill"></i></div>' +
     '<div class="statswrap hide" id="h-stats"><div class="statscard" id="h-statscard"></div></div>' +
     '<div class="ghint hide" id="h-ghint"></div>' +
     '<div class="tabbar" id="h-tabbar"><div id="h-tabcontent"></div><div class="tabs" id="h-tabs"></div></div>' +
     '<div class="menu" id="h-menu">' +
-    '  <a class="menuproto" id="h-menuproto" href="huds/_prototype-hud-gallery.html" target="_blank" rel="noopener" title="HUD design prototypes">' + icon('gallery', 20) + '<span>Designs</span></a>' +
     '  <button class="menugear" id="h-menugear" title="Settings">' + icon('gear', 22) + '</button>' +
     '  <div class="menu-content" id="h-menu-content"></div>' +
     '  <div class="menutabs" id="h-menu-tabs"></div>' +
@@ -327,7 +323,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   // ---------- in-game tab bar (3 icon subtabs: attack / defense / economic) ----------
   const tabsEl = $('#h-tabs'),
     contentEl = $('#h-tabcontent');
-  const rowEls: Record<string, { btn: HTMLElement; cur: HTMLElement; nxt: HTMLElement; cost: HTMLElement }> = {};
+  const rowEls: Record<string, { btn: HTMLElement; cur: HTMLElement; nxt: HTMLElement; cost: HTMLElement; lv: HTMLElement }> = {};
   let activeTab = TAB_DEFS[0].id,
     tabOpen = false,
     taughtTabs = false;
@@ -366,7 +362,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     for (const u of upgradesIn(activeTab)) {
       const btn = document.createElement('button');
       btn.className = 'up';
-      btn.innerHTML = '<span class="nm">' + icon(u.icon, 14) + ' ' + u.label + '</span>' +
+      btn.innerHTML = '<span class="nm">' + icon(u.icon, 14) + ' ' + u.label + ' <span class="uplv"></span></span>' +
         '<span class="delta"><span class="cur"></span> ' + icon('arrow', 12) + ' <span class="nxt"></span></span><span class="cost"></span>';
       btn.addEventListener('click', () => {
         if (!lastS || runAtMax(lastS, u.id)) return;
@@ -377,7 +373,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         handlers.onBuyRun && handlers.onBuyRun(u.id);
       });
       contentEl.appendChild(btn);
-      rowEls[u.id] = { btn, cur: btn.querySelector('.cur')!, nxt: btn.querySelector('.nxt')!, cost: btn.querySelector('.cost')! };
+      rowEls[u.id] = { btn, cur: btn.querySelector('.cur')!, nxt: btn.querySelector('.nxt')!, cost: btn.querySelector('.cost')!, lv: btn.querySelector('.uplv')! };
     }
   }
   renderTabContent();
@@ -423,6 +419,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         if (!r) continue;
         const bought = boughtOf(s, u.id);
         r.cur.textContent = u.fmt(bought);
+        r.lv.textContent = bought + '/' + upgradeCap(s.meta, u.id);
         if (runAtMax(s, u.id)) {
           r.nxt.textContent = '';
           r.cost.textContent = 'MAX';
@@ -674,17 +671,14 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         afford = (meta.cores || 0) >= cost;
       const isTut = tutoring && menuUpTab === 'attack' && i === 0 && bought === 0;
       html += '<button class="perm' + (isTut ? ' tut' : '') + (afford && !maxed ? '' : ' cant') + '" data-perm="' + up.id + '"' + (maxed ? ' disabled' : '') + '>' +
-        '<span class="ptop">' + icon(up.icon, 18) + '<span class="pname">' + up.label + '</span></span>' +
+        '<span class="ptop">' + icon(up.icon, 18) + '<span class="pname">' + up.label + '</span>' +
+        '<span class="plv">' + bought + '/' + upgradeCap(meta, up.id) + '</span></span>' +
         '<span class="pcur">' + cur + '</span>' +
         '<span class="pcost">' + (maxed ? 'MAX' : cost + ' ' + cores(12)) + '</span></button>';
     });
     return html;
   }
 
-  const mmss = (ms: number): string => {
-    const s = Math.ceil(ms / 1000);
-    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
-  };
   function fmtTime(sec: number): string {
     sec = Math.ceil(sec);
     if (sec < 60) return sec + 's';
@@ -740,8 +734,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       cl = meta.claimedMilestones || {},
       best = meta.bestWave || 0;
     let html = '<button class="close" id="h-ms-close">' + icon('back', 16) + ' Back</button><h2>Milestones</h2>' +
-      '<p class="msnote">Rewards for the furthest wave reached in Tier ' + (meta.tier || 1) + '.</p>' +
-      '<div class="cores-chip">' + cores(15) + ' <b>' + (meta.cores || 0) + '</b></div>';
+      '<p class="msnote">Rewards for the furthest wave reached in Tier ' + (meta.tier || 1) + '.</p>';
     for (const w of MILESTONES) {
       const reward = milestoneReward(w),
         claimed = !!cl[w],
@@ -771,15 +764,13 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     const meta = lastMeta!,
       opts = lastOpts,
       tutoring = sumPerm(meta) === 0;
-    const totalStars = (meta.cards || []).reduce((a, c) => a + (c.stars || 0), 0);
     for (const b of Array.from(menuTabsEl.children) as HTMLElement[]) {
       b.classList.toggle('on', b.dataset.mtab === menuTab);
       b.classList.toggle('tut', tutoring && b.dataset.mtab === 'upgrades' && menuTab !== 'upgrades');
       b.classList.toggle('tut-off', tutoring && b.dataset.mtab !== 'upgrades');
       if (b.dataset.mtab === 'cards') {
-        const u = cardsUnlocked(meta);
-        b.classList.toggle('locked', !u);
-        b.innerHTML = icon('cards', 24) + (u && totalStars > 0 ? '<span class="tabbadge br">' + totalStars + icon('star', 11, 'gold') + '</span>' : '');
+        b.classList.toggle('locked', !cardsUnlocked(meta));
+        b.innerHTML = icon('cards', 24);
       }
       if (b.dataset.mtab === 'labs') {
         const u = labsTabUnlocked(meta);
@@ -797,12 +788,11 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
           '<div class="es">' + opts.earn.kills + ' kills / wave ' + opts.earn.wave + '</div></div>';
       const curChips = CURRENCIES.map((c) => '<span class="chip">' + icon(c.icon, 13, c.cls) + ' <b>' + ((meta as any)[c.key] || 0) + '</b></span>').join('');
       html += '<div class="chips">' + curChips + '<span class="chip">' + icon('best', 13) + ' <b>wave ' + (meta.bestWave || 0) + '</b></span></div>';
+      // Only surface the check-in when a reward is actually claimable — no idle "Next reward in…" row.
       const pend = checkInPending(meta, Date.now());
       if (pend > 0) {
         html += '<button class="checkin ready" id="h-checkin">' + icon('cell', 14, 'cell') + ' Check In  +' + pend * CHECKIN_CELLS +
           ' ' + icon('cell', 12, 'cell') + '  +' + pend * CHECKIN_TOKENS + ' ' + icon('token', 12, 'token') + '</button>';
-      } else {
-        html += '<button class="checkin" id="h-checkin" disabled>Next reward in ' + mmss(checkInNextMs(meta, Date.now())) + '</button>';
       }
       html += '<div class="avatar-frame"><canvas id="h-avatar" width="200" height="200"></canvas></div>';
       const claim = claimableCount(meta);
