@@ -192,7 +192,9 @@ export interface UpgradeDef {
   id: string;
   tab: string;
   icon: string;
-  label: string;
+  label: string;      // short label shown on tile
+  name?: string;      // full name shown in detail modal (falls back to label)
+  tip?: string;       // one-sentence explanation shown in modal
   max: number;
   gated?: boolean;
   value: (b: number) => number;

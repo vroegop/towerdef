@@ -85,37 +85,36 @@
 /* the dock grid is capped to a fraction of the viewport and scrolls — a long tab (e.g. ~16 attack
    upgrades) never extends past the top of the screen on a phone. */
 .hud .tabcontent { padding: 10px 12px 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 640px; margin: 0 auto;
-  max-height: min(46vh, 360px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  max-height: min(28vh, 220px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .hud .tabcontent.collapsed { display: none; }
-.hud .up { display: flex; justify-content: space-between; align-items: center; gap: 6px;
-  background: #1c2030; border: 1px solid #262c3d; color: #d8deea; border-radius: 4px; padding: 9px 12px; cursor: pointer; font: inherit;
-  min-width: 0; }
+/* in-run upgrade card — compact 3-zone card; NOT square so many fit in the scrollable dock */
+.hud .up { display: grid; grid-template-rows: auto auto auto;
+  gap: 0; background: #151823; border: 1px solid #262c3d; color: #d8deea; border-radius: 6px;
+  padding: 0; cursor: pointer; font: inherit; min-width: 0; text-align: center; overflow: hidden; }
 .hud .up:hover:not(:disabled):not(.cant) { border-color: #4aa8ff; }
+.hud .up:hover:not(:disabled):not(.cant) .pcost { background: rgba(74,168,255,.14); border-top-color: rgba(74,168,255,.28); }
 .hud .up:disabled, .hud .up.cant { opacity: .4; cursor: default; }
-.hud .up .nm { font-weight: 600; flex: 1; min-width: 0; }
-.hud .up .delta, .hud .perm .delta { color: #8b93a7; font-size: 12.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.hud .up .cost { color: #ffd24a; font-variant-numeric: tabular-nums; white-space: nowrap; }
-/* current/max level badge on an upgrade block */
-.hud .up .uplv { color: #6b7488; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.hud .perm .plv { color: #8b93a7; font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
+/* in-run header: compact single row */
+.hud .up .phead { padding: 5px 8px; }
+/* in-run main: horizontal cur → nxt on one line */
+.hud .up .pcur { flex-direction: row; gap: 4px; font-size: 13px; padding: 3px 8px; }
+.hud .up .cur { font-size: 13px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
+.hud .up .nxt { font-size: 11px; color: #3ddc84; font-variant-numeric: tabular-nums; }
+.hud .up .nxt:not(:empty)::before { content: '→ '; color: #5a6280; }
+/* in-run footer: blue-tinted strip (gold cost text); overrides the red+gold of perm */
+.hud .up .pcost { color: #ffd24a; background: rgba(74,168,255,.08); border-top-color: rgba(74,168,255,.18); padding: 5px 8px; }
+.hud .up .pcost.maxed { color: #6b7488; background: rgba(255,255,255,.03); border-top-color: rgba(255,255,255,.06); }
+/* level badge shared between in-run and perm */
+.hud .up .uplv, .hud .perm .plv { color: #8b93a7; font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .hud .tabs { display: flex; max-width: 640px; margin: 0 auto; }
 .hud .tabs button { flex: 1; pointer-events: auto; background: transparent; border: 0; border-top: 2px solid transparent;
   color: #8b93a7; padding: 10px 4px; font: inherit; font-weight: 600; cursor: pointer; }
 .hud .tabs button.on { color: #fff; border-top-color: #4aa8ff; background: rgba(74,168,255,.08); }
 .hud .tabs button .ic { vertical-align: middle; }
-.hud .up .nm .ic { vertical-align: -0.2em; margin-right: 4px; color: #8b93a7; }
 /* in-run locked tab (economic before Tier 2) */
 .hud .tablock { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 8px;
   color: #6b7488; padding: 14px 8px; font-size: 13px; }
 .hud .tablock .ic { color: #6b7488; }
-/* narrow phones: tighten the dock so two upgrade columns + their level/cost never clip out of view */
-@media (max-width: 460px) {
-  .hud .tabcontent { gap: 6px; padding: 8px 8px 5px; }
-  .hud .up { padding: 8px 9px; font-size: 13px; }
-  .hud .up .nm { font-size: 12.5px; }
-  .hud .up .delta { font-size: 11px; }
-  .hud .up .uplv { font-size: 10px; }
-}
 
 /* ---- between-games MENU ---- */
 .hud .menu { position: absolute; inset: 0; display: none; flex-direction: column; pointer-events: auto;
@@ -198,18 +197,28 @@
 .hud .subtabs .subtab .ic.lk { position: absolute; top: 3px; right: 4px; color: #434a60; }
 
 /* permanent upgrades list */
-.hud .permlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 8px; }
-.hud .perm { aspect-ratio: 1; display: grid; grid-template-rows: auto 1fr auto;
-  gap: 4px; background: #151823; border: 1px solid #262c3d; border-radius: 4px; padding: 8px; margin: 0;
-  cursor: pointer; font: inherit; color: #d8deea; text-align: center; }
+.hud .permlist { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.hud .perm { aspect-ratio: 4/3; display: grid; grid-template-rows: auto 1fr auto;
+  gap: 0; background: #151823; border: 1px solid #262c3d; border-radius: 6px; padding: 0; margin: 0;
+  cursor: pointer; font: inherit; color: #d8deea; text-align: center; overflow: hidden; }
 .hud .perm:hover:not(:disabled):not(.cant) { border-color: #ffd24a; }
+.hud .perm:hover:not(:disabled):not(.cant) .pcost { background: rgba(255,210,74,.14); border-top-color: rgba(255,210,74,.30); }
 .hud .perm:disabled, .hud .perm.cant { opacity: .4; cursor: default; }
 .hud .perm.tut { border-color: #ffd24a; box-shadow: 0 0 0 3px rgba(255,210,74,.15); }
-.hud .perm .phead { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
-.hud .perm .phead .ic { color: #8b93a7; }
-.hud .perm .pname { align-self: center; font-size: 11px; line-height: 1.15; font-weight: 700; }
-.hud .perm .pcur { font-size: 17px; font-weight: 800; color: #fff; }
-.hud .perm .pcost { color: #ff2e4e; font-size: 11px; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+/* header zone: darkened band with icon + name + level */
+.hud .perm .phead { display: flex; align-items: center; justify-content: space-between; gap: 4px;
+  padding: 7px 10px; background: rgba(0,0,0,.28); border-bottom: 1px solid rgba(255,255,255,.05); }
+.hud .perm .phead .ic { color: #8b93a7; flex: 0 0 auto; }
+.hud .perm .pname { flex: 1; min-width: 0; text-align: left; font-size: 12px; line-height: 1.15; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* main zone: big current-value centred in remaining space */
+.hud .perm .pcur { display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 800; color: #fff; padding: 2px 6px; }
+/* footer zone: buy strip — subtle gold wash; number stays red (coins currency) */
+.hud .perm .pcost { display: flex; align-items: center; justify-content: center; gap: 3px;
+  color: #ff2e4e; font-size: 12px; font-weight: 700; white-space: nowrap;
+  padding: 7px 10px; background: rgba(255,210,74,.10); border-top: 1px solid rgba(255,210,74,.22);
+  transition: background .12s, border-color .12s; }
+.hud .perm .pcost.maxed { color: #6b7488; background: rgba(255,255,255,.03); border-top-color: rgba(255,255,255,.06); }
 
 
 /* ---- 15-minute check-in button (Hero screen) ---- */
@@ -583,3 +592,31 @@
 .hud .setrow .switch i { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #8b93a7; transition: left .15s, background .15s; }
 .hud .setrow.on .switch { background: #1f5e3a; }
 .hud .setrow.on .switch i { left: 19px; background: #3ddc84; }
+
+/* ---- upgrade detail modal (click perm tile body → opens) ---- */
+.hud .updmodal { position: fixed; inset: 0; z-index: 70; display: flex; align-items: flex-start; justify-content: center;
+  background: rgba(6,8,14,.6); pointer-events: auto; }
+.hud .updmodal.hide { display: none; }
+.hud .updmodal-inner { margin-top: 64px; width: min(340px, 90vw); background: #11151f; border: 1px solid #2a3550;
+  border-radius: 8px; overflow: hidden; }
+.hud .upd-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px 10px; border-bottom: 1px solid #1f2740; }
+.hud .upd-icon { flex: 0 0 auto; width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,.06); color: #8b93a7; }
+.hud .upd-title { flex: 1; }
+/* higher specificity than .hud.theme-* b overrides so values stay readable */
+.hud .updmodal-inner .upd-title b { display: block; font-size: 15px; font-weight: 800; color: #fff; }
+.hud .upd-title span { font-size: 11px; color: #6b7488; font-variant-numeric: tabular-nums; }
+.hud .upd-tip { padding: 12px 16px; font-size: 13px; line-height: 1.5; color: #aeb6c6; border-bottom: 1px solid #1f2740; }
+.hud .upd-stats { padding: 10px 16px 4px; }
+.hud .upd-row { display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 0; border-bottom: 1px solid #1f2740; font-size: 13px; }
+.hud .upd-row:last-child { border-bottom: 0; }
+.hud .upd-row span { color: #8b93a7; }
+.hud .updmodal-inner .upd-row b { color: #fff; font-variant-numeric: tabular-nums; }
+.hud .upd-buy { display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; border: 0; border-top: 1px solid rgba(255,210,74,.22); border-radius: 0;
+  padding: 13px; font: inherit; font-weight: 700; font-size: 14px; cursor: pointer;
+  background: rgba(255,210,74,.10); color: #ff2e4e; transition: background .12s; }
+.hud .upd-buy:hover:not(:disabled) { background: rgba(255,210,74,.18); }
+.hud .upd-buy:disabled { opacity: .45; cursor: default; }
+.hud .upd-buy.maxed { color: #6b7488; background: transparent; border-top-color: rgba(255,255,255,.06); cursor: default; }

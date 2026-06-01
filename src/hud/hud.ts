@@ -106,6 +106,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     '  <div class="modal hide" id="h-modal"><div class="modal-inner" id="h-modal-inner"></div></div>' +
     '</div>' +
     '<div class="setmodal hide" id="h-setmodal"><div class="setmodal-inner" id="h-setmodal-inner"></div></div>' +
+    '<div class="updmodal hide" id="h-updmodal"><div class="updmodal-inner" id="h-updmodal-inner"></div></div>' +
     // End-run confirm (opened from the side-rail X). Reuses the centered setmodal shell + themed .exitrun.
     '<div class="setmodal hide" id="h-endmodal"><div class="setmodal-inner">' +
     '<div class="statshead"><h2>End run?</h2><button class="iconclose" id="h-end-close" title="Close">' + icon('close', 18) + '</button></div>' +
@@ -369,8 +370,9 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     for (const u of upgradesIn(activeTab)) {
       const btn = document.createElement('button');
       btn.className = 'up';
-      btn.innerHTML = '<span class="nm">' + icon(u.icon, 14) + ' ' + u.label + ' <span class="uplv"></span></span>' +
-        '<span class="delta"><span class="cur"></span> ' + icon('arrow', 12) + ' <span class="nxt"></span></span><span class="cost"></span>';
+      btn.innerHTML = '<span class="phead">' + icon(u.icon, 18) + '<span class="pname">' + u.label + '</span><span class="plv uplv"></span></span>' +
+        '<span class="pcur"><span class="cur"></span><span class="nxt"></span></span>' +
+        '<span class="pcost"><span class="cost"></span></span>';
       btn.addEventListener('click', () => {
         if (!lastS || runAtMax(lastS, u.id)) return;
         if (lastS.econ.gold < runUpgradeCost(lastS, u.id)) {
@@ -562,6 +564,46 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     if (e.target === endmodal) hideEnd();
   });
 
+  // ---------- upgrade detail modal (perm tile body click) ----------
+  const updmodal = $('#h-updmodal'), updmodalInner = $('#h-updmodal-inner');
+  updmodal.addEventListener('click', (e) => { if (e.target === updmodal) updmodal.classList.add('hide'); });
+  function openPermModal(id: string): void {
+    if (!lastMeta) return;
+    const u = UP_BY_ID[id];
+    if (!u) return;
+    const bought = permBought(lastMeta, id);
+    const maxed = permAtMax(lastMeta, id);
+    const cap = upgradeCap(lastMeta, id);
+    const cost = permCost(lastMeta, id);
+    const afford = (lastMeta.coins || 0) >= cost;
+    updmodalInner.innerHTML =
+      '<div class="upd-head">' +
+        '<div class="upd-icon">' + icon(u.icon, 20) + '</div>' +
+        '<div class="upd-title"><b>' + (u.name || u.label) + '</b>' +
+          '<span>Level ' + bought + ' / ' + cap + '</span></div>' +
+        '<button class="iconclose" id="h-upd-close">' + icon('close', 18) + '</button>' +
+      '</div>' +
+      (u.tip ? '<div class="upd-tip">' + u.tip + '</div>' : '') +
+      '<div class="upd-stats">' +
+        '<div class="upd-row"><span>Current</span><b>' + u.fmt(bought) + '</b></div>' +
+        (!maxed ? '<div class="upd-row"><span>Next level</span><b>' + u.fmt(bought + 1) + '</b></div>' : '') +
+        (!maxed ? '<div class="upd-row"><span>At max (' + cap + ')</span><b>' + u.fmt(cap) + '</b></div>' : '') +
+      '</div>' +
+      '<button class="upd-buy' + (maxed ? ' maxed' : '') + (afford && !maxed ? '' : ' cant') + '" id="h-upd-buy"' + (maxed ? ' disabled' : '') + '>' +
+        (maxed ? 'Maxed out' : cost + ' ' + coinsIc(14) + ' — Buy') +
+      '</button>';
+    $('#h-upd-close').addEventListener('click', () => updmodal.classList.add('hide'));
+    const buyBtn = $('#h-upd-buy') as HTMLButtonElement;
+    buyBtn.addEventListener('click', () => {
+      if (maxed || !afford) { shake(buyBtn); return; }
+      if (handlers.onBuyPerm && handlers.onBuyPerm(id)) {
+        renderMenu();
+        openPermModal(id); // refresh modal after purchase
+      }
+    });
+    updmodal.classList.remove('hide');
+  }
+
   // Dismiss every in-run modal/panel (Display, End-run confirm, Run Stats) — called when a run ends
   // or we return to the menu, so a left-open modal never lingers over the overview/menu screen.
   const closeRunModals = (): void => {
@@ -700,10 +742,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         afford = (meta.coins || 0) >= cost;
       const isTut = tutoring && menuUpTab === 'attack' && i === 0 && bought === 0;
       html += '<button class="perm' + (isTut ? ' tut' : '') + (afford && !maxed ? '' : ' cant') + '" data-perm="' + up.id + '"' + (maxed ? ' disabled' : '') + '>' +
-        '<span class="ptop">' + icon(up.icon, 18) + '<span class="pname">' + up.label + '</span>' +
+        '<span class="phead">' + icon(up.icon, 18) + '<span class="pname">' + up.label + '</span>' +
         '<span class="plv">' + bought + '/' + upgradeCap(meta, up.id) + '</span></span>' +
         '<span class="pcur">' + cur + '</span>' +
-        '<span class="pcost">' + (maxed ? 'MAX' : cost + ' ' + coinsIc(12)) + '</span></button>';
+        '<span class="pcost' + (maxed ? ' maxed' : '') + '">' + (maxed ? 'MAX' : cost + ' ' + coinsIc(12)) + '</span></button>';
     });
     return html;
   }
@@ -906,9 +948,15 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         }),
       );
       menuContent.querySelectorAll<HTMLElement>('[data-perm]').forEach((b) =>
-        b.addEventListener('click', () => {
-          if (handlers.onBuyPerm && handlers.onBuyPerm(b.dataset.perm!)) renderMenu();
-          else shake(menuContent.querySelector('.coins-chip'));
+        b.addEventListener('click', (e) => {
+          if ((e.target as Element).closest('.pcost')) {
+            // footer click → buy
+            if (handlers.onBuyPerm && handlers.onBuyPerm(b.dataset.perm!)) renderMenu();
+            else shake(menuContent.querySelector('.coins-chip'));
+          } else {
+            // body/header click → detail modal
+            openPermModal(b.dataset.perm!);
+          }
         }),
       );
     } else if (menuTab === 'cards') {
@@ -983,6 +1031,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   }
   function hideMenu(): void {
     menuEl.classList.remove('show');
+    updmodal.classList.add('hide');
     setSpotlight(false);
     tabbarEl.style.display = '';
     topEl.style.display = '';

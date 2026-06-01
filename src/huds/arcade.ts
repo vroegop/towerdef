@@ -64,9 +64,12 @@ const CSS = `
   background: var(--panel-dk); border: 3px solid #fff; color: var(--ink); border-radius: 0; box-shadow: 3px 3px 0 #000;
 }
 .hud.theme-arcade .up:hover:not(:disabled):not(.cant) { border-color: var(--accent); }
-.hud.theme-arcade .up .nm .ic { color: var(--teal); }
-.hud.theme-arcade .up .delta { color: var(--dim); }
-.hud.theme-arcade .up .cost { color: var(--accent); }
+.hud.theme-arcade .up:hover:not(:disabled):not(.cant) .pcost { background: rgba(255,210,63,.16); border-top-color: rgba(255,210,63,.35); }
+.hud.theme-arcade .up .pname { color: var(--teal); }
+.hud.theme-arcade .up .phead { background: rgba(255,255,255,.05); border-bottom-color: rgba(255,255,255,.12); }
+.hud.theme-arcade .up .nxt { color: var(--teal); }
+.hud.theme-arcade .up .nxt::before { color: var(--dim); }
+.hud.theme-arcade .up .pcost { color: var(--accent); background: rgba(255,210,63,.08); border-top-color: rgba(255,210,63,.20); }
 .hud.theme-arcade .tablock, .hud.theme-arcade .tablock .ic { color: var(--dim); }
 
 /* ---- menu chrome ---- */
@@ -104,9 +107,18 @@ const CSS = `
 .hud.theme-arcade .statscard,
 .hud.theme-arcade .over-card,
 .hud.theme-arcade .setmodal-inner,
-.hud.theme-arcade .cardmodal-inner {
+.hud.theme-arcade .cardmodal-inner,
+.hud.theme-arcade .updmodal-inner {
   background: var(--panel); border: 4px solid #fff; box-shadow: 6px 6px 0 #000;
 }
+/* upgrade detail modal — ink values against dark panel */
+.hud.theme-arcade .updmodal-inner .upd-head { border-bottom-color: var(--rule); }
+.hud.theme-arcade .updmodal-inner .upd-icon { background: rgba(255,255,255,.08); color: var(--teal); }
+.hud.theme-arcade .updmodal-inner .upd-title b { color: var(--accent); text-shadow: 1px 1px 0 #000; }
+.hud.theme-arcade .updmodal-inner .upd-tip { border-bottom-color: var(--rule); }
+.hud.theme-arcade .updmodal-inner .upd-row { border-bottom-color: var(--rule); }
+.hud.theme-arcade .updmodal-inner .upd-buy { color: var(--accent); background: rgba(255,210,63,.10); border-top-color: rgba(255,210,63,.25); }
+.hud.theme-arcade .updmodal-inner .upd-buy:hover:not(:disabled) { background: rgba(255,210,63,.20); }
 
 .hud.theme-arcade .chip,
 .hud.theme-arcade .coins-chip,
@@ -153,10 +165,13 @@ const CSS = `
   background: var(--panel-dk); border: 2px solid var(--rule); color: var(--ink);
 }
 .hud.theme-arcade .perm:hover:not(:disabled):not(.cant) { border-color: var(--accent); }
+.hud.theme-arcade .perm:hover:not(:disabled):not(.cant) .pcost { background: rgba(255,210,63,.16); border-top-color: rgba(255,210,63,.35); }
 .hud.theme-arcade .perm.tut { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,210,63,.25); }
 .hud.theme-arcade .perm .pname { color: var(--dim); font-size: 8px; }
+.hud.theme-arcade .perm .phead { background: rgba(255,255,255,.05); border-bottom-color: rgba(255,255,255,.10); }
 .hud.theme-arcade .perm .pcur { color: var(--ink); }
-.hud.theme-arcade .perm .pcost { color: var(--accent); }
+.hud.theme-arcade .perm .pcost { color: var(--accent); background: rgba(255,210,63,.08); border-top-color: rgba(255,210,63,.18); }
+.hud.theme-arcade .perm .pcost.maxed { color: var(--dim); background: rgba(255,255,255,.03); border-top-color: rgba(255,255,255,.07); }
 .hud.theme-arcade .subtabs .subtab.on { color: #222; border-color: #fff; background: var(--accent); }
 .hud.theme-arcade .subtabs .subtab .ic { color: var(--teal); }
 

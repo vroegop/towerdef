@@ -79,7 +79,8 @@ const CSS = `
 .hud.theme-dnd .setmodal-inner,
 .hud.theme-dnd .statscard,
 .hud.theme-dnd .over-card,
-.hud.theme-dnd .cardmodal-inner {
+.hud.theme-dnd .cardmodal-inner,
+.hud.theme-dnd .updmodal-inner {
   background: var(--parch);
   background-image: radial-gradient(circle at 30% 8%, var(--parch-lt), #e3d3b0 70%);
   border: 1px solid #8a6a3a; box-shadow: inset 0 0 0 3px #8a6a3a, 0 12px 30px rgba(0,0,0,.5);
@@ -87,6 +88,17 @@ const CSS = `
 }
 .hud.theme-dnd .iconclose { color: var(--ink-dim); }
 .hud.theme-dnd .iconclose:hover { color: var(--ink); }
+/* upgrade detail modal on parchment */
+.hud.theme-dnd .updmodal-inner .upd-head { border-bottom-color: var(--rule); }
+.hud.theme-dnd .updmodal-inner .upd-icon { background: rgba(122,74,26,.12); color: var(--accent); }
+.hud.theme-dnd .updmodal-inner .upd-title b { color: var(--ink); }
+.hud.theme-dnd .updmodal-inner .upd-title span { color: var(--ink-dim); }
+.hud.theme-dnd .updmodal-inner .upd-tip { color: var(--ink-dim); border-bottom-color: var(--rule); }
+.hud.theme-dnd .updmodal-inner .upd-row { border-bottom-color: rgba(122,74,26,.2); }
+.hud.theme-dnd .updmodal-inner .upd-row span { color: var(--ink-dim); }
+.hud.theme-dnd .updmodal-inner .upd-row b { color: var(--ink); }
+.hud.theme-dnd .updmodal-inner .upd-buy { color: var(--crimson); background: rgba(154,106,26,.10); border-top-color: rgba(154,106,26,.25); }
+.hud.theme-dnd .updmodal-inner .upd-buy:hover:not(:disabled) { background: rgba(154,106,26,.18); }
 .hud.theme-dnd .setbody, .hud.theme-dnd .statsbody { color: var(--ink); }
 .hud.theme-dnd .cm-sub, .hud.theme-dnd .cmhead .cm-title span { color: var(--ink-dim); }
 .hud.theme-dnd .cm-sub b, .hud.theme-dnd .csr .csv, .hud.theme-dnd .csr .csv b { color: var(--ink); }
@@ -160,7 +172,20 @@ const CSS = `
 .hud.theme-dnd .perm.tut { border-color: var(--crimson); box-shadow: 0 0 0 3px rgba(154,42,26,.18); }
 .hud.theme-dnd .perm .pname { font-family: 'Cinzel', serif; color: var(--ink-dim); }
 .hud.theme-dnd .perm .pcur { color: var(--ink); font-family: 'Cinzel', serif; }
-.hud.theme-dnd .perm .pcost { color: var(--crimson); }
+/* perm header/footer zone tints adapted to parchment palette */
+.hud.theme-dnd .perm .phead { background: rgba(42,26,8,.10); border-bottom-color: rgba(42,26,8,.12); }
+.hud.theme-dnd .perm .pcost { color: var(--crimson); background: rgba(154,106,26,.10); border-top-color: rgba(154,106,26,.22); }
+.hud.theme-dnd .perm .pcost.maxed { color: var(--ink-dim); background: rgba(42,26,8,.05); border-top-color: rgba(42,26,8,.08); }
+.hud.theme-dnd .perm:hover:not(:disabled):not(.cant) .pcost { background: rgba(154,106,26,.18); border-top-color: rgba(154,106,26,.35); }
+/* in-run upgrade tiles — same card shape; ink colours replace the dark-theme defaults */
+.hud.theme-dnd .up .pname { font-family: 'Cinzel', serif; color: var(--ink-dim); }
+.hud.theme-dnd .up .phead { background: rgba(42,26,8,.10); border-bottom-color: rgba(42,26,8,.12); }
+.hud.theme-dnd .up .cur { color: var(--ink); }
+.hud.theme-dnd .up .nxt { color: #4a7a2a; }
+.hud.theme-dnd .up .nxt::before { color: var(--ink-dim); }
+.hud.theme-dnd .up .pcost { color: var(--gold-ink); background: rgba(154,106,26,.10); border-top-color: rgba(154,106,26,.22); }
+.hud.theme-dnd .up:hover:not(:disabled):not(.cant) { border-color: var(--crimson); }
+.hud.theme-dnd .up:hover:not(:disabled):not(.cant) .pcost { background: rgba(154,42,26,.14); border-top-color: rgba(154,42,26,.28); }
 .hud.theme-dnd .subtabs .subtab.on { color: var(--ink); border-color: var(--crimson); background: rgba(122,74,26,.14); }
 .hud.theme-dnd .subtabs .subtab .ic { color: var(--ink-dim); }
 
