@@ -34,5 +34,18 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'off',
     },
   },
+  {
+    // dev/ is throwaway balance/dashboard tooling: browser canvas charts (chart.ts, dashboard.ts)
+    // plus node tsx scripts (runner.ts, verify-*.ts). It leans on the same intentional canvas idioms
+    // as src/ — side-effect ternaries (`i ? ctx.lineTo(...) : ctx.moveTo(...)`) — so allow them here too.
+    files: ['dev/**/*.ts'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.browser },
+    },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-expressions': ['error', { allowShortCircuit: true, allowTernary: true }],
+    },
+  },
   prettier,
 );
