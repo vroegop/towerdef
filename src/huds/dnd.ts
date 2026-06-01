@@ -129,6 +129,13 @@ const CSS = `
 }
 .hud.theme-dnd .chip .ic { position: relative; z-index: 1; color: var(--accent); }
 .hud.theme-dnd .chip b { position: relative; z-index: 1; margin: 0; font-family: 'Cinzel', serif; font-size: 14px; line-height: 1.05; color: var(--ink); }
+
+/* floating check-in: a small carved parchment tablet (no neon) matching the ability-score stones. */
+.hud.theme-dnd .checkin-float { background: var(--parch-lt); border: 1px solid #8a6a3a; color: var(--ink);
+  box-shadow: inset 0 0 0 2px var(--parch), 0 3px 8px rgba(0,0,0,.3); font-family: 'Cinzel', serif; }
+.hud.theme-dnd .checkin-float:hover { border-color: var(--accent); }
+.hud.theme-dnd .checkin-float .cf-chip { background: rgba(122,74,26,.12); color: var(--ink); }
+.hud.theme-dnd .checkin-float .cf-chip .ic { color: var(--ink-dim); }
 .hud.theme-dnd .earncard .el { color: var(--ink-dim); font-family: 'Cinzel', serif; }
 .hud.theme-dnd .earncard .ev { color: var(--gold-ink); font-family: 'Cinzel', serif; }
 .hud.theme-dnd .earncard .ev span, .hud.theme-dnd .earncard .es { color: var(--ink-dim); }

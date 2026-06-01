@@ -512,10 +512,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       checkinFloat.classList.add('hide');
       return;
     }
+    // No label — each currency reward on its own line (icon + amount).
     checkinFloat.innerHTML =
-      '<span class="cf-lbl">Check in</span>' +
-      '<span class="cf-chip">+' + pend * CHECKIN_VIALS + ' ' + icon('vial', 13, 'vial') + '</span>' +
-      '<span class="cf-chip">+' + pend * CHECKIN_GEMS + ' ' + icon('gem', 13, 'gem') + '</span>';
+      '<span class="cf-chip">' + icon('vial', 14, 'vial') + ' +' + pend * CHECKIN_VIALS + '</span>' +
+      '<span class="cf-chip">' + icon('gem', 14, 'gem') + ' +' + pend * CHECKIN_GEMS + '</span>';
     checkinFloat.classList.remove('hide');
   }
 
