@@ -181,13 +181,9 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     const W = canvas.clientWidth,
       H = canvas.clientHeight;
     const range = (s.hero && s.hero.range) || BASE_RANGE_M * PX_PER_METER;
-    // Fit the whole range ring (diameter 2·range) into the narrow screen dimension, leaving only
-    // EDGE_PAD px of breathing room. coverScale stays as a floor that prevents empty void on unusual
-    // aspect ratios; because the sim keeps the arena larger than the ring, rangeScale wins in normal
-    // landscape play, so the ring is always fully visible and nearly edge-to-edge.
-    const coverScale = Math.max(W / s.arena.w, H / s.arena.h);
-    const rangeScale = (Math.min(W, H) - 2 * EDGE_PAD) / (2 * range);
-    const scale = Math.max(coverScale, rangeScale);
+    // Fit the full range ring (diameter 2·range) into the smaller screen dimension with EDGE_PAD
+    // breathing room. Using min(W,H) guarantees the ring fits in both axes on any aspect ratio.
+    const scale = (Math.min(W, H) - 2 * EDGE_PAD) / (2 * range);
     const hp = ipos(HERO_ID, s.hero.x, s.hero.y);
     let shx = 0,
       shy = 0;
@@ -199,12 +195,14 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     }
     let ox = W / 2 - hp.x * scale + shx,
       oy = H / 2 - hp.y * scale + shy;
-    // Keep the camera within the arena (no void past its edges). The box is centered on the hero, so
-    // its top-left world corner is (hero − half); at the base size this reduces to (0,0) as before.
+    // Clamp camera to arena edges only when the arena is larger than the screen on that axis.
+    // On extreme aspect ratios the arena may not fill the screen; centering on the hero is correct.
     const aLeft = hp.x - s.arena.w / 2,
       aTop = hp.y - s.arena.h / 2;
-    ox = Math.min(-aLeft * scale, Math.max(W - (aLeft + s.arena.w) * scale, ox));
-    oy = Math.min(-aTop * scale, Math.max(H - (aTop + s.arena.h) * scale, oy));
+    if (s.arena.w * scale > W)
+      ox = Math.min(-aLeft * scale, Math.max(W - (aLeft + s.arena.w) * scale, ox));
+    if (s.arena.h * scale > H)
+      oy = Math.min(-aTop * scale, Math.max(H - (aTop + s.arena.h) * scale, oy));
     const tx = (x: number): number => ox + x * scale,
       ty = (y: number): number => oy + y * scale;
 
