@@ -4,7 +4,6 @@
    draw(snapshot, alpha, paused): alpha in [0,1) interpolates between sim ticks; paused
    freezes the decorative clock so every effect holds still for inspection. */
 import type { Settings, State } from '../types';
-import { TIERS } from '../sim/registries';
 import { BASE_RANGE_M, PX_PER_METER } from '../sim/skills';
 
 const RANGE_PAD = 0.1; // fraction of range kept as padding outside the ring so bounced enemies stay visible
@@ -217,7 +216,7 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     ctx.fillRect(0, 0, W, H);
 
     for (const e of s.enemies) {
-      const col = TIERS[e.tier].color;
+      const col = e.color;
       const ep = ipos(e.id, e.x, e.y),
         esx = tx(ep.x),
         esy = ty(ep.y);
@@ -272,7 +271,7 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     prevEnemies.clear();
     for (const e of s.enemies) {
       const ep = ipos(e.id, e.x, e.y);
-      prevEnemies.set(e.id, { x: tx(ep.x), y: ty(ep.y), color: TIERS[e.tier].color });
+      prevEnemies.set(e.id, { x: tx(ep.x), y: ty(ep.y), color: e.color });
     }
 
     if (resync) lastFxSeq = s.fxSeq || 0;
@@ -283,7 +282,6 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
           fy = ty(f.y);
         if (cfg.goldOnKill && f.gold) spawnFloat(fx, fy, '+' + f.gold, '#ffd24a', 12);
         if (cfg.coinOnKill && f.coin) spawnFloat(fx, fy - 12, '+' + f.coin, '#ff2e4e', 13);
-        if (f.dodge) spawnFloat(fx, fy - 18, 'Dodge', '#5fd0ff', 13);
       }
       lastFxSeq = s.fxSeq;
     }

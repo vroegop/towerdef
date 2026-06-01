@@ -10,13 +10,14 @@ import { makeEnemy } from '../../src/sim/enemies';
 import { migrateMeta } from '../../src/sim/labs';
 import { buyPerm, permCost, computeStats, waveStrSafe } from './helpers';
 import { waveCount, waveStr, tierUnlocked, coinMult } from '../../src/sim/waves';
-import { buyCard, buyCardCost, MAX_STARS, CARD_ORDER } from '../../src/sim/skills';
+import { buyCard, buyCardCost, MAX_STARS, CARD_ORDER, evalCurve, UP_BY_ID, PX_PER_METER, isUnlocked, unlockGroup, nextUnlockGroup, skillGroup } from '../../src/sim/skills';
+import { applyHit } from '../../src/sim/projectiles';
 import type { Meta } from '../../src/types';
 
 function freshMeta(over: Partial<Meta> = {}): Meta {
   return migrateMeta({
-    coins: 0, perm: {}, hasPlayed: true, bestWave: 0, claimedMilestones: {}, tier: 1,
-    tierBest: {}, gems: 0, cards: [], cardBuys: 0, totalWaves: 0,
+    coins: 0, perm: {}, unlocked: {}, hasPlayed: true, bestWave: 0, claimedMilestones: {}, tier: 1,
+    tierBest: {}, gems: 0, cards: [], cardBuys: 0, cardSlots: 1, activeCards: [], totalWaves: 0,
     labs: {}, research: [], labSlots: 1, vials: 0, lastCheckIn: 0, ver: 0, ...over,
   });
 }
@@ -132,13 +133,35 @@ describe('permanent upgrades', () => {
     const buffed = computeStats(createState(1, freshMeta({ perm: { rangedDamage: 10 } }), false));
     expect(buffed.rangedDamage).toBeGreaterThan(base.rangedDamage);
   });
+  it('unlocks skills as GROUPS, sequentially by ascending cost', () => {
+    const meta = freshMeta({ coins: 1e9 });
+    // range starts locked (its group is not yet unlocked), so it can't be bought.
+    expect(isUnlocked(meta, 'range')).toBe(false);
+    expect(buyPerm(meta, 'range')).toBe(false);
+    // groups unlock cheapest-first: the next group is Gold (40), not Range — Range is out of sequence.
+    expect(nextUnlockGroup(meta)!.id).toBe('gold');
+    expect(unlockGroup(meta, 'range')).toBe(false);
+    // unlocking a group unlocks ALL its members at once for the single group price.
+    expect(unlockGroup(meta, 'gold')).toBe(true);
+    expect(isUnlocked(meta, 'cashBonus')).toBe(true);
+    expect(isUnlocked(meta, 'goldPerWave')).toBe(true);
+    // now Range (50) is next; unlocking it makes the skill buyable.
+    expect(nextUnlockGroup(meta)!.id).toBe('range');
+    expect(unlockGroup(meta, 'range')).toBe(true);
+    expect(buyPerm(meta, 'range')).toBe(true);
+    // a multi-skill group (Amp) maps both stats to one group; cost 0 starter groups are pre-unlocked.
+    expect(skillGroup('rendChance')!.id).toBe('amp');
+    expect(skillGroup('rendMult')!.id).toBe('amp');
+    expect(isUnlocked(freshMeta(), 'attackSpeed')).toBe(true);
+    expect(isUnlocked(freshMeta(), 'critChance')).toBe(true);
+  });
 });
 
 describe('labs scale stats', () => {
   it('a scale lab multiplies its target stat', () => {
     const base = computeStats(createState(1, freshMeta(), false));
-    const labbed = computeStats(createState(1, freshMeta({ labs: { dmgScale: 10 } }), false));
-    expect(labbed.rangedDamage).toBeCloseTo(base.rangedDamage * (1 + 0.04 * 10));
+    const labbed = computeStats(createState(1, freshMeta({ labs: { dmgLab: 10 } }), false));
+    expect(labbed.rangedDamage).toBeCloseTo(base.rangedDamage * (1 + 0.02 * 10)); // Damage Lab: +0.02/level
     expect(waveStrSafe()).toBe(true);
   });
 });
@@ -202,7 +225,8 @@ describe('arena scales with range', () => {
     const sim = new Sim(s);
     sim.step(1 / 30);
     const range = sim.s.hero.range;
-    expect(range).toBeGreaterThan(ARENA_H); // precondition: range now dwarfs the base arena's short side
+    // precondition: range is large enough that the arena must scale (range×4 > ARENA_W)
+    expect(range * 4).toBeGreaterThan(ARENA_W);
     // the box must strictly contain the range ring (diameter 2*range) so enemies still spawn outside it
     expect(sim.s.arena.w).toBeGreaterThan(2 * range);
     expect(sim.s.arena.h).toBeGreaterThan(2 * range);
@@ -222,7 +246,7 @@ describe('makeEnemy spawn box', () => {
       minY = Infinity,
       maxY = -Infinity;
     for (let i = 0; i < 800; i++) {
-      const e = makeEnemy(i + 1, 'melee', 'average', 1, rng, arena, cx, cy);
+      const e = makeEnemy(i + 1, 'melee', 1, rng, arena, cx, cy);
       minX = Math.min(minX, e.x);
       maxX = Math.max(maxX, e.x);
       minY = Math.min(minY, e.y);
@@ -240,11 +264,71 @@ describe('makeEnemy spawn box', () => {
     let minX = Infinity,
       maxX = -Infinity;
     for (let i = 0; i < 800; i++) {
-      const e = makeEnemy(i + 1, 'melee', 'average', 1, rng, arena);
+      const e = makeEnemy(i + 1, 'melee', 1, rng, arena);
       minX = Math.min(minX, e.x);
       maxX = Math.max(maxX, e.x);
     }
     expect(minX).toBeLessThan(40); // left edge ≈ 0 (− margin)
     expect(maxX).toBeGreaterThan(ARENA_W - 40); // right edge ≈ w (+ margin)
+  });
+});
+
+describe('curve-as-data (balance model)', () => {
+  it('evalCurve: linear with and without cap, and geometric', () => {
+    expect(evalCurve({ kind: 'linear', base: 1, per: 0.19 }, 100)).toBeCloseTo(20, 9);
+    expect(evalCurve({ kind: 'linear', base: 0, per: 0.001, cap: 1.2 }, 5000)).toBe(1.2); // capped
+    expect(evalCurve({ kind: 'linear', base: 0, per: 0.001, cap: 1.2 }, 100)).toBeCloseTo(0.1, 9);
+    expect(evalCurve({ kind: 'geom', mul: 1, ratio: 2 }, 0)).toBe(0); // 0 stars → 0
+    expect(evalCurve({ kind: 'geom', mul: 1, ratio: 2 }, 1)).toBe(1);
+    expect(evalCurve({ kind: 'geom', mul: 1, ratio: 2 }, 5)).toBe(16); // 2^(5-1)
+    expect(evalCurve({ kind: 'exp', base: 1, ratio: 1.05 }, 0)).toBe(1); // value(0)=base
+    expect(evalCurve({ kind: 'exp', base: 1, ratio: 1.05 }, 100)).toBeCloseTo(Math.pow(1.05, 100), 6);
+  });
+
+  it('value() reads its curve live — editing a curve flows through with no rebuild', () => {
+    const u = UP_BY_ID.attackSpeed;
+    const c = u.curve as { kind: 'linear'; base: number; per: number };
+    const origPer = c.per;
+    expect(u.value(10)).toBeCloseTo(1 + 10 * origPer, 9);
+    c.per = origPer * 2; // simulate a dashboard rebalance
+    expect(u.value(10)).toBeCloseTo(1 + 10 * origPer * 2, 9); // reflected immediately
+    c.per = origPer; // restore so later tests are unaffected
+    expect(u.value(10)).toBeCloseTo(1 + 10 * origPer, 9);
+  });
+});
+
+describe('knockback (force vs mass)', () => {
+  const hitRng = (): { next: () => number; state: number } => ({ next: () => 0, state: 0 }); // 0 < chance → always procs
+
+  it('pushes a light enemy back when force > mass (up to 5m × (1 − mass/force))', () => {
+    const s = createState(1, freshMeta(), false);
+    const e = makeEnemy(1, 'melee', 1, makeRng(1), s.arena, s.hero.x, s.hero.y);
+    e.x = s.hero.x + 100;
+    e.y = s.hero.y;
+    e.mass = 1;
+    s.enemies = [e];
+    const st = computeStats(s);
+    st.knockbackChance = 1;
+    st.knockbackForce = 2; // force 2 > mass 1 → push 5m·(1−1/2)=2.5m
+    const x0 = e.x;
+    applyHit(s, e, 1, st, hitRng());
+    expect(e.x - x0).toBeCloseTo(2.5 * PX_PER_METER, 3); // shoved away from the hero
+    expect(e.slowT).toBe(0); // not slowed
+  });
+
+  it('slows a heavy enemy instead of pushing when mass ≥ force (speed × force/mass)', () => {
+    const s = createState(1, freshMeta(), false);
+    const e = makeEnemy(2, 'melee', 1, makeRng(1), s.arena, s.hero.x, s.hero.y);
+    e.x = s.hero.x + 100;
+    e.mass = 2;
+    s.enemies = [e];
+    const st = computeStats(s);
+    st.knockbackChance = 1;
+    st.knockbackForce = 1; // force 1 < mass 2 → slow ×0.5, no push
+    const x0 = e.x;
+    applyHit(s, e, 1, st, hitRng());
+    expect(e.x).toBe(x0); // not pushed
+    expect(e.slow).toBeCloseTo(0.5, 6); // force/mass
+    expect(e.slowT).toBeGreaterThan(0);
   });
 });

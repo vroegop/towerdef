@@ -2,10 +2,12 @@
    so it replays identically during offline catch-up. Bullets carry the damage snapshotted
    at fire time and deal it ONLY on collision; they expire after a travel-distance budget. */
 import type { Enemy, Hero, Projectile, Rng, State, Stats } from '../types';
-import { MAX_REND, REND_DECAY } from './skills';
+import { MAX_REND, REND_DECAY, PX_PER_METER } from './skills';
 
-export const BULLET_SPEED = 520; // px/s — well above enemy speeds, so only lateral movers dodge
+export const BULLET_SPEED = 520; // px/s — well above enemy speeds, so only lateral movers slip past
 export const BULLET_R = 4;
+export const KNOCKBACK_MAX_M = 5; // a push can shove an enemy back at most this many metres
+export const KNOCKBACK_SLOW_DUR = 1.5; // seconds a too-heavy enemy stays slowed after a knockback proc
 
 // Spawn one bullet from the hero toward a target's CURRENT position (fire-and-forget).
 export function fireProjectile(state: State, hero: Hero, target: Enemy, stats: Stats, dmg: number | null, rng?: Rng): void {
@@ -45,19 +47,44 @@ function nearestNotHit(state: State, x: number, y: number, range: number, hitIds
   return best;
 }
 
-// Apply one hit's damage to an enemy, folding in Rend, Lifesteal, and ranged-enemy knockback.
+// Apply one hit's damage to an enemy, folding in Amp (rend), Lifesteal, Knockback, and the
+// ranged-enemy ram-bounce.
 export function applyHit(state: State, e: Enemy, baseDmg: number, stats: Stats, rng?: Rng): number {
   if (rng && stats && stats.rendChance && rng.next() < stats.rendChance) {
     e.rend = Math.min(MAX_REND, (e.rend || 0) + 1);
     e.rendT = REND_DECAY;
   }
-  const dealt = baseDmg * (1 + (e.rend || 0) * ((stats && stats.rendMult) || 0)) * (1 - (e.shielded || 0));
+  const dealt = baseDmg * (1 + (e.rend || 0) * ((stats && stats.rendMult) || 0));
   e.hp -= dealt;
   e.hitFlash = 0.12;
   e.hitDmg = Math.round(dealt);
   if (stats && stats.lifesteal && state.hero) state.hero.hp = Math.min(state.hero.hpMax, state.hero.hp + dealt * stats.lifesteal);
+  applyKnockback(state, e, stats, rng);
   if (e.behavior === 'bounce') e.kb = Math.max(e.kb, 0.25);
   return dealt;
+}
+
+// Knockback: on a chance proc, FORCE fights the enemy's MASS. force > mass → shove the enemy back
+// (up to KNOCKBACK_MAX_M metres, scaled by 1 − mass/force). Otherwise it's too heavy to move, so it
+// is slowed instead (speed × force/mass — e.g. mass = 2·force ⇒ ×0.5). No minimum: heavier = slower.
+function applyKnockback(state: State, e: Enemy, stats: Stats, rng?: Rng): void {
+  const force = (stats && stats.knockbackForce) || 0;
+  if (!rng || !stats || !stats.knockbackChance || force <= 0) return;
+  if (rng.next() >= stats.knockbackChance) return;
+  const mass = e.mass || 1;
+  if (force > mass) {
+    const pushM = KNOCKBACK_MAX_M * (1 - mass / force); // 0 at force=mass → 5m as force≫mass
+    const hx = state.hero ? state.hero.x : e.x,
+      hy = state.hero ? state.hero.y : e.y;
+    const dx = e.x - hx,
+      dy = e.y - hy,
+      d = Math.hypot(dx, dy) || 1;
+    e.x += (dx / d) * pushM * PX_PER_METER;
+    e.y += (dy / d) * pushM * PX_PER_METER;
+  } else {
+    e.slow = force / mass; // ≤1: the heavier the enemy, the slower it crawls
+    e.slowT = KNOCKBACK_SLOW_DUR;
+  }
 }
 
 function hitEnemy(state: State, p: Projectile): Enemy | null {

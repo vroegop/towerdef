@@ -9,3 +9,11 @@ dist/
 # test artifacts (baselines under tests/visual/__screenshots__ ARE committed)
 playwright-report/
 test-results/
+
+# agent / tooling scratch
+.claude/scheduled_tasks.lock
+.superpowers/
+docs/superpowers/
+
+# throwaway balance-research notes
+dev/tower-data/

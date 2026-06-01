@@ -10,31 +10,29 @@ export interface Rng {
 export type Shape = 'circle' | 'square' | 'triangle' | 'hexagon' | 'diamond' | 'pentagon';
 export type Behavior = 'stick' | 'bounce';
 
+// Bulk-buy quantity: a fixed count, or 'max' (buy as many as affordable up to the cap).
+export type BulkQty = number | 'max';
+
 export interface EnemyTypeDef {
   shape: Shape;
   behavior: Behavior;
+  color: string; // drawing colour (enemies have a single mode now; no strength tiers)
   hp: number;
   dmg: number;
   speed: number;
   range: number;
   r: number;
+  mass: number; // resists knockback: higher mass = less push / more slow
   splits?: number;
-  vamp?: number;
-  aura?: number;
-  auraR?: number;
-}
-
-export interface TierDef {
-  color: string;
-  stat: number;
-  reward: number;
+  coinValue: number; // coins paid on kill (relative to basic melee = 1), scaled by the wave coin-step
 }
 
 // ---- persistent meta (the between-runs save, separate from a run's State) ----
 export interface CardInstance {
   id: string;
-  stars: number;
+  stars: number; // here = the card's LEVEL (1..MAX_STARS); kept named `stars` for save compatibility
 }
+export type Rarity = 'common' | 'rare' | 'epic';
 export interface Research {
   id: string;
   cost: number;
@@ -43,6 +41,7 @@ export interface Research {
 export interface Meta {
   coins: number;
   perm: Record<string, number>;
+  unlocked: Record<string, boolean>; // which skills have been unlocked in the Workshop (gates buying)
   hasPlayed: boolean;
   bestWave: number;
   claimedMilestones: Record<string, boolean>;
@@ -51,6 +50,8 @@ export interface Meta {
   gems: number;
   cards: CardInstance[];
   cardBuys: number;
+  cardSlots: number;      // number of ACTIVE card slots (start 1; bought with gems)
+  activeCards: string[];  // card ids placed in slots (only these affect computeStats)
   totalWaves: number;
   labs: Record<string, number>;
   research: Research[];
@@ -78,9 +79,9 @@ export interface Hero {
 export interface Enemy {
   id: number;
   type: string;
-  tier: string;
   shape: Shape;
   behavior: Behavior;
+  color: string;
   r: number;
   x: number;
   y: number;
@@ -99,13 +100,13 @@ export interface Enemy {
   rend: number;
   rendT: number;
   splits: number;
-  vamp: number;
-  aura: number;
-  auraR: number;
-  shielded: number;
+  mass: number; // resists knockback
+  slow: number; // active slow multiplier (1 = none) from knockback on a too-heavy enemy
+  slowT: number; // seconds the slow remains
   bornWave: number;
   veteran: boolean;
   agedWaves: number;
+  heat: number; // landed-hit count; outgoing dmg is scaled by 1.04^heat (compounding heat-up)
 }
 export interface Projectile {
   id: number;
@@ -121,14 +122,13 @@ export interface Projectile {
   hitIds?: number[] | null;
   bounceRange?: number;
 }
-// Transient per-kill UI events the renderer consumes (gold/coin drops, dodge text).
+// Transient per-kill UI events the renderer consumes (gold/coin drops).
 export interface FxEvent {
   seq: number;
   x: number;
   y: number;
   gold?: number;
   coin?: number;
-  dodge?: number;
 }
 export interface Wave {
   n: number;
@@ -146,11 +146,20 @@ export interface Econ {
   kills: number;
   goldEarned: number;
   bonusCoins: number;
+  hitsTaken: number; // count of landed hits on the hero (instrumentation; also used by the dev dashboard)
 }
 export interface Run {
   levels: Record<string, number>;
   rapidT: number;
   rapidCheckCd: number;
+  // ---- active-card subsystem (per-run; reset each run) ----
+  // Per-ability cooldown/active timers, keyed by card id. cd = seconds until ready (>0 = on cooldown);
+  // active = seconds the effect is currently live (>0 = active).
+  actCd?: Record<string, number>;
+  actActive?: Record<string, number>;
+  secondWindUsed?: boolean; // Second Wind auto-revive fires once per run
+  invuln?: number;          // seconds the hero is invincible (Demon Mode / Second Wind shield)
+  dmgBoost?: number;        // transient outgoing-damage multiplier from active abilities (1 = none)
 }
 export interface State {
   seed: number;
@@ -187,21 +196,34 @@ export interface UpgradeCurve {
   base: number;
   grow: number;
   cost: (n: number) => number;
+  points?: [number, number][]; // present ⇒ cost is an exact sampled table (interpolated), not base·grow^n
 }
+// A balance curve expressed as DATA so it can be graphed, rebalanced, and exported without
+// touching code. `linear` (base + per·n, optionally capped) covers every upgrade; `geom`
+// (mul·ratio^(n-1)) covers the exponential cards. evalCurve() in skills.ts turns it into a number.
+export type Curve =
+  | { kind: 'linear'; base: number; per: number; cap?: number } // base + per·n (optionally capped)
+  | { kind: 'geom'; mul: number; ratio: number } // mul·ratio^(n-1) for n>0, else 0 (per-star cards)
+  | { kind: 'exp'; base: number; ratio: number; cap?: number } // base·ratio^n — value(0)=base, then compounds
+  | { kind: 'table'; points: [number, number][] }; // exact sampled [level,value] points, linear-interpolated
+
 export interface UpgradeDef {
   id: string;
   tab: string;
   icon: string;
   label: string;      // short label shown on tile
   name?: string;      // full name shown in detail modal (falls back to label)
-  tip?: string;       // one-sentence explanation shown in modal
+  tip?: string | ((up: UpgradeDef) => string); // derived at render time or static
   max: number;
   gated?: boolean;
-  value: (b: number) => number;
-  fmt: (b: number) => string;
+  curve: Curve;                 // the balance data; `value` is generated from it at module load
+  value: (b: number) => number; // (auto-generated) reads `curve` live, so edits flow through
+  fmt: (v: number) => string;   // formats a COMPUTED value (not a level), so a rebalance shows correctly
   gold: UpgradeCurve;
   coin: UpgradeCurve;
 }
+// An UpgradeDef before its `value` is generated from `curve` (the literal we write in skills.ts).
+export type UpgradeSpec = Omit<UpgradeDef, 'value'>;
 export interface TabDef {
   id: string;
   icon: string;
@@ -209,7 +231,11 @@ export interface TabDef {
 }
 export interface CardEffect {
   stat: string;
-  kind: 'flat' | 'mult';
+  // 'flat'  → value is ADDED to the stat (e.g. +0.05 crit chance)
+  // 'mult'  → value is the ABSOLUTE multiplier on the stat (e.g. ×1.50 damage)
+  // 'aura'/'mechanic'/'active' → not a plain stat; the value is surfaced in Stats under `stat`
+  //   for the sim/active subsystem to read (it does not directly scale a base stat number).
+  kind: 'flat' | 'mult' | 'aura' | 'mechanic' | 'active';
 }
 // The outcome of a card draw / star-up, returned to the HUD so it can play the matching reveal.
 export interface CardDrawResult {
@@ -223,11 +249,16 @@ export interface CardDef {
   name: string;
   art: string;
   tint: string;
+  rarity: Rarity;
   effects: CardEffect[];
-  value: (stars: number) => number;
+  curve: Curve;                     // balance data; `value` generated from it at module load
+  value: (stars: number) => number; // (auto-generated) reads `curve` live
   fmt: (v: number) => string;
   desc: (v: number) => string;
+  // Optional active-ability timing (Epics + a couple Rares). Durations in seconds.
+  active?: { cooldown?: number; duration?: number };
 }
+export type CardSpec = Omit<CardDef, 'value'>;
 export interface LabCurve {
   base: number;
   grow: number;
@@ -263,11 +294,14 @@ export interface Settings {
 export interface HudHandlers {
   settings?: Settings;
   onSaveSettings?: () => void;
-  onBuyRun?: (stat: string) => void;
-  onBuyPerm?: (id: string) => boolean;
+  onBuyRun?: (stat: string, qty?: BulkQty) => void;
+  onBuyPerm?: (id: string, qty?: BulkQty) => boolean;
+  onUnlockGroup?: (groupId: string) => boolean;
   onClaimMilestone?: (wave: number) => number;
   onSetTier?: (t: number) => boolean;
   onBuyCard?: () => CardDrawResult | null;
+  onBuyCardSlot?: () => boolean;
+  onSetActiveCard?: (slot: number, id: string | null) => boolean;
   onStartResearch?: (id: string) => boolean;
   onCancelResearch?: (id: string) => boolean;
   onRushResearch?: (id: string) => boolean;

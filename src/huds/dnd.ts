@@ -177,6 +177,15 @@ const CSS = `
 .hud.theme-dnd .perm .pcost { color: var(--crimson); background: rgba(154,106,26,.10); border-top-color: rgba(154,106,26,.22); }
 .hud.theme-dnd .perm .pcost.maxed { color: var(--ink-dim); background: rgba(42,26,8,.05); border-top-color: rgba(42,26,8,.08); }
 .hud.theme-dnd .perm:hover:not(:disabled):not(.cant) .pcost { background: rgba(154,106,26,.18); border-top-color: rgba(154,106,26,.35); }
+/* locked skill-group rows on parchment */
+.hud.theme-dnd .permgroup { background: var(--parch-lt); border-color: var(--rule); }
+.hud.theme-dnd .permgroup.next:hover { border-color: var(--gold-ink); }
+.hud.theme-dnd .permgroup .pg-ic { color: var(--ink-dim); }
+.hud.theme-dnd .permgroup.next .pg-ic { color: var(--gold-ink); }
+.hud.theme-dnd .permgroup .pg-tx b { color: var(--ink); }
+.hud.theme-dnd .permgroup .pg-tx span { color: var(--ink-dim); }
+.hud.theme-dnd .permgroup .pg-act { color: var(--crimson); }
+.hud.theme-dnd .permgroup.future .pg-act { color: var(--ink-dim); }
 /* in-run upgrade tiles — same card shape; ink colours replace the dark-theme defaults */
 .hud.theme-dnd .up .pname { font-family: 'Cinzel', serif; color: var(--ink-dim); }
 .hud.theme-dnd .up .phead { background: rgba(42,26,8,.10); border-bottom-color: rgba(42,26,8,.12); }
@@ -186,6 +195,10 @@ const CSS = `
 .hud.theme-dnd .up .pcost { color: var(--gold-ink); background: rgba(154,106,26,.10); border-top-color: rgba(154,106,26,.22); }
 .hud.theme-dnd .up:hover:not(:disabled):not(.cant) { border-color: var(--crimson); }
 .hud.theme-dnd .up:hover:not(:disabled):not(.cant) .pcost { background: rgba(154,42,26,.14); border-top-color: rgba(154,42,26,.28); }
+/* bulk-buy multiplier chip: an inked parchment tab matching the ledger (Cinzel, gold rule). */
+.hud.theme-dnd .bmult { background: var(--parch-dk); color: var(--accent); border-color: var(--rule);
+  font-family: 'Cinzel', serif; font-weight: 700; box-shadow: 0 1px 2px rgba(42,26,8,.18); }
+.hud.theme-dnd .bmult:hover { background: #ecdcb6; color: var(--ink); border-color: var(--accent); }
 .hud.theme-dnd .subtabs .subtab.on { color: var(--ink); border-color: var(--crimson); background: rgba(122,74,26,.14); }
 .hud.theme-dnd .subtabs .subtab .ic { color: var(--ink-dim); }
 
@@ -195,7 +208,44 @@ const CSS = `
 .hud.theme-dnd .card { background: #f3ead4; border: 1px solid var(--rule); border-radius: 6px 6px 10px 10px; box-shadow: 0 6px 14px rgba(0,0,0,.35); }
 .hud.theme-dnd .card.tier-gold { border-color: var(--gold-ink); box-shadow: 0 0 12px rgba(154,106,26,.3); }
 .hud.theme-dnd .card.tier-chroma { border-color: #8a3aaa; box-shadow: 0 0 14px rgba(138,58,170,.3); }
+.hud.theme-dnd .card.equipped { border-color: #6b8a3a; box-shadow: 0 6px 14px rgba(0,0,0,.35), 0 0 0 1px rgba(107,138,58,.55); }
 .hud.theme-dnd .card.locked { border: 2px dashed var(--rule); background: var(--parch-dk); }
+/* cards-tab sections + active strip themed to parchment */
+.hud.theme-dnd .cards-section-h { color: var(--ink-dim); }
+.hud.theme-dnd .cards-section-h .ac-count { color: var(--ink); }
+.hud.theme-dnd .activecards::-webkit-scrollbar-thumb { background: var(--rule); }
+.hud.theme-dnd .card.cardholder { border: 2px dashed var(--rule); background: var(--parch-dk); }
+.hud.theme-dnd .card.cardholder .card-img { box-shadow: none; color: var(--rule); }
+.hud.theme-dnd .card.cardholder .card-name { color: var(--ink-dim); }
+.hud.theme-dnd .holder-tip { color: var(--ink-dim); }
+.hud.theme-dnd .card.cardholder.buyslot .card-img { color: var(--gold-ink); }
+.hud.theme-dnd .card.cardholder.buyslot .buyslot-amt { color: var(--gold-ink); }
+.hud.theme-dnd .card.cardholder.buyslot:hover { border-color: var(--gold-ink); }
+.hud.theme-dnd .activecards .card { box-shadow: none; }
+
+/* ---- Labs: parchment-fit the slots, descriptions, actions and picker (base theme is dark) ---- */
+.hud.theme-dnd .labslot { background: var(--parch-lt); border: 1px solid var(--rule); }
+.hud.theme-dnd .labslot.running { border-color: var(--accent); box-shadow: inset 0 0 16px rgba(122,74,26,.10); }
+.hud.theme-dnd .labslot.empty:hover { border-color: var(--accent); }
+.hud.theme-dnd .labdesc { color: var(--ink-dim); }
+.hud.theme-dnd .labactions .labrem { color: var(--ink-dim); }
+.hud.theme-dnd .labactions .rushlab { border-color: var(--rule); color: var(--gold-ink); }
+.hud.theme-dnd .labactions .rushlab:hover:not(.cant) { border-color: var(--gold-ink); }
+.hud.theme-dnd .labactions .changelab { border-color: var(--rule); color: var(--ink-dim); }
+.hud.theme-dnd .labactions .changelab:hover { border-color: var(--accent); color: var(--ink); }
+.hud.theme-dnd .labpick-row { background: var(--parch-lt); border: 1px solid var(--rule); }
+.hud.theme-dnd .labpick-ic { color: var(--ink-dim); }
+.hud.theme-dnd .labpick-title b { color: var(--ink); }
+.hud.theme-dnd .labpick-title span { color: var(--ink-dim); }
+.hud.theme-dnd .labpick-info { border-color: var(--rule); color: var(--ink-dim); }
+.hud.theme-dnd .labpick-info:hover { border-color: var(--accent); color: var(--ink); }
+.hud.theme-dnd .labpick-start { background: rgba(154,106,26,.10); border-color: var(--rule); color: var(--gold-ink); }
+.hud.theme-dnd .labpick-start:hover:not(.cant) { border-color: var(--gold-ink); }
+.hud.theme-dnd .labpick-start.cant { color: var(--ink-dim); }
+.hud.theme-dnd .labpick-detail { border-top-color: var(--rule); color: var(--ink-dim); }
+/* glass tube reads fine on parchment; nudge its rim to a warmer bronze to match the wood cork */
+.hud.theme-dnd .vial .vtube { border-color: rgba(90,60,20,.55); }
+
 .hud.theme-dnd .card-img { box-shadow: inset 0 0 0 1px rgba(122,74,26,.25); }
 .hud.theme-dnd .card-band { opacity: .22; }
 .hud.theme-dnd .card-name { font-family: 'Cinzel', serif; color: var(--ink); text-shadow: none; }
@@ -243,11 +293,23 @@ const CSS = `
 .hud.theme-dnd .setrow { color: var(--ink); border-bottom: 1px dotted var(--rule); }
 .hud.theme-dnd .setrow .switch { background: var(--parch-dk); }
 .hud.theme-dnd .setrow.on .switch { background: #6a8a3a; }
-.hud.theme-dnd .ms { background: var(--parch-lt); border: 1px solid var(--rule); }
-.hud.theme-dnd .ms.can { border-color: #4a7a2a; }
-.hud.theme-dnd .ms .mw { color: var(--ink); font-family: 'Cinzel', serif; }
-.hud.theme-dnd .ms .mr { color: var(--gold-ink); }
-.hud.theme-dnd .ms button { background: #2f5a1a; border: 1px solid #4a7a2a; color: var(--parch-lt); }
+/* milestone trail on parchment: an inked spine, gilded to the furthest wave, a wax-seal "here" pin */
+.hud.theme-dnd .msrail::before { background: var(--rule); }
+.hud.theme-dnd .msrow.reached .msrail::before { background: linear-gradient(180deg, #d9a94a, var(--gold-ink)); }
+.hud.theme-dnd .msdot { background: var(--parch-dk); color: var(--ink-dim); box-shadow: inset 0 0 0 1px var(--rule); }
+.hud.theme-dnd .msrow.reached .msdot { background: linear-gradient(180deg, #e2bd66, var(--gold-ink)); color: #2a1a08; box-shadow: none; }
+.hud.theme-dnd .msrow.can .msdot { background: linear-gradient(180deg, #8aa64f, #5e7a3a); color: var(--parch-lt); box-shadow: 0 0 0 3px rgba(107,138,58,.3); }
+.hud.theme-dnd .mscard { border-bottom-color: rgba(122,74,26,.22); }
+.hud.theme-dnd .mn-info b { color: var(--ink); font-family: 'Cinzel', serif; }
+.hud.theme-dnd .msrow.locked .mn-info b { color: var(--ink-dim); }
+.hud.theme-dnd .mn-reward { color: var(--gold-ink); }
+.hud.theme-dnd .mn-reward.locked { color: var(--ink-dim); }
+.hud.theme-dnd .mn-done { color: #5e7a3a; }
+.hud.theme-dnd .mn-claim { background: rgba(107,138,58,.16); border-color: #6b8a3a; color: #4a6b2a; }
+.hud.theme-dnd .mn-claim:hover { background: rgba(107,138,58,.28); }
+.hud.theme-dnd .msnow .mspin { background: var(--crimson); color: var(--parch-lt); box-shadow: 0 0 0 3px rgba(154,42,26,.25); }
+.hud.theme-dnd .msnow .mn-info b { color: var(--crimson); }
+.hud.theme-dnd .msnow .mn-reward { color: var(--ink-dim); }
 .hud.theme-dnd .ghint { background: var(--parch-lt); border: 1px solid var(--accent); color: var(--ink); }
 .hud.theme-dnd .lk-tip, .hud.theme-dnd .tut-thought { background: #c9b285; color: var(--ink); border: 1px solid #7a5a2a; }
 .hud.theme-dnd .lk-tip:after, .hud.theme-dnd .tut-thought:after { border-top-color: #c9b285; }

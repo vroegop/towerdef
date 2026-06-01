@@ -14,6 +14,7 @@ export const WAVE = {
   strPerWave: 0.08, // +8% baseline strength per wave (the LINEAR term)
   expBase: 1.015, // gentle EXPONENTIAL term blended on top so a "wall" emerges at depth
   speedPerWave: 0.02,
+  coinStep: 10, // base coins/kill = ceil(wave / coinStep): +1 coin every this many waves
 };
 
 // First-run script: spawn a cluster on a fixed-radius ring so they converge together and a
@@ -51,7 +52,7 @@ export function coinMult(tier: number): number {
 // this out and the in-run stats panel previews it, so the preview can never drift from the reward.
 export function coinsForRun(state: State, tier: number): number {
   const e = state.econ;
-  return Math.max(1, Math.round((Math.floor(e.kills / 10) + (state.wave.maxWave || 0) + (e.bonusCoins || 0)) * coinMult(tier)));
+  return Math.max(1, Math.round(((state.wave.maxWave || 0) + (e.bonusCoins || 0)) * coinMult(tier)));
 }
 // Tier 1 is always open; tier N>1 needs TIER_UNLOCK_WAVE reached in the tier below.
 export function tierUnlocked(meta: Meta, tier: number): boolean {

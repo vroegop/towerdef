@@ -6,8 +6,8 @@ import type { EarnSummary, HudHandlers, Meta, Settings, State } from './types';
 import { DT, catchUp } from './sim/offline';
 import { Sim, tickDying } from './sim/core';
 import { createState } from './sim/state';
-import { migrateMeta, reconcileResearch, claimCheckIn, startResearch, cancelResearch, rushResearch, buyLabSlot, gameSpeed } from './sim/labs';
-import { buyRunUpgrade, buyPerm, claimMilestone, buyCard, FIRST_PERM_COST } from './sim/skills';
+import { migrateMeta, reconcileResearch, claimCheckIn, startResearch, cancelResearch, rushResearch, buyLabSlot, gameSpeed, LABS, MAX_SLOTS } from './sim/labs';
+import { buyRunUpgradeBulk, buyPermBulk, unlockGroup, claimMilestone, buyCard, buyCardSlot, setActiveCard, FIRST_PERM_COST } from './sim/skills';
 import { MAX_TIER, tierUnlocked, coinsForRun } from './sim/waves';
 import { makeEnemy } from './sim/enemies';
 import { BULLET_SPEED, BULLET_R } from './sim/projectiles';
@@ -50,6 +50,7 @@ function loadMeta(): Meta {
   const meta: Meta = {
     coins: m.coins || 0,
     perm: m.perm || {},
+    unlocked: m.unlocked || {}, // migrateMeta seeds the starter skills
     hasPlayed: !!m.hasPlayed,
     bestWave: m.bestWave || 0,
     claimedMilestones: m.claimedMilestones || {},
@@ -58,6 +59,8 @@ function loadMeta(): Meta {
     gems: m.gems || 0,
     cards: m.cards || [],
     cardBuys: m.cardBuys || 0,
+    cardSlots: m.cardSlots || 1,
+    activeCards: Array.isArray(m.activeCards) ? m.activeCards : [],
     totalWaves: m.totalWaves || 0,
     labs: m.labs || {},
     research: Array.isArray(m.research) ? m.research : [],
@@ -90,12 +93,20 @@ const renderer = Canvas2DRenderer(canvas, settings);
 const handlers: HudHandlers = {
   settings,
   onSaveSettings: saveSettings,
-  onBuyRun: (stat) => {
-    if (sim) buyRunUpgrade(sim.s, stat, sim.rng);
+  onBuyRun: (stat, qty = 1) => {
+    if (sim) buyRunUpgradeBulk(sim.s, stat, qty, sim.rng);
   },
-  onBuyPerm: (id) => {
-    const ok = buyPerm(meta, id);
+  onBuyPerm: (id, qty = 1) => {
+    const ok = buyPermBulk(meta, id, qty) > 0;
     if (ok) saveMeta();
+    return ok;
+  },
+  onUnlockGroup: (gid) => {
+    const ok = unlockGroup(meta, gid);
+    if (ok) {
+      saveMeta();
+      hud.refreshMenu(meta);
+    }
     return ok;
   },
   onClaimMilestone: (wave) => {
@@ -114,6 +125,16 @@ const handlers: HudHandlers = {
     const r = buyCard(meta);
     if (r) saveMeta();
     return r;
+  },
+  onBuyCardSlot: () => {
+    const ok = buyCardSlot(meta);
+    if (ok) saveMeta();
+    return ok;
+  },
+  onSetActiveCard: (slot: number, id: string | null) => {
+    const ok = setActiveCard(meta, slot, id);
+    if (ok) saveMeta();
+    return ok;
   },
   onStartResearch: (id) => {
     const ok = startResearch(meta, id, Date.now());
@@ -165,6 +186,16 @@ const handlers: HudHandlers = {
       hud.refreshMenu(meta);
     } else if (kind === 'vials') {
       meta.vials = 999999;
+      saveMeta();
+      hud.refreshMenu(meta);
+    } else if (kind === 'labs') {
+      // unlock everything lab-side: clear the wave-30 gate (tab + each lab), max every lab slot,
+      // complete each lab at max level, clear in-progress research.
+      meta.bestWave = Math.max(meta.bestWave || 0, 30);
+      meta.labs = meta.labs || {};
+      for (const L of LABS) meta.labs[L.id] = L.max;
+      meta.labSlots = MAX_SLOTS;
+      meta.research = [];
       saveMeta();
       hud.refreshMenu(meta);
     } else if (kind === 'lightning') {
@@ -248,7 +279,7 @@ function setupTestBullet(): void {
     hx = s.hero.x,
     hy = s.hero.y;
   s.atkMode = 'bullet';
-  const e = makeEnemy(s.nextId++, 'melee', 'average', Math.max(1, s.wave.n), sim.rng, s.arena);
+  const e = makeEnemy(s.nextId++, 'melee', Math.max(1, s.wave.n), sim.rng, s.arena);
   e.x = hx + 140;
   e.y = hy;
   e.hitFlash = 0;

@@ -1,24 +1,23 @@
-/* src/sim/registries.ts — the two data axes. Add a row here, the whole game adapts.
-   TYPES = shape + behavior + base numbers.  TIERS = color + strength/reward multiplier. */
-import type { EnemyTypeDef, TierDef } from '../types';
+/* src/sim/registries.ts — the enemy TYPE table. Add a row here and the whole game adapts.
+   Each type = shape + behavior + colour + base numbers + mass. Enemies have a single mode now
+   (no strength tiers); difficulty comes purely from the per-wave strength curve in waves.ts. */
+import type { EnemyTypeDef } from '../types';
 
-// Integer base stats to match the literal hero model. hp/dmg are multiplied by the
-// tier multiplier and wave growth, then rounded (min 1). A 1-damage hero one-shots a weak enemy.
+// Integer base stats to match the literal hero model. hp/dmg are multiplied by the per-wave
+// strength curve, then rounded (min 1). mass resists knockback (all start at 1).
+// Stats are RELATIVE to the basic "melee" enemy (hp 1, speed 46). Per the enemy spec the per-type
+// multipliers are baked straight into these base numbers so makeEnemy only applies the wave curve:
+//   fast  = 2× speed,            coin 2   (92 = 46×2)
+//   ranged= shoots from range,   coin 2
+//   tank  = 0.5× speed, 5× hp,   coin 4   (23 = 46×0.5, hp 5 = 1×5)
+//   boss  = 0.3× speed, 20× hp,  coin 5   (~14 ≈ 46×0.3, hp 20 = 1×20); spawns ~every 10 waves
+//   split = 2× hp,               coin 4   (halves 4 generations on death — see core._cleanup)
+//   melee = baseline,            coin 1
 export const TYPES: Record<string, EnemyTypeDef> = {
-  melee: { shape: 'square', behavior: 'stick', hp: 1, dmg: 1, speed: 46, range: 0, r: 11 },
-  ranged: { shape: 'triangle', behavior: 'bounce', hp: 1, dmg: 1, speed: 34, range: 150, r: 11 },
-  boss: { shape: 'hexagon', behavior: 'stick', hp: 10, dmg: 3, speed: 22, range: 0, r: 22 },
-  // ---- archetypes (Phase 5): distinct shapes + behaviours, each teaching a counter ----
-  fast: { shape: 'diamond', behavior: 'stick', hp: 0.4, dmg: 0.6, speed: 92, range: 0, r: 9 }, // swarm → attack speed / multishot
-  tank: { shape: 'square', behavior: 'stick', hp: 6, dmg: 1.6, speed: 24, range: 0, r: 17 }, // wall → raw damage / rend
-  splitter: { shape: 'pentagon', behavior: 'stick', hp: 1.2, dmg: 1, speed: 40, range: 0, r: 13, splits: 3 }, // → AoE; drops vials
-  vampire: { shape: 'pentagon', behavior: 'stick', hp: 2, dmg: 1.2, speed: 32, range: 0, r: 12, vamp: 0.5 }, // heals on hit; drops vials
-  protector: { shape: 'hexagon', behavior: 'stick', hp: 3, dmg: 1, speed: 26, range: 0, r: 14, aura: 0.5, auraR: 120 }, // shields nearby
-};
-
-export const TIERS: Record<string, TierDef> = {
-  weak: { color: '#3ddc84', stat: 1, reward: 1 }, // green
-  average: { color: '#4aa8ff', stat: 2, reward: 2 }, // blue
-  hard: { color: '#e64cff', stat: 4, reward: 4 }, // pink/purple
-  elite: { color: '#ffd24a', stat: 8, reward: 8 }, // gold
+  melee: { shape: 'square', behavior: 'stick', color: '#ff6b6b', hp: 1, dmg: 1, speed: 46, range: 0, r: 11, mass: 1, coinValue: 1 },
+  ranged: { shape: 'triangle', behavior: 'bounce', color: '#4aa8ff', hp: 1, dmg: 1, speed: 34, range: 150, r: 11, mass: 1, coinValue: 2 },
+  boss: { shape: 'hexagon', behavior: 'stick', color: '#e64cff', hp: 20, dmg: 3, speed: 14, range: 0, r: 22, mass: 1, coinValue: 5 },
+  fast: { shape: 'diamond', behavior: 'stick', color: '#37d7ff', hp: 1, dmg: 0.6, speed: 92, range: 0, r: 9, mass: 1, coinValue: 2 }, // swarm → attack speed / multishot
+  tank: { shape: 'square', behavior: 'stick', color: '#9aa7b3', hp: 5, dmg: 1.6, speed: 23, range: 0, r: 17, mass: 1, coinValue: 4 }, // wall → raw damage / amp
+  splitter: { shape: 'pentagon', behavior: 'stick', color: '#ff5db0', hp: 2, dmg: 1, speed: 40, range: 0, r: 13, mass: 1, splits: 4, coinValue: 4 }, // → AoE
 };
