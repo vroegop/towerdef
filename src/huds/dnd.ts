@@ -43,6 +43,8 @@ const CSS = `
 .hud.theme-dnd .sideitem .ic { color: var(--ink-dim); }
 .hud.theme-dnd .sideitem:hover { background: rgba(122,74,26,.12); }
 .hud.theme-dnd .sideitem:hover .ic { color: var(--ink); }
+.hud.theme-dnd .sideitem.danger .ic { color: var(--crimson); }
+.hud.theme-dnd .sideitem.danger:hover { background: rgba(154,42,26,.14); }
 .hud.theme-dnd .hpbar { background: rgba(42,26,8,.18); border: 1px solid var(--rule); }
 .hud.theme-dnd .hpbar i { background: #6a8a3a; }
 
@@ -206,6 +208,13 @@ const CSS = `
 .hud.theme-dnd .over-rewards .rew b { color: var(--crimson); }
 .hud.theme-dnd .exitrun { background: #7a1a10; color: var(--parch-lt); border-top: 1px solid #5a140c; }
 .hud.theme-dnd .exitrun:hover { background: #9a2a1a; color: #fff; }
+/* Run-Over "Back" + End-run "Keep playing" + confirm copy → parchment, not dark */
+.hud.theme-dnd .over-back,
+.hud.theme-dnd .endkeep { background: #c9b285; border-top: 2px solid #7a5a2a; color: var(--ink); font-family: 'Cinzel', serif; }
+.hud.theme-dnd .over-back:hover,
+.hud.theme-dnd .endkeep:hover { background: #d8c8a8; color: var(--ink); }
+.hud.theme-dnd .over-back .ic { color: var(--ink-dim); }
+.hud.theme-dnd .endbody { color: var(--ink-dim); }
 .hud.theme-dnd .setrow { color: var(--ink); border-bottom: 1px dotted var(--rule); }
 .hud.theme-dnd .setrow .switch { background: var(--parch-dk); }
 .hud.theme-dnd .setrow.on .switch { background: #6a8a3a; }

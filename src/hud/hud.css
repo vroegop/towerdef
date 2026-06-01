@@ -50,6 +50,12 @@
 .hud .exitrun { display: block; width: 100%; margin: 0; border: 0; border-top: 1px solid #5a2330; border-radius: 0; padding: 13px; font: inherit; font-weight: 700; cursor: pointer;
   background: #3a1620; color: #ff8a98; }
 .hud .exitrun:hover { background: #4d1c2a; color: #ffb3bd; }
+/* side-rail End-run X → centered confirm modal (reuses .setmodal shell + themed .exitrun button) */
+.hud .endbody { padding: 16px; color: #c7d0e0; font-size: 14px; line-height: 1.45; }
+.hud .endkeep { display: block; width: 100%; margin: 0; border: 0; border-top: 1px solid #2a3550; border-radius: 0; padding: 12px; font: inherit; font-weight: 700; background: #1a1f2e; color: #c7d0e0; cursor: pointer; }
+.hud .endkeep:hover { background: #232838; color: #fff; }
+.hud .sideitem.danger .ic { color: #ff6a78; }
+.hud .sideitem.danger:hover { background: rgba(255,46,78,.12); }
 .hud .strow { display: flex; justify-content: space-between; padding: 9px 2px; border-bottom: 1px solid #1f2740; }
 .hud .strow:last-child { border-bottom: 0; }
 .hud .strow span { color: #8b93a7; }

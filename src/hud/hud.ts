@@ -61,6 +61,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     fwd: '<path d="M9 5l7 7-7 7"/>',
     gear: '<circle cx="12" cy="12" r="3.2"/><path d="M19.4 13a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.7 8.6a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+    eye: '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/>',
   };
   function icon(name: string, size?: number, cls?: string): string {
     size = size || 16;
@@ -90,8 +91,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     // open (game interactions never auto-dismiss it). It is only as tall as its content, so it stays
     // unintrusive — each icon opens a self-dismissing modal instead of a big always-on panel.
     '<aside class="sidemenu" id="h-sidemenu">' +
-    '  <button class="sideitem" id="h-set" title="Settings">' + icon('gear', 20) + '</button>' +
+    // The cog only toggles on-screen visual indicators, so it's an EYE ("what you see"), not a gear.
+    '  <button class="sideitem" id="h-set" title="Display">' + icon('eye', 20) + '</button>' +
     '  <button class="sideitem" id="h-chart" title="Run Stats">' + icon('chart', 20) + '</button>' +
+    '  <button class="sideitem danger" id="h-rail-exit" title="End run">' + icon('close', 20) + '</button>' +
     '</aside>' +
     '<div class="wavebar" id="h-wavebar" title="Next wave"><i id="h-wavefill"></i></div>' +
     '<div class="statswrap hide" id="h-stats"><div class="statscard" id="h-statscard"></div></div>' +
@@ -104,6 +107,13 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     '  <div class="modal hide" id="h-modal"><div class="modal-inner" id="h-modal-inner"></div></div>' +
     '</div>' +
     '<div class="setmodal hide" id="h-setmodal"><div class="setmodal-inner" id="h-setmodal-inner"></div></div>' +
+    // End-run confirm (opened from the side-rail X). Reuses the centered setmodal shell + themed .exitrun.
+    '<div class="setmodal hide" id="h-endmodal"><div class="setmodal-inner">' +
+    '<div class="statshead"><h2>End run?</h2><button class="iconclose" id="h-end-close" title="Close">' + icon('close', 18) + '</button></div>' +
+    '<div class="endbody">Your cores are banked. This ends the current run and returns to the Workshop.</div>' +
+    '<button class="endkeep" id="h-end-cancel">Keep playing</button>' +
+    '<button class="exitrun" id="h-end-yes">' + icon('close', 16) + ' End run</button>' +
+    '</div></div>' +
     '<div class="over hide" id="h-over"><div class="over-card" id="h-over-card"></div></div>' +
     '<div class="tut-dim hide" id="h-spot"></div><div class="tut-thought hide" id="h-thought"></div>' +
     '<div class="lk-tip hide" id="h-lktip"></div>';
@@ -474,12 +484,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       '<div class="strow"><span>Coin multiplier</span><b id="st-mult">x1</b></div>' +
       '<div class="strow"><span>Total coins</span><b id="st-coins">0</b></div>' +
       '<div class="strow"><span>Coins this run (so far)</span><b id="st-run">0</b></div>' +
-      '</div><button class="exitrun" id="h-stats-exit">Exit run</button>';
+      '</div>'; // Run Stats is purely informational now; ending a run lives in the side-rail End-run X.
     $('#h-stats-close').addEventListener('click', () => $('#h-stats').classList.add('hide'));
-    $('#h-stats-exit').addEventListener('click', () => {
-      $('#h-stats').classList.add('hide');
-      handlers.onExitRun && handlers.onExitRun();
-    });
     if (lastS) refreshStats(lastS);
     $('#h-stats').classList.remove('hide');
   }
@@ -530,8 +536,9 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       }),
     );
   function openSettings(): void {
+    // "Display" = on-screen visual indicators only (the renderer reads these); no sim/persisted state.
     setmodalInner.innerHTML =
-      '<div class="statshead"><h2>Settings</h2><button class="iconclose" id="h-set-close" title="Close">' +
+      '<div class="statshead"><h2>Display</h2><button class="iconclose" id="h-set-close" title="Close">' +
       icon('close', 18) + '</button></div><div class="setbody">' + settingsRowsHtml() + '</div>';
     $('#h-set-close').addEventListener('click', () => setmodal.classList.add('hide'));
     wireSettingsRows(setmodalInner);
@@ -547,6 +554,20 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   const sidemenu = $('#h-sidemenu');
   $('#h-menu-btn').addEventListener('click', () => sidemenu.classList.toggle('open'));
   $('#h-set').addEventListener('click', openSettings);
+
+  // End-run X (side rail) → confirm modal → onExitRun (banks the run, shows the overview).
+  const endmodal = $('#h-endmodal');
+  const hideEnd = (): void => endmodal.classList.add('hide');
+  $('#h-rail-exit').addEventListener('click', () => endmodal.classList.remove('hide'));
+  $('#h-end-close').addEventListener('click', hideEnd);
+  $('#h-end-cancel').addEventListener('click', hideEnd);
+  $('#h-end-yes').addEventListener('click', () => {
+    hideEnd();
+    handlers.onExitRun && handlers.onExitRun();
+  });
+  endmodal.addEventListener('click', (e) => {
+    if (e.target === endmodal) hideEnd();
+  });
 
   // ---------- MENU ----------
   const menuEl = $('#h-menu'),

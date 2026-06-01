@@ -41,11 +41,11 @@ for (const hud of HUDS) {
       // Start a run then immediately exit it to reach the overview deterministically.
       await page.locator('#h-start').click();
       await page.waitForTimeout(300);
-      // open the side-menu rail, then the Run Stats panel, and use its Exit-run button (banks + shows overview)
+      // open the side-menu rail, then the End-run X → confirm modal (banks + shows overview)
       await page.locator('#h-menu-btn').click();
-      await page.locator('#h-chart').click();
-      await page.waitForSelector('#h-stats-exit', { state: 'visible' });
-      await page.locator('#h-stats-exit').click();
+      await page.locator('#h-rail-exit').click();
+      await page.waitForSelector('#h-end-yes', { state: 'visible' });
+      await page.locator('#h-end-yes').click(); // confirm: end the run
       await page.waitForSelector('#h-over:not(.hide) .over-card', { state: 'visible' });
       await page.waitForTimeout(200);
       await expect(page.locator('#h-over')).toHaveScreenshot(`${hud}-overview.png`);
