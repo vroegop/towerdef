@@ -307,11 +307,15 @@ export class Sim {
         continue;
       }
       if (e.behavior === 'bounce') {
+        // Ranged standoff is pinned to 80% of the hero's CURRENT range, so the hero always
+        // out-ranges ranged enemies (they advance into kill range instead of plinking from
+        // outside it). Tracks live range upgrades; ignores the per-type def.range baseline.
+        const eRange = h.range * 0.8;
         if (d < touch) {
           e.kb = 0.25;
           continue;
         } // hero rammed into it → bounce next ticks
-        if (d > e.range) {
+        if (d > eRange) {
           e.state = 'approach';
           e.x += (dx / d) * spd * dt;
           e.y += (dy / d) * spd * dt;
