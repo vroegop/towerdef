@@ -374,11 +374,15 @@
 .hud .menutabs .lk { font-size: 14px; }
 .hud .menutabs .ml { font-size: 11px; }
 
-/* ---- milestones modal ---- */
-.hud .modal { position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column;
+/* ---- milestones panel: an in-flow page that sits in the content region, NOT a fullscreen
+   overlay, so the bottom tab strip stays visible and clicking a tab returns to it ---- */
+.hud .menu-content { order: 1; }
+.hud .modal { order: 2; flex: 1; min-height: 0; display: flex; flex-direction: column;
   background: radial-gradient(900px 600px at 50% -10%, #141b2e 0%, #07090f 75%); }
+.hud .menutabs { order: 3; }
+.hud .menu.ms-open .menu-content { display: none; } /* panel takes over the content region */
 .hud .modal.hide { display: none; }
-.hud .modal-inner { flex: 1; overflow: auto; padding: 20px 18px 28px; }
+.hud .modal-inner { flex: 1; overflow: auto; padding: 22px 18px 16px; }
 .hud .modal-inner > * { max-width: 560px; margin-left: auto; margin-right: auto; }
 .hud .modal h2 { margin: 4px auto 4px; }
 .hud .modal .msnote { color: #8b93a7; font-size: 13px; margin: 0 auto 12px; }

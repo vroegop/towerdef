@@ -846,6 +846,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         if (lastMeta && t.unlockFn!(lastMeta)) {
           menuTab = t.id;
           modal.classList.add('hide');
+          menuEl.classList.remove('ms-open');
           renderMenu();
         } else showUnlockTip(b, t.unlock || 'Locked');
       });
@@ -854,6 +855,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       b.addEventListener('click', () => {
         menuTab = t.id;
         modal.classList.add('hide');
+        menuEl.classList.remove('ms-open');
         renderMenu();
       });
     }
@@ -1071,14 +1073,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       if (i === reachedCount - 1) rows += marker;
     });
     modalInner.innerHTML =
-      '<button class="close" id="h-ms-close">' + icon('back', 16) + ' Back</button><h2>Milestones</h2>' +
+      '<h2>Milestones</h2>' +
       '<p class="msnote">Tier ' + (meta.tier || 1) + ' · ' +
       (claimable > 0 ? claimable + ' reward' + (claimable > 1 ? 's' : '') + ' ready to claim.' : 'Reach further to unlock rewards.') + '</p>' +
       '<div class="mspath">' + rows + '</div>';
-    $('#h-ms-close').addEventListener('click', () => {
-      modal.classList.add('hide');
-      renderMenu();
-    });
     modalInner.querySelectorAll<HTMLElement>('[data-claim]').forEach((b) =>
       b.addEventListener('click', () => {
         if (handlers.onClaimMilestone && handlers.onClaimMilestone(+b.dataset.claim!)) renderMilestones();
@@ -1184,6 +1182,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       $('#h-ms').addEventListener('click', () => {
         renderMilestones();
         modal.classList.remove('hide');
+        menuEl.classList.add('ms-open');
         setSpotlight(false);
       });
       const tdn = $('#h-tier-down');
@@ -1320,6 +1319,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     lastMeta = meta;
     menuTab = 'hero';
     modal.classList.add('hide');
+    menuEl.classList.remove('ms-open');
     renderMenu();
     menuEl.classList.add('show');
     sidemenu.classList.remove('open'); // the side menu is in-game chrome — Settings lives there, not on the menu screen
