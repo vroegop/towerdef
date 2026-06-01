@@ -580,7 +580,7 @@ const CARD_SPECS: Record<string, CardSpec> = {
     effects: [{ stat: 'superTower', kind: 'active' }], active: { duration: 15, cooldown: 30 },
     curve: tbl([[1, 2.5], [3, 2.9], [5, 3.3], [7, 3.7], [9, 4.1], [11, 4.5], [13, 5.0], [15, 5.5]]),
     fmt: (v) => '×' + v.toFixed(1), desc: (v) => '×' + v.toFixed(1) + ' damage for 15s' },
-  waveAccelerator: { id: 'waveAccelerator', name: 'Wave Accelerator', art: 'rate', tint: '#ffae4a', rarity: 'epic',
+  waveAccelerator: { id: 'waveAccelerator', name: 'Accelerator', art: 'rate', tint: '#ffae4a', rarity: 'epic',
     effects: [{ stat: 'waveAccel', kind: 'mechanic' }],
     curve: tbl([[1, 0.30], [3, 0.34], [5, 0.38], [7, 0.42], [9, 0.46], [11, 0.50], [13, 0.54], [15, 0.58]]),
     fmt: (v) => '-' + (v * 100).toFixed(0) + '%', desc: (v) => '-' + (v * 100).toFixed(0) + '% wave cooldown' },
