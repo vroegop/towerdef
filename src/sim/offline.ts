@@ -27,6 +27,7 @@ export function catchUp(sim: Sim, elapsedSec: number, maxSec?: number): CatchUpR
     level: sim.s.econ.level,
   };
   const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now();
+  sim.refreshStats(); // stats are invariant across the replay batch — compute once, not per tick
   let ran = 0;
   for (let i = 0; i < ticks; i++) {
     if (!sim.s.alive) break;

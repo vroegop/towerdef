@@ -13,9 +13,10 @@ export default tseslint.config(
       globals: { ...globals.browser },
     },
     rules: {
-      // The sim/HUD code is deliberately dynamic in places; allow pragmatic escape hatches
-      // rather than fighting the type system on a freshly-migrated codebase.
-      '@typescript-eslint/no-explicit-any': 'off',
+      // `any` is banned in src — the migration's escape hatches have been removed, so this keeps
+      // new ones from creeping back in. Non-null assertions stay allowed for the main-loop `sim!`
+      // idiom (sim is provably set whenever the loop runs).
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       // The code leans on two idioms the default rule flags: short-circuit calls

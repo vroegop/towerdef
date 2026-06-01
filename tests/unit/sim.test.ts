@@ -8,15 +8,15 @@ import { Sim } from '../../src/sim/core';
 import { createState } from '../../src/sim/state';
 import { migrateMeta } from '../../src/sim/labs';
 import { buyPerm, permCost, computeStats, waveStrSafe } from './helpers';
-import { waveCount, waveStr, tierUnlocked, coreMult } from '../../src/sim/waves';
+import { waveCount, waveStr, tierUnlocked, coinMult } from '../../src/sim/waves';
 import { buyCard, buyCardCost, MAX_STARS, CARD_ORDER } from '../../src/sim/skills';
 import type { Meta } from '../../src/types';
 
 function freshMeta(over: Partial<Meta> = {}): Meta {
   return migrateMeta({
-    cores: 0, perm: {}, hasPlayed: true, bestWave: 0, claimedMilestones: {}, tier: 1, coreMult: 1,
-    tierBest: {}, tokens: 0, cards: [], cardBuys: 0, totalWaves: 0, waveTokensGranted: 0,
-    labs: {}, research: [], labSlots: 1, cells: 0, lastCheckIn: 0, ultimates: {}, ver: 0, ...over,
+    coins: 0, perm: {}, hasPlayed: true, bestWave: 0, claimedMilestones: {}, tier: 1,
+    tierBest: {}, gems: 0, cards: [], cardBuys: 0, totalWaves: 0,
+    labs: {}, research: [], labSlots: 1, vials: 0, lastCheckIn: 0, ver: 0, ...over,
   });
 }
 
@@ -111,20 +111,20 @@ describe('tiers', () => {
     expect(tierUnlocked(freshMeta(), 2)).toBe(false);
     expect(tierUnlocked(freshMeta({ tierBest: { 1: 300 } }), 2)).toBe(true);
   });
-  it('core multiplier grows +0.8x per tier', () => {
-    expect(coreMult(1)).toBeCloseTo(1);
-    expect(coreMult(2)).toBeCloseTo(1.8);
-    expect(coreMult(3)).toBeCloseTo(2.6);
+  it('coin multiplier grows +0.8x per tier', () => {
+    expect(coinMult(1)).toBeCloseTo(1);
+    expect(coinMult(2)).toBeCloseTo(1.8);
+    expect(coinMult(3)).toBeCloseTo(2.6);
   });
 });
 
 describe('permanent upgrades', () => {
-  it('buying deducts cores and raises the level; refuses when too poor', () => {
-    const meta = freshMeta({ cores: permCost(freshMeta(), 'attackSpeed') });
+  it('buying deducts coins and raises the level; refuses when too poor', () => {
+    const meta = freshMeta({ coins: permCost(freshMeta(), 'attackSpeed') });
     expect(buyPerm(meta, 'attackSpeed')).toBe(true);
     expect(meta.perm.attackSpeed).toBe(1);
-    expect(meta.cores).toBe(0);
-    expect(buyPerm(meta, 'attackSpeed')).toBe(false); // no cores left
+    expect(meta.coins).toBe(0);
+    expect(buyPerm(meta, 'attackSpeed')).toBe(false); // no coins left
   });
   it('permanent levels raise computed stats', () => {
     const base = computeStats(createState(1, freshMeta(), false));
@@ -147,7 +147,7 @@ describe('card draws (buyCard)', () => {
   // SINGLE candidate (max out every other card). The drawn card is then forced, no matter the roll.
   it('unlocks an un-owned card when it is the only non-maxed option', () => {
     const cards = CARD_ORDER.slice(1).map((id) => ({ id, stars: MAX_STARS }));
-    const meta = freshMeta({ cards, tokens: 999 });
+    const meta = freshMeta({ cards, gems: 999 });
     const r = buyCard(meta);
     expect(r).not.toBeNull();
     expect(r!.id).toBe(CARD_ORDER[0]);
@@ -159,7 +159,7 @@ describe('card draws (buyCard)', () => {
   it('adds a star to a card you already own when it is the only non-maxed option', () => {
     const cards = CARD_ORDER.map((id) => ({ id, stars: MAX_STARS }));
     cards[0] = { id: CARD_ORDER[0], stars: 3 };
-    const meta = freshMeta({ cards, tokens: 999 });
+    const meta = freshMeta({ cards, gems: 999 });
     const r = buyCard(meta);
     expect(r!.id).toBe(CARD_ORDER[0]);
     expect(r!.unlocked).toBe(false);
@@ -169,20 +169,20 @@ describe('card draws (buyCard)', () => {
 
   it('never draws a maxed card: returns null when every card is already maxed', () => {
     const cards = CARD_ORDER.map((id) => ({ id, stars: MAX_STARS }));
-    const meta = freshMeta({ cards, tokens: 999 });
+    const meta = freshMeta({ cards, gems: 999 });
     expect(buyCard(meta)).toBeNull();
   });
 
-  it('refuses to buy when tokens are insufficient', () => {
-    expect(buyCard(freshMeta({ cards: [], tokens: 0 }))).toBeNull();
+  it('refuses to buy when gems are insufficient', () => {
+    expect(buyCard(freshMeta({ cards: [], gems: 0 }))).toBeNull();
   });
 
   it('deducts the cost and counts the buy', () => {
     const cards = CARD_ORDER.slice(1).map((id) => ({ id, stars: MAX_STARS }));
-    const meta = freshMeta({ cards, tokens: 999, cardBuys: 0 });
+    const meta = freshMeta({ cards, gems: 999, cardBuys: 0 });
     const cost = buyCardCost(meta);
     buyCard(meta);
-    expect(meta.tokens).toBe(999 - cost);
+    expect(meta.gems).toBe(999 - cost);
     expect(meta.cardBuys).toBe(1);
   });
 });

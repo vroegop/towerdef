@@ -73,14 +73,14 @@ const CSS = `
 .hud.theme-dnd .menuproto { color: var(--accent); }
 .hud.theme-dnd .menuproto:hover { color: var(--ink); }
 
-/* chips / cores chip / earnings — framed ledger entries */
+/* chips / coins chip / earnings — framed ledger entries */
 .hud.theme-dnd .chip,
-.hud.theme-dnd .cores-chip,
+.hud.theme-dnd .coins-chip,
 .hud.theme-dnd .earncard {
   background: rgba(255,255,255,.32); border: 1px solid var(--rule); border-radius: 4px; color: var(--ink-dim);
 }
 .hud.theme-dnd .chip b { color: var(--ink); }
-.hud.theme-dnd .cores-chip b { color: var(--crimson); }
+.hud.theme-dnd .coins-chip b { color: var(--crimson); }
 .hud.theme-dnd .earncard .el { color: var(--ink-dim); font-family: 'Cinzel', serif; }
 .hud.theme-dnd .earncard .ev { color: var(--gold-ink); font-family: 'Cinzel', serif; }
 .hud.theme-dnd .earncard .ev span, .hud.theme-dnd .earncard .es { color: var(--ink-dim); }
@@ -101,7 +101,7 @@ const CSS = `
 }
 .hud.theme-dnd .msbtn:hover, .hud.theme-dnd .tiersel .tierstep:hover { border-color: var(--crimson); color: var(--ink); }
 .hud.theme-dnd .tiersel .tl-tier { color: var(--ink); }
-.hud.theme-dnd .tiersel .tl-core b { color: var(--gold-ink); }
+.hud.theme-dnd .tiersel .tl-coin b { color: var(--gold-ink); }
 .hud.theme-dnd .msbtn .badge { background: var(--crimson); color: var(--parch-lt); }
 
 /* the Start button: an embossed wax seal, not neon */
@@ -154,7 +154,7 @@ const CSS = `
 .hud.theme-dnd .lab .mbar i { background: linear-gradient(90deg, #7a4a1a, #b3331f); }
 .hud.theme-dnd .lab .rushlab { color: var(--accent); border: 1px solid var(--rule); }
 .hud.theme-dnd .lab .cancellab { color: var(--crimson); border: 1px solid var(--rule); }
-.hud.theme-dnd .cores-chip .slotchip { color: var(--ink-dim); }
+.hud.theme-dnd .coins-chip .slotchip { color: var(--ink-dim); }
 
 /* check-in proclamation */
 .hud.theme-dnd .checkin { background: var(--parch-lt); border: 1px solid var(--rule); color: var(--ink-dim); }

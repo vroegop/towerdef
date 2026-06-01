@@ -86,7 +86,7 @@ const CSS = `
 .hud.theme-arcade .setmodal-inner,
 .hud.theme-arcade .cardmodal-inner,
 .hud.theme-arcade .chip,
-.hud.theme-arcade .cores-chip,
+.hud.theme-arcade .coins-chip,
 .hud.theme-arcade .earncard,
 .hud.theme-arcade .msbtn,
 .hud.theme-arcade .tiersel .tierlabel,
@@ -110,12 +110,12 @@ const CSS = `
 }
 
 .hud.theme-arcade .chip,
-.hud.theme-arcade .cores-chip,
+.hud.theme-arcade .coins-chip,
 .hud.theme-arcade .earncard {
   background: var(--panel); border: 3px solid #fff; color: var(--dim); box-shadow: 3px 3px 0 #000;
 }
 .hud.theme-arcade .chip b { color: var(--ink); }
-.hud.theme-arcade .cores-chip b { color: var(--accent); }
+.hud.theme-arcade .coins-chip b { color: var(--accent); }
 .hud.theme-arcade .earncard .el { color: var(--dim); font-size: 8px; }
 .hud.theme-arcade .earncard .ev { color: var(--accent); }
 .hud.theme-arcade .earncard .ev span, .hud.theme-arcade .earncard .es { color: var(--dim); }
@@ -134,7 +134,7 @@ const CSS = `
 }
 .hud.theme-arcade .msbtn:hover, .hud.theme-arcade .tiersel .tierstep:hover { border-color: var(--accent); }
 .hud.theme-arcade .tiersel .tl-tier { color: var(--ink); }
-.hud.theme-arcade .tiersel .tl-core b { color: var(--accent); }
+.hud.theme-arcade .tiersel .tl-coin b { color: var(--accent); }
 .hud.theme-arcade .msbtn .badge { background: var(--teal); color: #002018; border-radius: 0; }
 
 /* INSERT COIN → PLAY: blinking neon start cabinet button */
@@ -187,7 +187,7 @@ const CSS = `
 .hud.theme-arcade .lab .mbar i { background: var(--teal); }
 .hud.theme-arcade .lab .rushlab { color: var(--teal); border: 2px solid var(--rule); border-radius: 0; }
 .hud.theme-arcade .lab .cancellab { color: var(--pink); border: 2px solid var(--rule); border-radius: 0; }
-.hud.theme-arcade .cores-chip .slotchip { color: var(--dim); }
+.hud.theme-arcade .coins-chip .slotchip { color: var(--dim); }
 
 /* check-in → INSERT COIN */
 .hud.theme-arcade .checkin { background: var(--panel-dk); border: 3px solid #fff; color: var(--dim); box-shadow: 3px 3px 0 #000; }

@@ -212,17 +212,6 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     ctx.fillStyle = fg;
     ctx.fillRect(0, 0, W, H);
 
-    for (const e of s.effects) {
-      if (e.kind !== 'blackhole') continue;
-      const g = ctx.createRadialGradient(tx(e.x || 0), ty(e.y || 0), 0, tx(e.x || 0), ty(e.y || 0), (e.r || 0) * scale);
-      g.addColorStop(0, 'rgba(230,76,255,.45)');
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(tx(e.x || 0), ty(e.y || 0), (e.r || 0) * scale, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
     for (const e of s.enemies) {
       const col = TIERS[e.tier].color;
       const ep = ipos(e.id, e.x, e.y),
@@ -253,6 +242,8 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
         drawHealthBar(ctx, esx, by, bw, bh, e.hp / e.hpMax);
       }
     }
+    // drop hit-flash memory for enemies that no longer exist, so `seen` can't grow over a run
+    for (const id of seen.keys()) if (!curPos.has(id)) seen.delete(id);
 
     ctx.fillStyle = '#ffffff';
     for (const p of s.projectiles) {
@@ -287,7 +278,7 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
         const fx = tx(f.x),
           fy = ty(f.y);
         if (cfg.goldOnKill && f.gold) spawnFloat(fx, fy, '+' + f.gold, '#ffd24a', 12);
-        if (cfg.coreOnKill && f.core) spawnFloat(fx, fy - 12, '+' + f.core, '#ff2e4e', 13);
+        if (cfg.coinOnKill && f.coin) spawnFloat(fx, fy - 12, '+' + f.coin, '#ff2e4e', 13);
         if (f.dodge) spawnFloat(fx, fy - 18, 'Dodge', '#5fd0ff', 13);
       }
       lastFxSeq = s.fxSeq;

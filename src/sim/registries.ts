@@ -11,8 +11,8 @@ export const TYPES: Record<string, EnemyTypeDef> = {
   // ---- archetypes (Phase 5): distinct shapes + behaviours, each teaching a counter ----
   fast: { shape: 'diamond', behavior: 'stick', hp: 0.4, dmg: 0.6, speed: 92, range: 0, r: 9 }, // swarm → attack speed / multishot
   tank: { shape: 'square', behavior: 'stick', hp: 6, dmg: 1.6, speed: 24, range: 0, r: 17 }, // wall → raw damage / rend
-  splitter: { shape: 'pentagon', behavior: 'stick', hp: 1.2, dmg: 1, speed: 40, range: 0, r: 13, splits: 3 }, // → AoE; drops cells
-  vampire: { shape: 'pentagon', behavior: 'stick', hp: 2, dmg: 1.2, speed: 32, range: 0, r: 12, vamp: 0.5 }, // heals on hit; drops cells
+  splitter: { shape: 'pentagon', behavior: 'stick', hp: 1.2, dmg: 1, speed: 40, range: 0, r: 13, splits: 3 }, // → AoE; drops vials
+  vampire: { shape: 'pentagon', behavior: 'stick', hp: 2, dmg: 1.2, speed: 32, range: 0, r: 12, vamp: 0.5 }, // heals on hit; drops vials
   protector: { shape: 'hexagon', behavior: 'stick', hp: 3, dmg: 1, speed: 26, range: 0, r: 14, aura: 0.5, auraR: 120 }, // shields nearby
 };
 

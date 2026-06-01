@@ -6,7 +6,6 @@ import { TIERS } from './registries';
 import { ageSurvivors, makeEnemy, pickTier, pickType } from './enemies';
 import { FIRST_RUN, COIN_DECAY_FACTOR, COIN_DECAY_WAVES, WAVE, waveCount } from './waves';
 import { applyHit, fireProjectile, tickProjectiles } from './projectiles';
-import { tickEffects } from './abilities';
 import { computeStats, PX_PER_METER, RAPID_CHECK, RAPID_MULT } from './skills';
 
 export class Sim {
@@ -31,8 +30,11 @@ export class Sim {
     return this.s;
   }
 
-  snapshot(): State {
-    return this.s;
+  // Recompute the cached stat sheet. Stats are a pure function of meta/run-levels/cards/labs —
+  // none of which change mid-batch — so callers refresh ONCE per frame (and after any buy) rather
+  // than paying for a full rebuild on every tick. The constructor seeds it; see step().
+  refreshStats(): void {
+    this.stats = computeStats(this.s);
   }
 
   step(dt: number): void {
@@ -40,12 +42,11 @@ export class Sim {
     s.tick++;
     s.t += dt;
     if (!s.alive) return;
-    this.stats = computeStats(s);
+    // NB: this.stats is refreshed once per frame by the caller (refreshStats), NOT per tick.
     this._waves(dt);
     this._hero(dt);
     this._enemies(dt);
     tickProjectiles(s, dt, this.stats, this.rng);
-    tickEffects(s, dt);
     this._cleanup();
   }
 
@@ -63,13 +64,13 @@ export class Sim {
       st = this.stats;
     w.n = n;
     w.maxWave = Math.max(w.maxWave, n);
-    // economic per-wave income (gold is immediate; cores are banked at run end)
-    if (st.coinsPerWave) {
-      const cw = Math.round(st.coinsPerWave * (st.cashMult || 1));
+    // economic per-wave income (gold is immediate; coins are banked at run end)
+    if (st.goldPerWave) {
+      const cw = Math.round(st.goldPerWave * (st.cashMult || 1));
       this.s.econ.gold += cw;
       this.s.econ.goldEarned += cw;
     }
-    if (st.coresPerWave) this.s.econ.bonusCores += st.coresPerWave;
+    if (st.coinsPerWave) this.s.econ.bonusCoins += st.coinsPerWave;
     // Interest: gain a capped fraction of banked cash each wave.
     if (st.interest) {
       const gain = Math.min(st.maxInterest || 0, Math.floor(this.s.econ.gold * st.interest));
@@ -328,12 +329,14 @@ export class Sim {
         s.econ.kills++;
         const tg = TIERS[e.tier];
         const decay = (e.agedWaves || 0) >= COIN_DECAY_WAVES ? COIN_DECAY_FACTOR : 1; // anti-kite
-        const g = Math.round(tg.reward * this.stats.goldFind * e.strMult * (s.rewardMult || 1) * (this.stats.cashMult || 1) * decay);
+        const g = Math.round(tg.reward * this.stats.goldFind * e.strMult * (this.stats.cashMult || 1) * decay);
         s.econ.gold += g;
         s.econ.goldEarned += g;
-        if (this.stats.coresPerKill) s.econ.bonusCores += this.stats.coresPerKill; // economic per-kill cores
+        if (this.stats.coinsPerKill) s.econ.bonusCoins += this.stats.coinsPerKill; // economic per-kill coins
         // Splitter: spawn weaker children on death (capped so a mass-death can't explode the arena).
-        if (e.splits > 0 && s.enemies.length + spawned.length < WAVE.screenCap) {
+        // Gate on the ALIVE count (keep), not s.enemies.length — the latter still includes the
+        // corpses being processed this tick, which would suppress splits before the real cap.
+        if (e.splits > 0 && keep.length + spawned.length < WAVE.screenCap) {
           for (let i = 0; i < e.splits; i++) {
             const c = makeEnemy(s.nextId++, 'melee', e.tier, e.bornWave, this.rng, s.arena);
             const a = this.rng.next() * Math.PI * 2;
@@ -350,8 +353,8 @@ export class Sim {
         }
         s.econ.xp += Math.round(2 * tg.reward * e.strMult * this.stats.xpGain);
         // UI-facing transient kill events (consumed by the renderer).
-        const core = s.econ.kills % 10 === 0 ? 1 : 0;
-        s.fx.push({ seq: ++s.fxSeq, x: e.x, y: e.y, gold: g, core });
+        const coin = s.econ.kills % 10 === 0 ? 1 : 0;
+        s.fx.push({ seq: ++s.fxSeq, x: e.x, y: e.y, gold: g, coin });
         if (s.fx.length > 32) s.fx.shift();
       } else keep.push(e);
     }

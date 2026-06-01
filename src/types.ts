@@ -41,25 +41,22 @@ export interface Research {
   endsAt: number;
 }
 export interface Meta {
-  cores: number;
+  coins: number;
   perm: Record<string, number>;
   hasPlayed: boolean;
   bestWave: number;
   claimedMilestones: Record<string, boolean>;
   tier: number;
-  coreMult: number;
   tierBest: Record<string, number>;
-  tokens: number;
+  gems: number;
   cards: CardInstance[];
   cardBuys: number;
   totalWaves: number;
-  waveTokensGranted: number;
   labs: Record<string, number>;
   research: Research[];
   labSlots: number;
-  cells: number;
+  vials: number;
   lastCheckIn: number;
-  ultimates: Record<string, number>;
   ver: number;
 }
 
@@ -74,8 +71,6 @@ export interface Hero {
   r: number;
   hp: number;
   hpMax: number;
-  shield: number;
-  shieldMax: number;
   sinceHit: number;
   atkCd: number;
   range: number;
@@ -89,8 +84,6 @@ export interface Enemy {
   r: number;
   x: number;
   y: number;
-  vx: number;
-  vy: number;
   facing: number;
   strMult: number;
   hpMax: number;
@@ -128,26 +121,13 @@ export interface Projectile {
   hitIds?: number[] | null;
   bounceRange?: number;
 }
-// Effects are polymorphic by `kind`; fields beyond the common ones are kind-specific.
-export interface Effect {
-  kind: string;
-  ttl: number;
-  x?: number;
-  y?: number;
-  r?: number;
-  pull?: number;
-  dps?: number;
-  dmg?: number;
-  fuse?: number;
-  rewardMult?: number;
-}
-// Transient per-kill UI events the renderer consumes (gold/core drops, dodge text).
+// Transient per-kill UI events the renderer consumes (gold/coin drops, dodge text).
 export interface FxEvent {
   seq: number;
   x: number;
   y: number;
   gold?: number;
-  core?: number;
+  coin?: number;
   dodge?: number;
 }
 export interface Wave {
@@ -165,7 +145,7 @@ export interface Econ {
   level: number;
   kills: number;
   goldEarned: number;
-  bonusCores: number;
+  bonusCoins: number;
 }
 export interface Run {
   levels: Record<string, number>;
@@ -186,10 +166,8 @@ export interface State {
   hero: Hero;
   enemies: Enemy[];
   projectiles: Projectile[];
-  effects: Effect[];
   fx: FxEvent[];
   fxSeq: number;
-  rewardMult: number;
   wave: Wave;
   econ: Econ;
   run: Run;
@@ -220,7 +198,7 @@ export interface UpgradeDef {
   value: (b: number) => number;
   fmt: (b: number) => string;
   gold: UpgradeCurve;
-  core: UpgradeCurve;
+  coin: UpgradeCurve;
 }
 export interface TabDef {
   id: string;
@@ -265,25 +243,18 @@ export interface LabDef {
   time: LabCurve;
   gate: { wave: number };
 }
-export interface AbilityDef {
-  cd: number;
-  mk: (x: number, y: number, L: number) => Effect;
-}
-
 // ---- HUD surface ----
 export interface EarnSummary {
-  cores?: number;
+  coins?: number;
   kills?: number;
   wave?: number;
-  tokens?: number;
-  cells?: number;
 }
 export interface MenuOpts {
   earn?: EarnSummary;
 }
 export interface Settings {
   goldOnKill: boolean;
-  coreOnKill: boolean;
+  coinOnKill: boolean;
   enemyHp: boolean;
   damageNumbers: boolean;
 }

@@ -2,7 +2,7 @@
    A wave starts every WAVE.interval seconds; its enemies spawn over the first spawnWindow
    seconds. screenCap limits CONCURRENT enemies, so a bigger wave only adds pressure when
    the arena isn't already full. Strength/speed baselines rise with wave number. */
-import type { Meta } from '../types';
+import type { Meta, State } from '../types';
 
 export const WAVE = {
   interval: 30, // seconds between wave starts
@@ -43,9 +43,15 @@ export const TIER_UNLOCK_WAVE = 300; // reach this wave in a tier to unlock the 
 export function tierDifficulty(tier: number): number {
   return Math.pow(2, (tier || 1) - 1);
 }
-// Core reward multiplier per tier: tier 1 is the 1x baseline; each higher tier adds +0.8x.
-export function coreMult(tier: number): number {
+// Coin reward multiplier per tier: tier 1 is the 1x baseline; each higher tier adds +0.8x.
+export function coinMult(tier: number): number {
   return 1 + 0.8 * ((tier || 1) - 1);
+}
+// Coins banked for a finished (non-first) run, floored at 1. SINGLE SOURCE OF TRUTH: bankRun pays
+// this out and the in-run stats panel previews it, so the preview can never drift from the reward.
+export function coinsForRun(state: State, tier: number): number {
+  const e = state.econ;
+  return Math.max(1, Math.round((Math.floor(e.kills / 10) + (state.wave.maxWave || 0) + (e.bonusCoins || 0)) * coinMult(tier)));
 }
 // Tier 1 is always open; tier N>1 needs TIER_UNLOCK_WAVE reached in the tier below.
 export function tierUnlocked(meta: Meta, tier: number): boolean {

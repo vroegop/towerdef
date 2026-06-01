@@ -31,9 +31,10 @@ export function createDevMenu(cfg: { handlers?: HudHandlers; hudHost?: HudHost }
       title: 'Cheats',
       rows: [
         { dev: 'reset', label: 'Reset progress' },
-        { dev: 'cores', label: 'Max Cores' },
+        { dev: 'coins', label: 'Max Coins' },
         { dev: 'gold', label: 'Max Gold' },
-        { dev: 'tokens', label: 'Max Tokens' },
+        { dev: 'gems', label: 'Max Gems' },
+        { dev: 'vials', label: 'Max Vials' },
       ],
     },
     {

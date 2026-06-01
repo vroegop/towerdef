@@ -2,7 +2,7 @@
    (5 bottom tabs), a spotlight tutorial, a milestones modal, and a settings modal.
    Handlers: onBuyRun, onBuyPerm, onClaimMilestone, onStartRun, onDev, onFF. */
 import type { CardDef, CardDrawResult, CardInstance, Hud as HudInstance, HudFactory, HudHandlers, MenuOpts, Meta, Settings, State, ThemeDef, EarnSummary, UpgradeDef } from '../types';
-import { WAVE, waveCount, tierDifficulty, coreMult, MAX_TIER, TIER_UNLOCK_WAVE, tierUnlocked } from '../sim/waves';
+import { WAVE, waveCount, tierDifficulty, coinMult, coinsForRun, MAX_TIER, TIER_UNLOCK_WAVE, tierUnlocked } from '../sim/waves';
 import {
   UPGRADES, UP_BY_ID, upgradesIn, economyUnlocked, boughtOf, permBought, runUpgradeCost, runAtMax, permCost, permAtMax,
   CARDS, CARD_INFO, MAX_STARS, CARD_ORDER, CARD_SLOTS, starSlot, buyCardCost, cardsUnlocked, MILESTONES, milestoneReward,
@@ -10,7 +10,7 @@ import {
 } from '../sim/skills';
 import {
   labsIn, LAB_CATS, labLevel, labUnlocked, labsTabUnlocked, labCoinCost, labTimeSec, labAtMax, researchOf, researchRemaining,
-  researchProgress, freeSlots, rushCellCost, labSlotCost, MAX_SLOTS, checkInPending, checkInNextMs, CHECKIN_CELLS, CHECKIN_TOKENS,
+  researchProgress, freeSlots, rushVialCost, labSlotCost, MAX_SLOTS, checkInPending, checkInNextMs, CHECKIN_VIALS, CHECKIN_GEMS,
 } from '../sim/labs';
 
 // The HUD is a single themeable core: identical structure + wiring for every theme, restyled
@@ -24,7 +24,6 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   const PATHS: Record<string, string> = {
     hero: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.9 3.1-6.6 7-6.6s7 2.7 7 6.6"/>',
     upgrades: '<path d="M12 19V9"/><path d="M7 13l5-5 5 5"/><path d="M7 5h10"/>',
-    cores: '<path d="M12 3l7 4v10l-7 4-7-4V7z"/><path d="M12 3v18"/><path d="M5 7l7 4 7-4"/>',
     best: '<path d="M7 4h10v4.5a5 5 0 0 1-10 0V4z"/><path d="M7 5.5H4.5V8a3 3 0 0 0 3 3"/><path d="M17 5.5h2.5V8a3 3 0 0 1-3 3"/><path d="M12 13.5V17"/><path d="M8.5 20h7l-1-3h-5z"/>',
     play: '<path d="M8 5l11 7-11 7z"/>',
     lock: '<rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
@@ -34,8 +33,14 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     chart: '<path d="M5 20V11"/><path d="M11 20V5"/><path d="M17 20v-7"/><path d="M3 20h18"/>',
     close: '<path d="M6 6l12 12M18 6L6 18"/>',
     cards: '<rect x="3" y="7" width="12" height="14" rx="1"/><path d="M8 7V5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2"/>',
-    token: '<path d="M12 2.5l2.5 6.5 6.5 2.5-6.5 2.5L12 20.5 9.5 14 3 11.5 9.5 9z"/>',
-    coin: '<circle cx="12" cy="12" r="9"/><path d="M14.5 9.2a3 3 0 0 0-2.5-1.2c-1.7 0-2.6 1-2.6 2 0 2.6 5.2 1.3 5.2 4 0 1.1-1 2-2.6 2a3 3 0 0 1-2.5-1.2M12 6.3v11.4"/>',
+    // gold = two solid coins (no star); a dark rim on the front coin separates the pair on dark UI
+    coin: '<circle cx="14.5" cy="9.5" r="6" fill="currentColor" stroke="none"/><circle cx="9.5" cy="14.5" r="6" fill="currentColor" stroke="rgba(8,10,16,.55)" stroke-width="1.5"/>',
+    // out-run coins = a coin with a star struck into it
+    coinstar: '<circle cx="12" cy="12" r="9"/><path transform="translate(12 12) scale(.42) translate(-11.8 -11.4)" fill="currentColor" stroke="none" d="M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6z"/>',
+    // gems = faceted brilliant-cut gem (card currency)
+    gem: '<path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/>',
+    // vials = test tube with a liquid line (lab currency)
+    vial: '<path d="M8.5 3h7"/><path d="M10 3v12.5a2 2 0 1 0 4 0V3"/><path d="M10 12h4"/>',
     burst: '<path d="M12 2v5M12 17v5M2 12h5M17 12h5M5.2 5.2l3.4 3.4M18.8 5.2l-3.4 3.4M5.2 18.8l3.4-3.4M18.8 18.8l-3.4-3.4"/>',
     bow: '<path d="M8 3a10 10 0 0 1 0 18"/><path d="M8 3v18"/><path d="M5 12h13"/><path d="M15 9l3 3-3 3"/><path d="M5 12l2.5-2M5 12l2.5 2"/>',
     bullseye: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.6"/>',
@@ -46,7 +51,6 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     powers: '<path d="M13 2L4 14h6l-1 8 9-12h-6z"/>',
     prestige: '<path d="M5 18h14"/><path d="M5 18l-1-9 4 3 4-7 4 7 4-3-1 9z"/>',
     flask: '<path d="M9 3h6"/><path d="M10 3v6L5 18a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3"/><path d="M7.5 14h9"/>',
-    cell: '<path d="M12 2l8 6v8l-8 6-8-6V8z"/><path d="M12 8v8M8 10v4M16 10v4"/>',
     tier: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
     sword: '<path d="M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2"/>',
     shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
@@ -68,7 +72,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       PATHS[name] + '</svg>'
     );
   }
-  const cores = (size?: number): string => icon('cores', size || 14, 'core');
+  const coinsIc = (size?: number): string => icon('coinstar', size || 14, 'coin');
 
   root.innerHTML =
     // Fixed header: game info on the left, a single menu toggle pinned right. No wrapping, so
@@ -153,13 +157,13 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
 
   const STARP = 'M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6z';
   const STAT_ICON: Record<string, string> = { rangedDamage: 'bow', attackSpeed: 'rate', health: 'heart', regen: 'regen',
-    critChance: 'crit', critDamage: 'burst', dodge: 'dodge', coins: 'coin',
+    critChance: 'crit', critDamage: 'burst', dodge: 'dodge', gold: 'coin',
     thorns: 'shield', msChance: 'bow', bounceChance: 'arrow', rendMult: 'burst', range: 'range', interest: 'coin' };
   const STAT_LABEL: Record<string, string> = { rangedDamage: 'Ranged', attackSpeed: 'Speed', health: 'Health', regen: 'Regen',
-    critChance: 'Crit', critDamage: 'Crit Dmg', dodge: 'Dodge', coins: 'Coins',
+    critChance: 'Crit', critDamage: 'Crit Dmg', dodge: 'Dodge', gold: 'Gold',
     thorns: 'Thorns', msChance: 'Multishot', bounceChance: 'Bounce', rendMult: 'Rend', range: 'Range', interest: 'Interest' };
   // currencies shown on the Hero screen
-  const CURRENCIES = [{ key: 'cores', icon: 'cores', cls: 'core' }, { key: 'tokens', icon: 'token', cls: 'token' }, { key: 'cells', icon: 'cell', cls: 'cell' }];
+  const CURRENCIES: { key: 'coins' | 'gems' | 'vials'; icon: string; cls: string }[] = [{ key: 'coins', icon: 'coinstar', cls: 'coin' }, { key: 'gems', icon: 'gem', cls: 'gem' }, { key: 'vials', icon: 'vial', cls: 'vial' }];
   function starSvg(kind: string): string {
     const fill = kind === 'white' ? '#eef2f8' : kind === 'gold' ? '#ffd24a' : 'url(#chroma)';
     return '<svg class="star ' + kind + '" width="16" height="16" viewBox="0 0 24 24"><path fill="' + fill + '" stroke="rgba(0,0,0,.3)" stroke-width="1" d="' + STARP + '"/></svg>';
@@ -382,6 +386,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   renderTabContent();
 
   let lastS: State | null = null;
+  // top-bar elements are static chrome (built once); cache them instead of re-querying every frame
+  let uel: Record<string, HTMLElement> | null = null;
   function shake(el: Element | null): void {
     if (!el) return;
     el.classList.remove('shake');
@@ -390,23 +396,28 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   }
   function update(s: State): void {
     lastS = s;
-    $('#h-wave').textContent = String(s.wave.n);
-    $('#h-hp').textContent = abbr(Math.ceil(s.hero.hp)) + '/' + abbr(Math.ceil(s.hero.hpMax));
-    $('#h-gold').textContent = abbr(s.econ.gold);
+    if (!uel)
+      uel = {
+        wave: $('#h-wave'), hp: $('#h-hp'), gold: $('#h-gold'), hpclip: $('#h-hpclip'), hptrail: $('#h-hptrail'),
+        hpstat: $('.stat.hp'), wavebar: $('#h-wavebar'), wavefill: $('#h-wavefill'), tabbar: $('#h-tabbar'), stats: $('#h-stats'),
+      };
+    uel.wave.textContent = String(s.wave.n);
+    uel.hp.textContent = abbr(Math.ceil(s.hero.hp)) + '/' + abbr(Math.ceil(s.hero.hpMax));
+    uel.gold.textContent = abbr(s.econ.gold);
     // HP bar: a red→green gradient revealed by clipping to the current fraction (mirrors the enemy
     // bars), with a translucent "damage trail" that drains a beat behind each hit and a low-HP danger
     // pulse. The value lives inside the bar.
     const hpf = s.hero.hpMax > 0 ? Math.max(0, Math.min(1, s.hero.hp / s.hero.hpMax)) : 0;
     const hpPct = hpf * 100 + '%';
-    $('#h-hpclip').style.width = hpPct;
-    $('#h-hptrail').style.width = hpPct;
-    $<HTMLElement>('.stat.hp').classList.toggle('low', hpf > 0 && hpf <= 0.3);
-    const wbar = $('#h-wavebar');
+    uel.hpclip.style.width = hpPct;
+    uel.hptrail.style.width = hpPct;
+    uel.hpstat.classList.toggle('low', hpf > 0 && hpf <= 0.3);
+    const wbar = uel.wavebar;
     if (s.firstRun) wbar.style.display = 'none';
     else {
       const effInt = WAVE.interval - (UP_BY_ID.waveCut ? UP_BY_ID.waveCut.value(boughtOf(s, 'waveCut')) : 0);
       wbar.style.display = '';
-      $('#h-wavefill').style.height = Math.max(0, Math.min(1, s.wave.clock / effInt)) * 100 + '%';
+      uel.wavefill.style.height = Math.max(0, Math.min(1, s.wave.clock / effInt)) * 100 + '%';
     }
     if (!taughtTabs && !s.firstRun && !tabOpen) {
       let min = Infinity;
@@ -414,7 +425,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         if ((u.gated && !economyUnlocked(s.meta)) || runAtMax(s, u.id)) continue;
         min = Math.min(min, runUpgradeCost(s, u.id));
       }
-      $('#h-tabbar').classList.toggle('pulse', s.econ.gold >= min);
+      uel.tabbar.classList.toggle('pulse', s.econ.gold >= min);
     }
     if (tabOpen) {
       for (const u of upgradesIn(activeTab)) {
@@ -434,7 +445,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         }
       }
     }
-    if (!$('#h-stats').classList.contains('hide')) refreshStats(s);
+    if (!uel.stats.classList.contains('hide')) refreshStats(s);
   }
 
   // ---------- in-game stats panel (chart button) ----------
@@ -445,18 +456,16 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   function refreshStats(s: State): void {
     const m = boundMeta || ({} as Meta),
       tier = m.tier || 1;
-    const coresRun = s.firstRun
-      ? FIRST_PERM_COST
-      : Math.max(1, Math.round((Math.floor(s.econ.kills / 10) + (s.wave.maxWave || 0) + (s.econ.bonusCores || 0)) * coreMult(tier)));
+    const coinsRun = s.firstRun ? FIRST_PERM_COST : coinsForRun(s, tier);
     const set = (id: string, v: string): void => {
       const e = $('#st-' + id);
       if (e) e.textContent = v;
     };
     set('kills', fmt(s.econ.kills));
     set('foes', fmt(waveCount(s.wave.n * (s.difficultyMult || 1))));
-    set('mult', 'x' + coreMult(tier).toFixed(1));
-    set('cores', fmt(m.cores || 0));
-    set('run', fmt(coresRun));
+    set('mult', 'x' + coinMult(tier).toFixed(1));
+    set('coins', fmt(m.coins || 0));
+    set('run', fmt(coinsRun));
   }
   function openStats(): void {
     $('#h-statscard').innerHTML =
@@ -464,9 +473,9 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       '<div class="statsbody">' +
       '<div class="strow"><span>Kills</span><b id="st-kills">0</b></div>' +
       '<div class="strow"><span>Foes per wave</span><b id="st-foes">0</b></div>' +
-      '<div class="strow"><span>Core multiplier</span><b id="st-mult">x1</b></div>' +
-      '<div class="strow"><span>Total cores</span><b id="st-cores">0</b></div>' +
-      '<div class="strow"><span>Cores this run (so far)</span><b id="st-run">0</b></div>' +
+      '<div class="strow"><span>Coin multiplier</span><b id="st-mult">x1</b></div>' +
+      '<div class="strow"><span>Total coins</span><b id="st-coins">0</b></div>' +
+      '<div class="strow"><span>Coins this run (so far)</span><b id="st-run">0</b></div>' +
       '</div><button class="exitrun" id="h-stats-exit">Exit run</button>';
     $('#h-stats-close').addEventListener('click', () => $('#h-stats').classList.add('hide'));
     $('#h-stats-exit').addEventListener('click', () => {
@@ -498,7 +507,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   const settings: Partial<Settings> = handlers.settings || {};
   const SETTINGS_DEF: { key: keyof Settings; label: string; icon: string; cls?: string }[] = [
     { key: 'goldOnKill', label: 'Gold on kill', icon: 'coin', cls: 'gold' },
-    { key: 'coreOnKill', label: 'Cores on kill', icon: 'cores', cls: 'core' },
+    { key: 'coinOnKill', label: 'Coins on kill', icon: 'coinstar', cls: 'coin' },
     { key: 'enemyHp', label: 'Enemy health bars', icon: 'heart', cls: 'hp' },
     { key: 'damageNumbers', label: 'Damage numbers', icon: 'burst' },
   ];
@@ -669,10 +678,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       const cur = up.fmt(bought);
       const maxed = permAtMax(meta, up.id);
       const cost = permCost(meta, up.id),
-        afford = (meta.cores || 0) >= cost;
+        afford = (meta.coins || 0) >= cost;
       const isTut = tutoring && menuUpTab === 'attack' && i === 0 && bought === 0;
       html += '<button class="perm' + (isTut ? ' tut' : '') + (afford && !maxed ? '' : ' cant') + '" data-perm="' + up.id + '"' + (maxed ? ' disabled' : '') + '>' +
-        '<span class="phead">' + icon(up.icon, 18) + '<span class="pcost">' + (maxed ? 'MAX' : cost + ' ' + cores(12)) + '</span></span>' +
+        '<span class="phead">' + icon(up.icon, 18) + '<span class="pcost">' + (maxed ? 'MAX' : cost + ' ' + coinsIc(12)) + '</span></span>' +
         '<span class="pname">' + up.label + '</span>' +
         '<span class="pcur">' + cur + '</span></button>';
     });
@@ -710,10 +719,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       if (researching) {
         const prog = researchProgress(meta, L.id, now),
           rem = researchRemaining(meta, L.id, now);
-        const rc = rushCellCost(meta, L.id, now),
-          canRush = (meta.cells || 0) >= rc;
+        const rc = rushVialCost(meta, L.id, now),
+          canRush = (meta.vials || 0) >= rc;
         right = '<span class="labprog"><span class="mbar"><i style="width:' + (prog * 100).toFixed(1) + '%"></i></span>' +
-          '<button class="rushlab' + (canRush ? '' : ' cant') + '" data-rushlab="' + L.id + '" title="Rush with cells">' + rc + ' ' + icon('cell', 11, 'cell') + '</button>' +
+          '<button class="rushlab' + (canRush ? '' : ' cant') + '" data-rushlab="' + L.id + '" title="Rush with vials">' + rc + ' ' + icon('vial', 11, 'vial') + '</button>' +
           '<button class="cancellab" data-cancellab="' + L.id + '">' + fmtTime(rem) + ' ' + icon('close', 11) + '</button></span>';
       } else if (!unlocked) {
         right = '<span class="pcost">' + icon('lock', 12) + ' wave ' + L.gate.wave + '</span>';
@@ -722,8 +731,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       } else {
         const cost = labCoinCost(meta, L.id),
           t = labTimeSec(meta, L.id);
-        const can = (meta.cores || 0) >= cost && freeSlots(meta) > 0;
-        right = '<button class="reslab' + (can ? '' : ' cant') + '" data-startlab="' + L.id + '">' + cost + ' ' + cores(12) + ' · ' + fmtTime(t) + '</button>';
+        const can = (meta.coins || 0) >= cost && freeSlots(meta) > 0;
+        right = '<button class="reslab' + (can ? '' : ' cant') + '" data-startlab="' + L.id + '">' + cost + ' ' + coinsIc(12) + ' · ' + fmtTime(t) + '</button>';
       }
       h += '<div class="lab' + (researching ? ' active' : '') + (unlocked ? '' : ' locked') + '">' +
         '<span class="ptop">' + icon(LAB_CAT_ICON[L.cat], 18) + '<span class="pname">' + L.label + '</span>' +
@@ -739,7 +748,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       best = meta.bestWave || 0;
     let html = '<button class="close" id="h-ms-close">' + icon('back', 16) + ' Back</button><h2>Milestones</h2>' +
       '<p class="msnote">Rewards for the furthest wave reached in Tier ' + (meta.tier || 1) + '.</p>' +
-      '<div class="cores-chip">' + cores(15) + ' <b>' + (meta.cores || 0) + '</b></div>';
+      '<div class="coins-chip">' + coinsIc(15) + ' <b>' + (meta.coins || 0) + '</b></div>';
     for (const w of MILESTONES) {
       const reward = milestoneReward(w),
         claimed = !!cl[w],
@@ -751,7 +760,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
           ? '<button data-claim="' + w + '">Claim</button>'
           : '<span class="tag">' + icon('lock', 16) + '</span>';
       html += '<div class="' + cls + '"><span class="mw">Wave ' + w.toLocaleString() + '</span>' +
-        '<span class="mr">+' + reward.toLocaleString() + ' ' + cores(13) + '</span>' + right + '</div>';
+        '<span class="mr">+' + reward.toLocaleString() + ' ' + coinsIc(13) + '</span>' + right + '</div>';
     }
     modalInner.innerHTML = html;
     $('#h-ms-close').addEventListener('click', () => {
@@ -791,14 +800,14 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     if (menuTab === 'hero') {
       if (opts.earn)
         html += '<div class="earncard"><div class="el">Last run</div>' +
-          '<div class="ev">+' + opts.earn.cores + ' ' + cores(16) + '</div>' +
+          '<div class="ev">+' + opts.earn.coins + ' ' + coinsIc(16) + '</div>' +
           '<div class="es">' + opts.earn.kills + ' kills / wave ' + opts.earn.wave + '</div></div>';
-      const curChips = CURRENCIES.map((c) => '<span class="chip">' + icon(c.icon, 13, c.cls) + ' <b>' + ((meta as any)[c.key] || 0) + '</b></span>').join('');
+      const curChips = CURRENCIES.map((c) => '<span class="chip">' + icon(c.icon, 13, c.cls) + ' <b>' + (meta[c.key] || 0) + '</b></span>').join('');
       html += '<div class="chips">' + curChips + '<span class="chip">' + icon('best', 13) + ' <b>wave ' + (meta.bestWave || 0) + '</b></span></div>';
       const pend = checkInPending(meta, Date.now());
       if (pend > 0) {
-        html += '<button class="checkin ready" id="h-checkin">' + icon('cell', 14, 'cell') + ' Check In  +' + pend * CHECKIN_CELLS +
-          ' ' + icon('cell', 12, 'cell') + '  +' + pend * CHECKIN_TOKENS + ' ' + icon('token', 12, 'token') + '</button>';
+        html += '<button class="checkin ready" id="h-checkin">' + icon('vial', 14, 'vial') + ' Check In  +' + pend * CHECKIN_VIALS +
+          ' ' + icon('vial', 12, 'vial') + '  +' + pend * CHECKIN_GEMS + ' ' + icon('gem', 12, 'gem') + '</button>';
       } else {
         html += '<button class="checkin" id="h-checkin" disabled>Next reward in ' + mmss(checkInNextMs(meta, Date.now())) + '</button>';
       }
@@ -810,12 +819,12 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       html += '<div class="tiersel">' +
         '<button class="tierstep' + (tier > 1 ? '' : ' invisible') + '" id="h-tier-down"' + (tier > 1 ? '' : ' disabled') + '>' + icon('back', 18) + '</button>' +
         '<span class="tierlabel"><span class="tl-tier">' + icon('tier', 14) + ' Tier ' + tier + '</span>' +
-        '<span class="tl-core">' + cores(12) + ' <b>x' + coreMult(tier).toFixed(1) + '</b></span></span>' +
+        '<span class="tl-coin">' + coinsIc(12) + ' <b>x' + coinMult(tier).toFixed(1) + '</b></span></span>' +
         '<button class="tierstep' + (canUp ? '' : ' locked') + '" id="h-tier-up">' + icon('fwd', 18) + '</button>' +
         '</div>';
       html += '<button class="startsq" id="h-start">' + icon('play', 35, 'green') + '</button>';
     } else if (menuTab === 'upgrades') {
-      html += '<div class="cores-chip">' + cores(15) + ' <b>' + (meta.cores || 0) + '</b></div>';
+      html += '<div class="coins-chip">' + coinsIc(15) + ' <b>' + (meta.coins || 0) + '</b></div>';
       const ecoOk = economyUnlocked(meta);
       html += '<div class="subtabs" id="h-uptabs">';
       for (const t of TAB_DEFS) {
@@ -841,29 +850,28 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
           const c = owned.find((x) => x.id === id);
           return c && (c.stars || 0) >= MAX_STARS;
         });
-        html += '<div class="cores-chip token-chip">' + icon('token', 15, 'token') + ' <b>' + (meta.tokens || 0) + '</b></div>';
+        html += '<div class="coins-chip gem-chip">' + icon('gem', 15, 'gem') + ' <b>' + (meta.gems || 0) + '</b></div>';
         html += '<div class="cardbtns">' +
-          '<button class="cardbtn draw' + ((meta.tokens || 0) < bc || allMaxed ? ' cant' : '') + '" id="h-buycard"' + (allMaxed ? ' disabled' : '') + '>' +
+          '<button class="cardbtn draw' + ((meta.gems || 0) < bc || allMaxed ? ' cant' : '') + '" id="h-buycard"' + (allMaxed ? ' disabled' : '') + '>' +
           '<span class="cb-ic">' + icon('cards', 26) + '</span>' +
           '<span class="cb-tx"><span class="cb-t">Draw Card</span><span class="cb-s">' + (allMaxed ? 'Every card maxed!' : 'New card, or +1 star on one you own') + '</span></span>' +
-          '<span class="cb-cost">' + bc + ' ' + icon('token', 13, 'token') + '</span></button>' +
+          '<span class="cb-cost">' + bc + ' ' + icon('gem', 13, 'gem') + '</span></button>' +
           '</div>';
         html += '<div class="cardgrid">' + cardGridHtml(meta) + '</div>';
       }
     } else if (menuTab === 'labs') {
       const used = (meta.research || []).length,
         slots = meta.labSlots || 1;
-      html += '<div class="cores-chip">' + cores(15) + ' <b>' + (meta.cores || 0) + '</b>' +
-        '<span class="slotchip">' + icon('cell', 13, 'cell') + ' ' + (meta.cells || 0) + '</span>' +
+      html += '<div class="coins-chip">' + coinsIc(15) + ' <b>' + (meta.coins || 0) + '</b>' +
+        '<span class="slotchip">' + icon('vial', 13, 'vial') + ' ' + (meta.vials || 0) + '</span>' +
         '<span class="slotchip">' + icon('flask', 13) + ' ' + used + '/' + slots + '</span></div>';
-      const LCAT_ICON: Record<string, string> = { attack: 'sword', defense: 'shield', utility: 'coins' };
       html += '<div class="subtabs" id="h-labtabs">';
       for (const cat of LAB_CATS)
-        html += '<button class="subtab' + (cat === menuLabCat ? ' on' : '') + '" data-labcat="' + cat + '" title="' + cat + '">' + icon(LCAT_ICON[cat], 22) + '</button>';
+        html += '<button class="subtab' + (cat === menuLabCat ? ' on' : '') + '" data-labcat="' + cat + '" title="' + cat + '">' + icon(LAB_CAT_ICON[cat], 22) + '</button>';
       html += '</div><div class="lablist">' + labRowsHtml(meta) + '</div>';
       const sc = labSlotCost(meta),
         canSlot = slots < MAX_SLOTS;
-      if (canSlot) html += '<button class="slotbtn' + ((meta.tokens || 0) < sc ? ' cant' : '') + '" id="h-buyslot">+1 Slot · ' + sc + ' ' + icon('token', 13, 'token') + '</button>';
+      if (canSlot) html += '<button class="slotbtn' + ((meta.gems || 0) < sc ? ' cant' : '') + '" id="h-buyslot">+1 Slot · ' + sc + ' ' + icon('gem', 13, 'gem') + '</button>';
     } else {
       html += '<div class="locked-tab">' + icon('lock', 46) + '<div class="lockmsg">Unlocks later</div></div>';
     }
@@ -907,7 +915,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       menuContent.querySelectorAll<HTMLElement>('[data-perm]').forEach((b) =>
         b.addEventListener('click', () => {
           if (handlers.onBuyPerm && handlers.onBuyPerm(b.dataset.perm!)) renderMenu();
-          else shake(menuContent.querySelector('.cores-chip'));
+          else shake(menuContent.querySelector('.coins-chip'));
         }),
       );
     } else if (menuTab === 'cards') {
@@ -930,7 +938,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       menuContent.querySelectorAll<HTMLElement>('[data-startlab]').forEach((b) =>
         b.addEventListener('click', () => {
           if (handlers.onStartResearch && handlers.onStartResearch(b.dataset.startlab!)) renderMenu();
-          else shake(menuContent.querySelector('.cores-chip'));
+          else shake(menuContent.querySelector('.coins-chip'));
         }),
       );
       menuContent.querySelectorAll<HTMLElement>('[data-cancellab]').forEach((b) =>
@@ -941,7 +949,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       menuContent.querySelectorAll<HTMLElement>('[data-rushlab]').forEach((b) =>
         b.addEventListener('click', () => {
           if (handlers.onRushResearch && handlers.onRushResearch(b.dataset.rushlab!)) renderMenu();
-          else shake(menuContent.querySelector('.cores-chip'));
+          else shake(menuContent.querySelector('.coins-chip'));
         }),
       );
       const sb = $('#h-buyslot');
@@ -956,7 +964,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     if (tutoring && modal.classList.contains('hide')) {
       if (menuTab === 'hero') {
         spotTarget = menuTabsEl.querySelector('[data-mtab="upgrades"]');
-        spotText = 'Spend your ' + cores(15) + ' here';
+        spotText = 'Spend your ' + coinsIc(15) + ' here';
       } else if (menuTab === 'upgrades') {
         spotTarget = menuContent.querySelector('.perm.tut');
         spotText = 'Buy this to grow stronger, more unlock after';
@@ -995,9 +1003,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     const e = earn || {};
     $('#h-stats').classList.add('hide');
     const tier = meta.tier || 1;
-    let rew = '<div class="rew"><span>Cores</span><b>+' + (e.cores || 0) + ' ' + cores(16) + '</b></div>';
-    if (e.tokens) rew += '<div class="rew"><span>Tokens</span><b class="tok">+' + e.tokens + ' ' + icon('token', 15, 'token') + '</b></div>';
-    if (e.cells) rew += '<div class="rew"><span>Cells</span><b class="cell">+' + e.cells + ' ' + icon('cell', 15, 'cell') + '</b></div>';
+    const rew = '<div class="rew"><span>Coins</span><b>+' + (e.coins || 0) + ' ' + coinsIc(16) + '</b></div>';
     const row = (label: string, val: string): string => '<div class="strow"><span>' + label + '</span><b>' + val + '</b></div>';
     overCard.innerHTML =
       '<div class="statshead"><h2>Run Over</h2></div>' +
@@ -1006,8 +1012,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       row('Kills', fmt(e.kills || 0)) +
       row('Wave reached', fmt(e.wave || 0)) +
       row('Foes per wave', fmt(waveCount((e.wave || 1) * tierDifficulty(tier)))) +
-      row('Core multiplier', 'x' + coreMult(tier).toFixed(1)) +
-      row('Total cores', fmt(meta.cores || 0)) +
+      row('Coin multiplier', 'x' + coinMult(tier).toFixed(1)) +
+      row('Total coins', fmt(meta.coins || 0)) +
       '</div>' +
       '<button class="over-back" id="h-over-back">' + icon('back', 16) + ' Back to the Workshop</button>';
     $('#h-over-back').addEventListener('click', () => handlers.onToWorkshop && handlers.onToWorkshop());
