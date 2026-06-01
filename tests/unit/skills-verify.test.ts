@@ -181,7 +181,7 @@ describe('multishot', () => {
 
     // Simulate one attack cycle manually: msChance=0 → only 1 shot
     const targets = s.enemies.slice(0, 1);
-    let shots = 1;
+    const shots = 1;
     // msChance is 0 so no extra shots
     for (let i = 0; i < shots; i++) fireProjectile(s, s.hero, targets[i], st, 10, rng);
     expect(s.projectiles.length).toBe(1);
