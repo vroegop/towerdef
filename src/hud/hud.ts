@@ -12,7 +12,7 @@ import {
 } from '../sim/skills';
 import {
   LABS, LAB_BY_ID, labLevel, labUnlocked, labsTabUnlocked, labCoinCost, labTimeSec, labAtMax, researchOf, researchRemaining,
-  researchProgress, freeSlots, rushVialCost, labSlotCost, MAX_SLOTS, checkInPending, checkInNextMs, CHECKIN_VIALS, CHECKIN_GEMS,
+  researchProgress, freeSlots, rushVialCost, labSlotCost, MAX_SLOTS, checkInPending, CHECKIN_VIALS, CHECKIN_GEMS,
 } from '../sim/labs';
 
 // The HUD is a single themeable core: identical structure + wiring for every theme, restyled
@@ -456,7 +456,11 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     for (const k in rowEls) delete rowEls[k];
     contentEl.className = 'tabcontent' + (tabOpen ? '' : ' collapsed');
     if (!tabOpen) return;
+    // Inside a run, hide skills that aren't unlocked yet (unlocking is Workshop-only, so the locked
+    // set is fixed for the whole run). Fall back to showing all only before the first frame sets meta.
+    const meta = lastS ? lastS.meta : null;
     for (const u of upgradesIn(activeTab)) {
+      if (meta && !isUnlocked(meta, u.id)) continue;
       const btn = document.createElement('button');
       btn.className = 'up';
       btn.innerHTML = '<span class="phead">' + icon(u.icon, 18) + '<span class="pname">' + u.label + '</span><span class="plv uplv"></span></span>' +
@@ -484,9 +488,37 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       rowEls[u.id] = { btn, cur: btn.querySelector('.cur')!, nxt: btn.querySelector('.nxt')!, cost: btn.querySelector('.cost')!, lv: btn.querySelector('.uplv')!, mult };
     }
   }
-  renderTabContent();
 
   let lastS: State | null = null;
+  renderTabContent();
+
+  // Floating check-in button: fixed bottom-left, a little above the DEV toggle. Shows the pending
+  // check-in reward as wrapped icon+number chips, in BOTH the menu and in-game, and is HIDDEN whenever
+  // nothing is claimable (no idle "next reward in…" countdown). Clicking claims the check-in.
+  const checkinFloat = document.createElement('button');
+  checkinFloat.id = 'h-checkin-float';
+  checkinFloat.className = 'checkin-float hide';
+  root.appendChild(checkinFloat);
+  checkinFloat.addEventListener('click', () => {
+    if (handlers.onCheckIn && handlers.onCheckIn()) {
+      refreshCheckinFloat();
+      if (menuEl.classList.contains('show')) renderMenu();
+    }
+  });
+  function refreshCheckinFloat(): void {
+    const meta = boundMeta || lastMeta || (lastS ? lastS.meta : null);
+    const pend = meta ? checkInPending(meta, Date.now()) : 0;
+    if (pend <= 0) {
+      checkinFloat.classList.add('hide');
+      return;
+    }
+    checkinFloat.innerHTML =
+      '<span class="cf-lbl">Check in</span>' +
+      '<span class="cf-chip">+' + pend * CHECKIN_VIALS + ' ' + icon('vial', 13, 'vial') + '</span>' +
+      '<span class="cf-chip">+' + pend * CHECKIN_GEMS + ' ' + icon('gem', 13, 'gem') + '</span>';
+    checkinFloat.classList.remove('hide');
+  }
+
   // top-bar elements are static chrome (built once); cache them instead of re-querying every frame
   let uel: Record<string, HTMLElement> | null = null;
   function shake(el: Element | null): void {
@@ -941,16 +973,16 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     let html = '';
     let idx = 0; // running buyable-skill index in this tab (for the first-run tutorial highlight)
     for (const g of groups) {
-      // LOCKED group: a single full-width row. The next-in-sequence group is unlockable; the rest wait.
+      // LOCKED group: out of a run we show ONLY the single next-in-sequence group (the rest stay
+      // hidden until it's unlocked), with an enabled/disabled Unlock button per affordability.
       if (!isGroupUnlocked(meta, g.id)) {
-        const isNext = !!next && next.id === g.id;
+        if (!next || next.id !== g.id) continue; // hide all locked groups except the next one
         const uafford = (meta.coins || 0) >= g.cost;
         const names = g.skills.map((s) => UP_BY_ID[s].label).join(' · ');
-        html += '<div class="permgroup ' + (isNext ? (uafford ? 'next' : 'next cant') : 'future') + '"' +
-          (isNext ? ' data-unlockgroup="' + g.id + '"' : '') + '>' +
+        html += '<div class="permgroup next' + (uafford ? '' : ' cant') + '">' +
           '<span class="pg-ic">' + icon('lock', 16) + '</span>' +
           '<span class="pg-tx"><b>' + g.label + '</b><span>' + names + '</span></span>' +
-          '<span class="pg-act">' + (isNext ? 'Unlock · ' + g.cost + ' ' + coinsIc(12) : 'Locked') + '</span></div>';
+          '<button class="pg-act" data-unlockgroup="' + g.id + '"' + (uafford ? '' : ' disabled') + '>Unlock · ' + g.cost + ' ' + coinsIc(12) + '</button></div>';
         continue;
       }
       for (const sid of g.skills) {
@@ -978,10 +1010,6 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     return html;
   }
 
-  function mmss(ms: number): string {
-    const s = Math.ceil(ms / 1000);
-    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
-  }
   function fmtTime(sec: number): string {
     sec = Math.ceil(sec);
     if (sec < 60) return sec + 's';
@@ -1059,16 +1087,20 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     let rows = '';
     if (reachedCount === 0) rows += marker;
     MILESTONES.forEach((w, i) => {
-      const reward = milestoneReward(w),
+      const reward = milestoneReward(w, meta.tier || 1),
         claimed = !!cl[w],
         reached = best >= w,
         can = reached && !claimed;
+      // a reward chip: gems if this milestone pays gems, else coins.
+      const rwIc = reward.gems > 0
+        ? '+' + reward.gems.toLocaleString() + ' ' + icon('gem', 12, 'gem')
+        : '+' + reward.coins.toLocaleString() + ' ' + coinsIc(12);
       const cls = 'msrow' + (reached ? ' reached' : '') + (claimed ? ' claimed' : can ? ' can' : ' locked');
       const cta = claimed
         ? '<span class="mn-done">' + icon('check', 15) + ' Claimed</span>'
         : can
-          ? '<button class="mn-claim" data-claim="' + w + '">Claim +' + reward.toLocaleString() + ' ' + coinsIc(12) + '</button>'
-          : '<span class="mn-reward locked">+' + reward.toLocaleString() + ' ' + coinsIc(12) + '</span>';
+          ? '<button class="mn-claim" data-claim="' + w + '">Claim ' + rwIc + '</button>'
+          : '<span class="mn-reward locked">' + rwIc + '</span>';
       rows += '<div class="' + cls + '">' +
         '<div class="msrail"><span class="msdot">' + short(w) + '</span></div>' +
         '<div class="mscard"><div class="mn-info"><b>Wave ' + w.toLocaleString() + '</b></div>' + cta + '</div></div>';
@@ -1107,14 +1139,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     if (menuTab === 'hero') {
       const curChips = CURRENCIES.map((c) => '<span class="chip">' + icon(c.icon, 13, c.cls) + ' <b>' + (meta[c.key] || 0) + '</b></span>').join('');
       html += '<div class="chips">' + curChips + '<span class="chip">' + icon('best', 13) + ' <b>wave ' + (meta.bestWave || 0) + '</b></span></div>';
-      // Only surface the check-in when a reward is actually claimable — no idle "Next reward in…" row.
-      const pend = checkInPending(meta, Date.now());
-      if (pend > 0) {
-        html += '<button class="checkin ready" id="h-checkin">' + icon('vial', 14, 'vial') + ' Check In  +' + pend * CHECKIN_VIALS +
-          ' ' + icon('vial', 12, 'vial') + '  +' + pend * CHECKIN_GEMS + ' ' + icon('gem', 12, 'gem') + '</button>';
-      } else {
-        html += '<button class="checkin" id="h-checkin" disabled>Next reward in ' + mmss(checkInNextMs(meta, Date.now())) + '</button>';
-      }
+      // The check-in is surfaced by the floating #h-checkin-float button (menu + in-game), shown only
+      // when a reward is claimable — so there's no inline button or idle countdown here anymore.
       html += '<div class="avatar-frame"><canvas id="h-avatar" width="200" height="200"></canvas></div>';
       const claim = claimableCount(meta);
       html += '<button class="msbtn" id="h-ms">Milestones' + (claim > 0 ? '<span class="badge">' + claim + '</span>' : '') + '</button>';
@@ -1200,10 +1226,6 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         } else showUnlockTip(e.currentTarget as HTMLElement, 'Reach wave ' + TIER_UNLOCK_WAVE + ' in Tier ' + cur + ' to unlock Tier ' + (cur + 1));
       });
       $('#h-start').addEventListener('click', () => handlers.onStartRun && handlers.onStartRun());
-      const cib = $<HTMLButtonElement>('#h-checkin');
-      if (cib && !cib.disabled) cib.addEventListener('click', () => {
-        if (handlers.onCheckIn && handlers.onCheckIn()) renderMenu();
-      });
     } else if (menuTab === 'upgrades') {
       menuContent.querySelectorAll<HTMLElement>('[data-uptab]').forEach((b) =>
         b.addEventListener('click', () => {
@@ -1323,6 +1345,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     menuTab = 'hero';
     modal.classList.add('hide');
     renderMenu();
+    refreshCheckinFloat();
     menuEl.classList.add('show');
     sidemenu.classList.remove('open'); // the side menu is in-game chrome — Settings lives there, not on the menu screen
     closeRunModals();
@@ -1373,8 +1396,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     $('#h-stats').classList.add('hide');
   }
 
-  // 1s tick: advance research bars on the Lab tab; tick the check-in countdown on the Hero tab.
+  // 1s tick: keep the floating check-in button current (menu AND in-game), advance research bars on
+  // the Lab tab, and refresh the Hero tab.
   setInterval(() => {
+    refreshCheckinFloat();
     if (!menuEl.classList.contains('show') || !lastMeta) return;
     if (menuTab === 'labs') {
       const had = (lastMeta.research || []).length;

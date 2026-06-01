@@ -7,7 +7,7 @@ import { DT, catchUp } from './sim/offline';
 import { Sim, tickDying } from './sim/core';
 import { createState } from './sim/state';
 import { migrateMeta, reconcileResearch, claimCheckIn, startResearch, cancelResearch, rushResearch, buyLabSlot, gameSpeed, LABS, MAX_SLOTS } from './sim/labs';
-import { buyRunUpgradeBulk, buyPermBulk, unlockGroup, claimMilestone, buyCard, buyCardSlot, setActiveCard, FIRST_PERM_COST } from './sim/skills';
+import { buyRunUpgradeBulk, buyPermBulk, unlockGroup, claimMilestone, claimAllMilestones, buyCard, buyCardSlot, setActiveCard, FIRST_PERM_COST } from './sim/skills';
 import { MAX_TIER, tierUnlocked, coinsForRun } from './sim/waves';
 import { makeEnemy } from './sim/enemies';
 import { BULLET_SPEED, BULLET_R } from './sim/projectiles';
@@ -111,8 +111,15 @@ const handlers: HudHandlers = {
   },
   onClaimMilestone: (wave) => {
     const r = claimMilestone(meta, wave);
-    if (r) saveMeta();
-    return r;
+    const got = r.coins > 0 || r.gems > 0;
+    if (got) saveMeta();
+    return got;
+  },
+  onClaimAllMilestones: () => {
+    const r = claimAllMilestones(meta);
+    const got = r.coins > 0 || r.gems > 0;
+    if (got) saveMeta();
+    return got;
   },
   onSetTier: (t) => {
     t = t | 0;

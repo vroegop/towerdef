@@ -297,7 +297,8 @@ export interface HudHandlers {
   onBuyRun?: (stat: string, qty?: BulkQty) => void;
   onBuyPerm?: (id: string, qty?: BulkQty) => boolean;
   onUnlockGroup?: (groupId: string) => boolean;
-  onClaimMilestone?: (wave: number) => number;
+  onClaimMilestone?: (wave: number) => boolean;
+  onClaimAllMilestones?: () => boolean;
   onSetTier?: (t: number) => boolean;
   onBuyCard?: () => CardDrawResult | null;
   onBuyCardSlot?: () => boolean;

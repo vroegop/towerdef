@@ -430,8 +430,7 @@ const RAW_GROUPS: { id: string; label: string; skills: string[] }[] = [
   { id: 'critical', label: 'Critical', skills: ['critChance', 'critDamage'] },
   { id: 'health', label: 'Health', skills: ['health'] },
   { id: 'regen', label: 'HP Regen', skills: ['regen'] },
-  { id: 'range', label: 'Range', skills: ['range'] },
-  { id: 'dmgmeter', label: 'Damage / Meter', skills: ['dmgPerMeter'] },
+  { id: 'range', label: 'Range', skills: ['range', 'dmgPerMeter'] },
   { id: 'multishot', label: 'Multishot', skills: ['msChance', 'msTargets'] },
   { id: 'burst', label: 'Burst', skills: ['rapidChance', 'rapidDuration'] },
   { id: 'bounce', label: 'Bounce', skills: ['bounceChance', 'bounceTargets', 'bounceRange'] },
@@ -741,13 +740,26 @@ export function buyCard(meta: Meta, rng?: () => number): CardDrawResult | null {
   return { id, before, after, unlocked };
 }
 
-// ---- tier / milestones (coins rewards for furthest-wave progress in the current tier) ----
+// ---- tier / milestones (rewards for furthest-wave progress) ----
 export const MILESTONES: number[] = (() => {
   const a = [10, 50, 100, 250, 500];
   for (let w = 1000; w <= 10000; w += 1000) a.push(w);
   return a;
 })();
-export const milestoneReward = (wave: number): number => wave; // coins; tune freely
+// A milestone pays EITHER coins or gems. Every other milestone (odd index) pays gems IN TIER 1 —
+// they fuel early card progress; in higher tiers those slots pay coins instead. Coin reward is the
+// wave × MS_COIN_MULT (20× the old flat `wave` value). Gem rewards escalate 10,20,30,… per gem slot.
+export interface MilestoneReward { coins: number; gems: number; }
+const MS_COIN_MULT = 20;
+export function milestoneReward(wave: number, tier = 1): MilestoneReward {
+  const i = MILESTONES.indexOf(wave);
+  if (i < 0) return { coins: 0, gems: 0 };
+  if (i % 2 === 1 && (tier || 1) === 1) {
+    const gemSlot = Math.floor(i / 2) + 1; // 1st gem milestone → 10, 2nd → 20, …
+    return { coins: 0, gems: 10 * gemSlot };
+  }
+  return { coins: wave * MS_COIN_MULT, gems: 0 };
+}
 export function claimableCount(meta: Meta): number {
   const best = meta.bestWave || 0,
     cl = meta.claimedMilestones || {};
@@ -755,16 +767,44 @@ export function claimableCount(meta: Meta): number {
   for (const w of MILESTONES) if (best >= w && !cl[w]) c++;
   return c;
 }
-export function claimMilestone(meta: Meta, wave: number): number {
+// Sum of all currently-claimable rewards (for the floating claim button's per-currency chips).
+export function claimableRewards(meta: Meta): MilestoneReward {
+  const best = meta.bestWave || 0,
+    cl = meta.claimedMilestones || {};
+  const out: MilestoneReward = { coins: 0, gems: 0 };
+  for (const w of MILESTONES) {
+    if (best >= w && !cl[w]) {
+      const r = milestoneReward(w, meta.tier || 1);
+      out.coins += r.coins;
+      out.gems += r.gems;
+    }
+  }
+  return out;
+}
+export function claimMilestone(meta: Meta, wave: number): MilestoneReward {
   const best = meta.bestWave || 0;
   meta.claimedMilestones = meta.claimedMilestones || {};
   if (best >= wave && !meta.claimedMilestones[wave]) {
-    const r = milestoneReward(wave);
-    meta.coins = (meta.coins || 0) + r;
+    const r = milestoneReward(wave, meta.tier || 1);
+    meta.coins = (meta.coins || 0) + r.coins;
+    meta.gems = (meta.gems || 0) + r.gems;
     meta.claimedMilestones[wave] = true;
     return r;
   }
-  return 0;
+  return { coins: 0, gems: 0 };
+}
+// Claim ALL currently-claimable milestones at once (the floating button does this). Returns the total.
+export function claimAllMilestones(meta: Meta): MilestoneReward {
+  const best = meta.bestWave || 0;
+  const out: MilestoneReward = { coins: 0, gems: 0 };
+  for (const w of MILESTONES) {
+    if (best >= w && !(meta.claimedMilestones || {})[w]) {
+      const r = claimMilestone(meta, w);
+      out.coins += r.coins;
+      out.gems += r.gems;
+    }
+  }
+  return out;
 }
 
 // Turn levels into the numbers the sim runs on, then apply card bonuses.
