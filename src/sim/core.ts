@@ -36,6 +36,11 @@ export class Sim {
   // than paying for a full rebuild on every tick. The constructor seeds it; see step().
   refreshStats(): void {
     this.stats = computeStats(this.s);
+    // Sync range-dependent state immediately so the renderer always sees current values,
+    // even between steps and when paused.
+    this.s.hero.range = this.stats.range;
+    this.s.arena.w = Math.max(ARENA_W, Math.round(this.stats.range * 4));
+    this.s.arena.h = Math.max(ARENA_H, Math.round(this.stats.range * 3));
   }
 
   step(dt: number): void {

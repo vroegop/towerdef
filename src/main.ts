@@ -341,6 +341,7 @@ function frame(now: number): void {
     requestAnimationFrame(frame);
     return;
   }
+  sim!.refreshStats(); // recompute stats + sync hero.range/arena every frame, including while paused
   if (paused) {
     renderer.draw(sim!.s, 0, true);
     hud.update(sim!.s);
@@ -351,7 +352,6 @@ function frame(now: number): void {
   acc += dt * gs;
   let g = 0;
   const maxSteps = Math.ceil(8 * gs);
-  sim!.refreshStats(); // recompute the stat sheet ONCE per frame; the batch of steps reuses it
   while (acc >= DT && g++ < maxSteps) {
     sim!.step(DT);
     acc -= DT;
