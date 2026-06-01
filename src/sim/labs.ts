@@ -167,8 +167,8 @@ export function buyLabSlot(meta: Meta): boolean {
 }
 
 // ---- 15-minute check-in: the SOLE source of vials & card currency ----
-export const CHECKIN_MS = 15 * 60 * 1000; // one claim every 15 minutes
-export const CHECKIN_CAP = 8; // bank up to 8 claims (~2 hours) while away
+const CHECKIN_MS = 15 * 60 * 1000; // one claim every 15 minutes
+const CHECKIN_CAP = 8; // bank up to 8 claims (~2 hours) while away
 export const CHECKIN_VIALS = 5; // vials per claim
 export const CHECKIN_GEMS = 5; // card currency (gems) per claim
 export function checkInPending(meta: Meta, nowMs: number): number {
@@ -192,7 +192,7 @@ export function claimCheckIn(meta: Meta, nowMs: number): { claims: number; vials
 }
 
 // ---- meta defaults / migration (idempotent; additive only, never destructive) ----
-export const META_VER = 2;
+const META_VER = 2;
 export function migrateMeta(meta: Meta): Meta {
   if (!meta) return meta;
   if (meta.labs == null) meta.labs = {};

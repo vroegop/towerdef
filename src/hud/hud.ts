@@ -4,8 +4,8 @@
 import type { CardDef, CardDrawResult, CardInstance, Hud as HudInstance, HudFactory, HudHandlers, MenuOpts, Meta, Settings, State, ThemeDef, EarnSummary, UpgradeDef } from '../types';
 import { WAVE, waveCount, tierDifficulty, coinMult, coinsForRun, MAX_TIER, TIER_UNLOCK_WAVE, tierUnlocked } from '../sim/waves';
 import {
-  UPGRADES, UP_BY_ID, upgradesIn, economyUnlocked, boughtOf, permBought, runUpgradeCost, runAtMax, permCost, permAtMax,
-  upgradeCap, CARDS, CARD_INFO, MAX_STARS, CARD_ORDER, CARD_SLOTS, starSlot, buyCardCost, cardsUnlocked, MILESTONES, milestoneReward,
+  UPGRADES, UP_BY_ID, upgradesIn, boughtOf, permBought, runUpgradeCost, runAtMax, permCost, permAtMax,
+  upgradeCap, CARDS, CARD_INFO, MAX_STARS, CARD_ORDER, CARD_SLOTS, starSlot, buyCardCost, MILESTONES, milestoneReward,
   claimableCount, TAB_DEFS, FIRST_PERM_COST,
 } from '../sim/skills';
 import {
@@ -101,7 +101,6 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     '<div class="ghint hide" id="h-ghint"></div>' +
     '<div class="tabbar" id="h-tabbar"><div id="h-tabcontent"></div><div class="tabs" id="h-tabs"></div></div>' +
     '<div class="menu" id="h-menu">' +
-    '  <button class="menugear" id="h-menugear" title="Settings">' + icon('gear', 22) + '</button>' +
     '  <div class="menu-content" id="h-menu-content"></div>' +
     '  <div class="menutabs" id="h-menu-tabs"></div>' +
     '  <div class="modal hide" id="h-modal"><div class="modal-inner" id="h-modal-inner"></div></div>' +
@@ -363,16 +362,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     for (const b of Array.from(tabsEl.children) as HTMLElement[]) b.classList.toggle('on', tabOpen && b.dataset.tab === activeTab);
   }
   function renderTabContent(): void {
-    const tabDef = TAB_DEFS.find((t) => t.id === activeTab)!;
-    const locked = tabDef.gated && lastS && !economyUnlocked(lastS.meta);
     contentEl.innerHTML = '';
     for (const k in rowEls) delete rowEls[k];
     contentEl.className = 'tabcontent' + (tabOpen ? '' : ' collapsed');
     if (!tabOpen) return;
-    if (locked) {
-      contentEl.innerHTML = '<div class="tablock">' + icon('lock', 18) + '<span>Economic upgrades unlock in Tier 2</span></div>';
-      return;
-    }
     for (const u of upgradesIn(activeTab)) {
       const btn = document.createElement('button');
       btn.className = 'up';
@@ -429,7 +422,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     if (!taughtTabs && !s.firstRun && !tabOpen) {
       let min = Infinity;
       for (const u of UPGRADES) {
-        if ((u.gated && !economyUnlocked(s.meta)) || runAtMax(s, u.id)) continue;
+        if (runAtMax(s, u.id)) continue;
         min = Math.min(min, runUpgradeCost(s, u.id));
       }
       uel.tabbar.classList.toggle('pulse', s.econ.gold >= min);
@@ -590,15 +583,14 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   const MENU_TABS: { id: string; icon: string; gated?: boolean; locked?: boolean; unlockFn?: (m: Meta) => boolean; unlock?: string }[] = [
     { id: 'hero', icon: 'hero' },
     { id: 'upgrades', icon: 'upgrades' },
-    { id: 'cards', icon: 'cards', gated: true, unlockFn: (m) => cardsUnlocked(m), unlock: 'Reach wave 30 to unlock Cards' },
+    { id: 'cards', icon: 'cards' },
     { id: 'labs', icon: 'flask', gated: true, unlockFn: (m) => labsTabUnlocked(m), unlock: 'Reach wave 30 to unlock Labs' },
     { id: 'prestige', icon: 'prestige', locked: true, unlock: 'Prestige unlocks in Tier 3' },
   ];
   let menuTab = 'hero',
     menuUpTab = 'attack',
     menuLabCat = 'attack',
-    lastMeta: Meta | null = null,
-    lastOpts: MenuOpts = {};
+    lastMeta: Meta | null = null;
 
   MENU_TABS.forEach((t) => {
     const b = document.createElement('button');
@@ -803,16 +795,11 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
 
   function renderMenu(): void {
     const meta = lastMeta!,
-      opts = lastOpts,
       tutoring = sumPerm(meta) === 0;
     for (const b of Array.from(menuTabsEl.children) as HTMLElement[]) {
       b.classList.toggle('on', b.dataset.mtab === menuTab);
       b.classList.toggle('tut', tutoring && b.dataset.mtab === 'upgrades' && menuTab !== 'upgrades');
       b.classList.toggle('tut-off', tutoring && b.dataset.mtab !== 'upgrades');
-      if (b.dataset.mtab === 'cards') {
-        b.classList.toggle('locked', !cardsUnlocked(meta));
-        b.innerHTML = icon('cards', 24);
-      }
       if (b.dataset.mtab === 'labs') {
         const u = labsTabUnlocked(meta);
         b.classList.toggle('locked', !u);
@@ -823,10 +810,6 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     menuContent.className = 'menu-content tab-' + menuTab + (tutoring && menuTab === 'hero' ? ' tut-block' : '');
     let html = '';
     if (menuTab === 'hero') {
-      if (opts.earn)
-        html += '<div class="earncard"><div class="el">Last run</div>' +
-          '<div class="ev">+' + opts.earn.coins + ' ' + coinsIc(16) + '</div>' +
-          '<div class="es">' + opts.earn.kills + ' kills / wave ' + opts.earn.wave + '</div></div>';
       const curChips = CURRENCIES.map((c) => '<span class="chip">' + icon(c.icon, 13, c.cls) + ' <b>' + (meta[c.key] || 0) + '</b></span>').join('');
       html += '<div class="chips">' + curChips + '<span class="chip">' + icon('best', 13) + ' <b>wave ' + (meta.bestWave || 0) + '</b></span></div>';
       // Only surface the check-in when a reward is actually claimable — no idle "Next reward in…" row.
@@ -851,40 +834,29 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       html += '<button class="startsq" id="h-start">' + icon('play', 35, 'green') + '</button>';
     } else if (menuTab === 'upgrades') {
       html += '<div class="coins-chip">' + coinsIc(15) + ' <b>' + (meta.coins || 0) + '</b></div>';
-      const ecoOk = economyUnlocked(meta);
       html += '<div class="subtabs" id="h-uptabs">';
       for (const t of TAB_DEFS) {
-        const lk = t.gated && !ecoOk;
-        html += '<button class="subtab' + (t.id === menuUpTab ? ' on' : '') + (lk ? ' locked' : '') + '" data-uptab="' + t.id + '" title="' + t.id + '">' +
-          icon(t.icon, 22) + (lk ? icon('lock', 11, 'lk') : '') + '</button>';
+        html += '<button class="subtab' + (t.id === menuUpTab ? ' on' : '') + '" data-uptab="' + t.id + '" title="' + t.id + '">' + icon(t.icon, 22) + '</button>';
       }
       html += '</div>';
-      if (menuUpTab === 'economic' && !ecoOk) {
-        html += '<div class="locked-tab">' + icon('lock', 46) + '<div class="lockmsg">Economic upgrades unlock in Tier 2</div></div>';
-      } else {
-        html += '<div class="permlist">' + permRowsHtml(meta, tutoring) + '</div>';
-      }
+      html += '<div class="permlist">' + permRowsHtml(meta, tutoring) + '</div>';
     } else if (menuTab === 'cards') {
-      if (!cardsUnlocked(meta)) {
-        html += '<div class="locked-tab">' + icon('lock', 46) + '<div class="lockmsg">Reach wave 30 to unlock cards</div></div>';
-      } else {
-        const owned = meta.cards || [];
-        const bc = buyCardCost(meta);
-        // A draw is impossible only once every card type is owned AND maxed (the non-maxed pool is
-        // empty) — mirrors buyCard()'s own guard so the button greys out instead of shaking.
-        const allMaxed = Object.keys(CARDS).every((id) => {
-          const c = owned.find((x) => x.id === id);
-          return c && (c.stars || 0) >= MAX_STARS;
-        });
-        html += '<div class="coins-chip gem-chip">' + icon('gem', 15, 'gem') + ' <b>' + (meta.gems || 0) + '</b></div>';
-        html += '<div class="cardbtns">' +
-          '<button class="cardbtn draw' + ((meta.gems || 0) < bc || allMaxed ? ' cant' : '') + '" id="h-buycard"' + (allMaxed ? ' disabled' : '') + '>' +
-          '<span class="cb-ic">' + icon('cards', 26) + '</span>' +
-          '<span class="cb-tx"><span class="cb-t">Draw Card</span><span class="cb-s">' + (allMaxed ? 'Every card maxed!' : 'New card, or +1 star on one you own') + '</span></span>' +
-          '<span class="cb-cost">' + bc + ' ' + icon('gem', 13, 'gem') + '</span></button>' +
-          '</div>';
-        html += '<div class="cardgrid">' + cardGridHtml(meta) + '</div>';
-      }
+      const owned = meta.cards || [];
+      const bc = buyCardCost(meta);
+      // A draw is impossible only once every card type is owned AND maxed (the non-maxed pool is
+      // empty) — mirrors buyCard()'s own guard so the button greys out instead of shaking.
+      const allMaxed = Object.keys(CARDS).every((id) => {
+        const c = owned.find((x) => x.id === id);
+        return c && (c.stars || 0) >= MAX_STARS;
+      });
+      html += '<div class="coins-chip gem-chip">' + icon('gem', 15, 'gem') + ' <b>' + (meta.gems || 0) + '</b></div>';
+      html += '<div class="cardbtns">' +
+        '<button class="cardbtn draw' + ((meta.gems || 0) < bc || allMaxed ? ' cant' : '') + '" id="h-buycard"' + (allMaxed ? ' disabled' : '') + '>' +
+        '<span class="cb-ic">' + icon('cards', 26) + '</span>' +
+        '<span class="cb-tx"><span class="cb-t">Draw Card</span><span class="cb-s">' + (allMaxed ? 'Every card maxed!' : 'New card, or +1 star on one you own') + '</span></span>' +
+        '<span class="cb-cost">' + bc + ' ' + icon('gem', 13, 'gem') + '</span></button>' +
+        '</div>';
+      html += '<div class="cardgrid">' + cardGridHtml(meta) + '</div>';
     } else if (menuTab === 'labs') {
       const used = (meta.research || []).length,
         slots = meta.labSlots || 1;
@@ -929,11 +901,6 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     } else if (menuTab === 'upgrades') {
       menuContent.querySelectorAll<HTMLElement>('[data-uptab]').forEach((b) =>
         b.addEventListener('click', () => {
-          const t = TAB_DEFS.find((x) => x.id === b.dataset.uptab);
-          if (t && t.gated && !economyUnlocked(meta)) {
-            showUnlockTip(b, 'Economic upgrades unlock in Tier 2');
-            return;
-          }
           menuUpTab = b.dataset.uptab!;
           renderMenu();
         }),
@@ -1001,7 +968,6 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
 
   function showMenu(meta: Meta, opts: MenuOpts): void {
     lastMeta = meta;
-    lastOpts = opts || {};
     menuTab = 'hero';
     modal.classList.add('hide');
     renderMenu();

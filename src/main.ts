@@ -7,7 +7,7 @@ import { DT, catchUp } from './sim/offline';
 import { Sim, tickDying } from './sim/core';
 import { createState } from './sim/state';
 import { migrateMeta, reconcileResearch, claimCheckIn, startResearch, cancelResearch, rushResearch, buyLabSlot, gameSpeed } from './sim/labs';
-import { buyRunUpgrade, buyPerm, claimMilestone, buyCard, grantInitialCard, FIRST_PERM_COST } from './sim/skills';
+import { buyRunUpgrade, buyPerm, claimMilestone, buyCard, FIRST_PERM_COST } from './sim/skills';
 import { MAX_TIER, tierUnlocked, coinsForRun } from './sim/waves';
 import { makeEnemy } from './sim/enemies';
 import { BULLET_SPEED, BULLET_R } from './sim/projectiles';
@@ -286,7 +286,6 @@ function goToMenu(opts: object): void {
   mode = 'menu';
   running = false;
   clearSave();
-  if (grantInitialCard(meta)) saveMeta();
   hud.hideHint();
   hud.showMenu(meta, opts || {});
 }

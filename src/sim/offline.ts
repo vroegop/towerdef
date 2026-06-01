@@ -5,7 +5,7 @@ import type { Sim } from './core';
 
 export const DT = 1 / 30;
 
-export interface CatchUpResult {
+interface CatchUpResult {
   ranTicks: number;
   simSeconds: number;
   computeMs: number;

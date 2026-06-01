@@ -111,9 +111,6 @@ export const UP_BY_ID: Record<string, UpgradeDef> = {};
 for (const u of UPGRADES) UP_BY_ID[u.id] = u;
 export const upgradesIn = (tab: string): UpgradeDef[] => UPGRADES.filter((u) => u.tab === tab);
 
-// economic/utility upgrades: tier gating disabled — everything is buyable from the start (test mode)
-export const economyUnlocked = (_meta: Meta): boolean => true;
-
 // The scripted first run grants exactly enough coins to buy the tutorial's first upgrade.
 export const FIRST_PERM_COST = UP_BY_ID.attackSpeed.coin.cost(0);
 
@@ -186,13 +183,6 @@ export const CARD_INFO: Record<string, string> = {
   sunder: 'Shred enemy armor so attacks bite deeper.', eagle: 'Extends how far you can attack.',
   compound: 'Earn interest on your banked gold.',
 };
-export const cardsUnlocked = (_meta: Meta): boolean => true; // cards available from the start
-export function grantInitialCard(meta: Meta): boolean {
-  // Players start with an EMPTY collection and unlock cards by drawing them — the first draw of any
-  // card type plays the locked-card flip reveal. (Kept as a hook so callers stay unchanged; no-op now.)
-  meta.cards = meta.cards || [];
-  return false;
-}
 export const starSlot = (i: number, stars: number): string =>
   stars >= i + 11 ? 'chroma' : stars >= i + 6 ? 'gold' : stars >= i + 1 ? 'white' : 'empty';
 
@@ -341,7 +331,6 @@ export function runAtMax(state: State, id: string): boolean {
 export function buyRunUpgrade(state: State, id: string, rng?: { next(): number }): boolean {
   const up = UP_BY_ID[id];
   if (!up) return false;
-  if (up.gated && !economyUnlocked(state.meta)) return false;
   if (runAtMax(state, id)) return false;
   const n = state.run.levels[id] || 0,
     cost = up.gold.cost(n);
@@ -367,7 +356,6 @@ export function permAtMax(meta: Meta, id: string): boolean {
 export function buyPerm(meta: Meta, id: string): boolean {
   const up = UP_BY_ID[id];
   if (!up) return false;
-  if (up.gated && !economyUnlocked(meta)) return false;
   const n = (meta.perm && meta.perm[id]) || 0;
   if (n >= capOf(meta, id)) return false;
   const cost = up.coin.cost(n);
