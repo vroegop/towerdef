@@ -539,7 +539,7 @@
 .hud .hpclip { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; overflow: hidden;
   transition: width .16s linear; }
 .hud .hpfill { display: block; width: var(--hpw); height: 100%;
-  background: linear-gradient(90deg, #ca3f44 0%, #e0b937 50%, #37ac44 100%); }
+  background: #ca3f44; }
 /* heart cap + inset value, painted over the fill */
 .hud .hpheart { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); display: flex;
   color: #fff; filter: drop-shadow(0 1px 1px rgba(0,0,0,.7)); pointer-events: none; }
