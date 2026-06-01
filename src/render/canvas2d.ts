@@ -7,7 +7,7 @@ import type { Settings, State } from '../types';
 import { TIERS } from '../sim/registries';
 import { BASE_RANGE_M, PX_PER_METER } from '../sim/skills';
 
-const VIEW_MARGIN = 1.5; // how much room around the range ring to show (bigger = more zoomed out)
+const EDGE_PAD = 6; // px gap left between the range ring and the nearest screen edge (full-immersion zoom)
 
 type Ctx = CanvasRenderingContext2D;
 interface Spark { x: number; y: number; vx: number; vy: number; life: number; color: string }
@@ -181,8 +181,12 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     const W = canvas.clientWidth,
       H = canvas.clientHeight;
     const range = (s.hero && s.hero.range) || BASE_RANGE_M * PX_PER_METER;
+    // Fit the whole range ring (diameter 2·range) into the narrow screen dimension, leaving only
+    // EDGE_PAD px of breathing room. coverScale stays as a floor that prevents empty void on unusual
+    // aspect ratios; because the sim keeps the arena larger than the ring, rangeScale wins in normal
+    // landscape play, so the ring is always fully visible and nearly edge-to-edge.
     const coverScale = Math.max(W / s.arena.w, H / s.arena.h);
-    const rangeScale = Math.min(W, H) / (2 * range * VIEW_MARGIN);
+    const rangeScale = (Math.min(W, H) - 2 * EDGE_PAD) / (2 * range);
     const scale = Math.max(coverScale, rangeScale);
     const hp = ipos(HERO_ID, s.hero.x, s.hero.y);
     let shx = 0,
@@ -195,10 +199,12 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     }
     let ox = W / 2 - hp.x * scale + shx,
       oy = H / 2 - hp.y * scale + shy;
-    const minOx = W - s.arena.w * scale,
-      minOy = H - s.arena.h * scale;
-    ox = Math.min(0, Math.max(minOx, ox));
-    oy = Math.min(0, Math.max(minOy, oy));
+    // Keep the camera within the arena (no void past its edges). The box is centered on the hero, so
+    // its top-left world corner is (hero − half); at the base size this reduces to (0,0) as before.
+    const aLeft = hp.x - s.arena.w / 2,
+      aTop = hp.y - s.arena.h / 2;
+    ox = Math.min(-aLeft * scale, Math.max(W - (aLeft + s.arena.w) * scale, ox));
+    oy = Math.min(-aTop * scale, Math.max(H - (aTop + s.arena.h) * scale, oy));
     const tx = (x: number): number => ox + x * scale,
       ty = (y: number): number => oy + y * scale;
 

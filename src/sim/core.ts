@@ -7,6 +7,7 @@ import { ageSurvivors, makeEnemy, pickTier, pickType } from './enemies';
 import { FIRST_RUN, COIN_DECAY_FACTOR, COIN_DECAY_WAVES, WAVE, waveCount } from './waves';
 import { applyHit, fireProjectile, tickProjectiles } from './projectiles';
 import { computeStats, PX_PER_METER, RAPID_CHECK, RAPID_MULT } from './skills';
+import { ARENA_W, ARENA_H } from './state';
 
 export class Sim {
   s: State;
@@ -43,6 +44,13 @@ export class Sim {
     s.t += dt;
     if (!s.alive) return;
     // NB: this.stats is refreshed once per frame by the caller (refreshStats), NOT per tick.
+    // Arena scales with range so the box ALWAYS strictly contains the range ring (diameter 2·range):
+    // the renderer can frame the whole ring on-screen while enemies still enter from off-screen. Uses
+    // the per-frame this.stats (seeded by the constructor, refreshed once per offline batch) — range
+    // only changes on a buy, so per-frame is exact. Kw=4 / Kh=3 keep the base 960×640 arena at base
+    // range and clear a 16:9 viewport once range grows past it.
+    s.arena.w = Math.max(ARENA_W, Math.round(this.stats.range * 4));
+    s.arena.h = Math.max(ARENA_H, Math.round(this.stats.range * 3));
     this._waves(dt);
     this._hero(dt);
     this._enemies(dt);
@@ -94,7 +102,7 @@ export class Sim {
       eff = this._effWave(s.wave.n);
     const type = pickType(this.rng, eff);
     const tier = pickTier(this.rng, eff);
-    s.enemies.push(makeEnemy(s.nextId++, type, tier, eff, this.rng, s.arena));
+    s.enemies.push(makeEnemy(s.nextId++, type, tier, eff, this.rng, s.arena, s.hero.x, s.hero.y));
   }
 
   // First run only: a scripted, deliberately lethal trickle of weak melee.
@@ -110,10 +118,10 @@ export class Sim {
     }
     s.firstTimer = (s.firstTimer || 0) - dt;
     while ((s.firstTimer || 0) <= 0 && (s.firstSpawned || 0) < F.count) {
-      const e = makeEnemy(s.nextId++, 'melee', 'weak', 1, this.rng, s.arena);
+      const e = makeEnemy(s.nextId++, 'melee', 'weak', 1, this.rng, s.arena, s.hero.x, s.hero.y);
       const a = this.rng.next() * Math.PI * 2; // fixed-radius ring → predictable convergence
-      e.x = s.arena.w / 2 + Math.cos(a) * F.radius;
-      e.y = s.arena.h / 2 + Math.sin(a) * F.radius;
+      e.x = s.hero.x + Math.cos(a) * F.radius;
+      e.y = s.hero.y + Math.sin(a) * F.radius;
       e.speed = F.speed;
       s.enemies.push(e);
       s.firstSpawned = (s.firstSpawned || 0) + 1;

@@ -29,26 +29,30 @@ export function pickTier(rng: Rng, n: number): string {
 
 const ihp = (base: number, mult: number): number => Math.max(1, Math.round(base * mult));
 
-export function makeEnemy(id: number, type: string, tier: string, waveN: number, rng: Rng, arena: Arena): Enemy {
+export function makeEnemy(id: number, type: string, tier: string, waveN: number, rng: Rng, arena: Arena, cx = arena.w / 2, cy = arena.h / 2): Enemy {
   const def = TYPES[type],
     tg = TIERS[tier];
   const strMult = waveStr(waveN) * tg.stat;
   const speed = def.speed * waveSpeed(waveN);
   const m = 30;
+  // Spawn just outside one edge of the arena box, which is centered on (cx, cy) — the stationary
+  // hero. (Default center = w/2,h/2 reproduces the legacy origin-anchored box exactly.)
+  const left = cx - arena.w / 2,
+    top = cy - arena.h / 2;
   let x: number, y: number;
   const edge = (rng.next() * 4) | 0;
   if (edge === 0) {
-    x = rng.next() * arena.w;
-    y = -m;
+    x = left + rng.next() * arena.w;
+    y = top - m;
   } else if (edge === 1) {
-    x = arena.w + m;
-    y = rng.next() * arena.h;
+    x = left + arena.w + m;
+    y = top + rng.next() * arena.h;
   } else if (edge === 2) {
-    x = rng.next() * arena.w;
-    y = arena.h + m;
+    x = left + rng.next() * arena.w;
+    y = top + arena.h + m;
   } else {
-    x = -m;
-    y = rng.next() * arena.h;
+    x = left - m;
+    y = top + rng.next() * arena.h;
   }
   const hp = ihp(def.hp, strMult),
     dmg = ihp(def.dmg, strMult);

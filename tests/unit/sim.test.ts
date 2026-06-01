@@ -5,7 +5,8 @@
 import { describe, it, expect } from 'vitest';
 import { makeRng } from '../../src/sim/rng';
 import { Sim } from '../../src/sim/core';
-import { createState } from '../../src/sim/state';
+import { createState, ARENA_W, ARENA_H } from '../../src/sim/state';
+import { makeEnemy } from '../../src/sim/enemies';
 import { migrateMeta } from '../../src/sim/labs';
 import { buyPerm, permCost, computeStats, waveStrSafe } from './helpers';
 import { waveCount, waveStr, tierUnlocked, coinMult } from '../../src/sim/waves';
@@ -184,5 +185,66 @@ describe('card draws (buyCard)', () => {
     buyCard(meta);
     expect(meta.gems).toBe(999 - cost);
     expect(meta.cardBuys).toBe(1);
+  });
+});
+
+describe('arena scales with range', () => {
+  it('keeps the base arena size while the range still fits inside it', () => {
+    const sim = new Sim(createState(1, freshMeta(), false));
+    sim.step(1 / 30);
+    expect(sim.s.arena.w).toBe(ARENA_W);
+    expect(sim.s.arena.h).toBe(ARENA_H);
+  });
+
+  it('grows the arena to stay larger than the range ring once range is high', () => {
+    const s = createState(1, freshMeta(), false);
+    s.run.levels.range = 5000; // many Range levels → range far exceeds the base arena
+    const sim = new Sim(s);
+    sim.step(1 / 30);
+    const range = sim.s.hero.range;
+    expect(range).toBeGreaterThan(ARENA_H); // precondition: range now dwarfs the base arena's short side
+    // the box must strictly contain the range ring (diameter 2*range) so enemies still spawn outside it
+    expect(sim.s.arena.w).toBeGreaterThan(2 * range);
+    expect(sim.s.arena.h).toBeGreaterThan(2 * range);
+    expect(sim.s.arena.w).toBeGreaterThan(ARENA_W);
+    expect(sim.s.arena.h).toBeGreaterThan(ARENA_H);
+  });
+});
+
+describe('makeEnemy spawn box', () => {
+  it('centers the spawn box on the given point, not the arena origin', () => {
+    const rng = makeRng(1);
+    const arena = { w: 4000, h: 3000 };
+    const cx = 480,
+      cy = 320; // a stationary hero, far from the big box's [0,0] corner
+    let minX = Infinity,
+      maxX = -Infinity,
+      minY = Infinity,
+      maxY = -Infinity;
+    for (let i = 0; i < 800; i++) {
+      const e = makeEnemy(i + 1, 'melee', 'average', 1, rng, arena, cx, cy);
+      minX = Math.min(minX, e.x);
+      maxX = Math.max(maxX, e.x);
+      minY = Math.min(minY, e.y);
+      maxY = Math.max(maxY, e.y);
+    }
+    expect((minX + maxX) / 2).toBeCloseTo(cx, 0); // box centered on the hero, not on w/2
+    expect((minY + maxY) / 2).toBeCloseTo(cy, 0);
+    expect(maxX - minX).toBeGreaterThan(arena.w * 0.9); // really spans the whole box
+    expect(maxY - minY).toBeGreaterThan(arena.h * 0.9);
+  });
+
+  it('defaults to the legacy origin-anchored box (hero at w/2, h/2)', () => {
+    const rng = makeRng(2);
+    const arena = { w: ARENA_W, h: ARENA_H };
+    let minX = Infinity,
+      maxX = -Infinity;
+    for (let i = 0; i < 800; i++) {
+      const e = makeEnemy(i + 1, 'melee', 'average', 1, rng, arena);
+      minX = Math.min(minX, e.x);
+      maxX = Math.max(maxX, e.x);
+    }
+    expect(minX).toBeLessThan(40); // left edge ≈ 0 (− margin)
+    expect(maxX).toBeGreaterThan(ARENA_W - 40); // right edge ≈ w (+ margin)
   });
 });
