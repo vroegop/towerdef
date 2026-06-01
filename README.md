@@ -85,26 +85,22 @@ effective level is `perm + run`, capped at the upgrade's `max` **plus** any cap 
 
 The game loop never talks to a HUD directly — it talks to the **HUD host** (`src/hud/host.ts`), a
 proxy + error boundary. If the active HUD throws in any method (or fails to build), the host catches
-it, reports it, and reverts to the last-good HUD (ultimately `classic`), so a broken skin can never
-crash `frame()`. Swaps go through `host.switchTo(name)`; the dev menu remembers the choice in
-`localStorage` (`arena.hud`).
+it, reports it, and reverts to the last-good HUD, so a broken skin can never crash `frame()`. Swaps
+go through `host.switchTo(name)`; the dev menu remembers the choice in `localStorage` (`arena.hud`).
 
 All HUDs are **one themeable core** (`src/hud/hud.ts` — identical structure and wiring) restyled by a
 scoping class plus an injected override stylesheet. Adding a skin = `createThemedHud({ cls, css })`.
 
-Three HUDs ship, registered in `src/hud/registry.ts`:
+One HUD ships, registered in `src/hud/registry.ts`:
 
-| id        | label   | look                                                            |
-|-----------|---------|-----------------------------------------------------------------|
-| `classic` | Classic | the original dark neon look; the host's synchronous crash fallback |
-| `dnd`     | D&D     | parchment character sheet, hexagonal ability-score currency chips |
-| `arcade`  | Arcade  | CRT-cabinet pixel skin (the "retro" theme)                      |
+| id    | label | look                                                            |
+|-------|-------|-----------------------------------------------------------------|
+| `dnd` | D&D   | parchment character sheet, hexagonal ability-score currency chips |
 
 The dev overlay (`src/hud/devmenu.ts`) lives outside the swappable root (appended to `<body>`) so it
 survives HUD swaps; it exposes cheats, time-skip, and the HUD switcher. HUD visual regressions are
-covered by `tests/visual/hud.spec.ts` (screenshots of `classic`/`dnd`/`arcade` across menu tabs and
-the run-over overview); re-bless baselines with `npm run test:visual:update` after intentional UI
-changes.
+covered by `tests/visual/hud.spec.ts` (screenshots of `dnd` across menu tabs and the run-over
+overview); re-bless baselines with `npm run test:visual:update` after intentional UI changes.
 
 ## Technical backlog (non-game)
 

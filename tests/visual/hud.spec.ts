@@ -10,7 +10,7 @@
 import { test, expect } from '@playwright/test';
 import { bootToMenu, openMenuTab } from './fixtures';
 
-const HUDS = ['classic', 'dnd', 'arcade'] as const;
+const HUDS = ['dnd'] as const;
 // Menu tabs that render rich content for our seeded meta: hero, upgrades, cards, labs.
 const TABS: { index: number; name: string }[] = [
   { index: 0, name: 'hero' },
@@ -54,18 +54,18 @@ for (const hud of HUDS) {
 }
 
 test('in-game top bar + upgrade dock', async ({ page }) => {
-  await bootToMenu(page, 'classic');
+  await bootToMenu(page, 'dnd');
   await page.locator('#h-start').click();
   await page.waitForTimeout(400);
   // open the attack subtab so the upgrade dock is expanded
   await page.locator('#h-tabs button').first().click();
   await page.waitForTimeout(200);
   // top bar
-  await expect(page.locator('#h-top')).toHaveScreenshot('classic-ingame-topbar.png');
+  await expect(page.locator('#h-top')).toHaveScreenshot('dnd-ingame-topbar.png');
   // upgrade dock
-  await expect(page.locator('#h-tabbar')).toHaveScreenshot('classic-ingame-dock.png');
+  await expect(page.locator('#h-tabbar')).toHaveScreenshot('dnd-ingame-dock.png');
   // side-menu rail (opened from the header menu toggle) — part of the redesigned in-game chrome
   await page.locator('#h-menu-btn').click();
   await page.waitForTimeout(150);
-  await expect(page.locator('#h-sidemenu')).toHaveScreenshot('classic-ingame-sidemenu.png');
+  await expect(page.locator('#h-sidemenu')).toHaveScreenshot('dnd-ingame-sidemenu.png');
 });

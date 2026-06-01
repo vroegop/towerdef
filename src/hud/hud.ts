@@ -5,7 +5,7 @@ import type { CardDef, CardDrawResult, CardInstance, Hud as HudInstance, HudFact
 import { WAVE, waveCount, tierDifficulty, coinMult, coinsForRun, MAX_TIER, TIER_UNLOCK_WAVE, tierUnlocked } from '../sim/waves';
 import {
   UPGRADES, UP_BY_ID, upgradesIn, boughtOf, permBought, runUpgradeCost, runAtMax, permCost, permAtMax,
-  upgradeCap, CARDS, CARD_INFO, MAX_STARS, CARD_ORDER, CARD_SLOTS, starSlot, buyCardCost, MILESTONES, milestoneReward,
+  upgradeCap, tipOf, CARDS, CARD_INFO, MAX_STARS, CARD_ORDER, CARD_SLOTS, starSlot, buyCardCost, MILESTONES, milestoneReward,
   claimableCount, TAB_DEFS, FIRST_PERM_COST,
 } from '../sim/skills';
 import {
@@ -166,9 +166,9 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   const STAT_ICON: Record<string, string> = { rangedDamage: 'bow', attackSpeed: 'rate', health: 'heart', regen: 'regen',
     critChance: 'crit', critDamage: 'burst', dodge: 'dodge', gold: 'coin',
     thorns: 'shield', msChance: 'bow', bounceChance: 'arrow', rendMult: 'burst', range: 'range', interest: 'coin' };
-  const STAT_LABEL: Record<string, string> = { rangedDamage: 'Ranged', attackSpeed: 'Speed', health: 'Health', regen: 'Regen',
+  const STAT_LABEL: Record<string, string> = { rangedDamage: 'Damage', attackSpeed: 'Speed', health: 'HP', regen: 'Regen',
     critChance: 'Crit', critDamage: 'Crit Dmg', dodge: 'Dodge', gold: 'Gold',
-    thorns: 'Thorns', msChance: 'Multishot', bounceChance: 'Bounce', rendMult: 'Rend', range: 'Range', interest: 'Interest' };
+    thorns: 'Reflect', msChance: 'Multishot', bounceChance: 'Bounce', rendMult: 'Amp', range: 'Range', interest: 'Interest' };
   // currencies shown on the Hero screen
   const CURRENCIES: { key: 'coins' | 'gems' | 'vials'; icon: string; cls: string }[] = [{ key: 'coins', icon: 'coinstar', cls: 'coin' }, { key: 'gems', icon: 'gem', cls: 'gem' }, { key: 'vials', icon: 'vial', cls: 'vial' }];
   function starSvg(kind: string): string {
@@ -417,7 +417,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     const wbar = uel.wavebar;
     if (s.firstRun) wbar.style.display = 'none';
     else {
-      const effInt = WAVE.interval - (UP_BY_ID.waveCut ? UP_BY_ID.waveCut.value(boughtOf(s, 'waveCut')) : 0);
+      const effInt = WAVE.interval;
       wbar.style.display = '';
       uel.wavefill.style.height = Math.max(0, Math.min(1, s.wave.clock / effInt)) * 100 + '%';
     }
@@ -583,7 +583,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
           '<span>Level ' + bought + ' / ' + cap + '</span></div>' +
         '<button class="iconclose" id="h-upd-close">' + icon('close', 18) + '</button>' +
       '</div>' +
-      (u.tip ? '<div class="upd-tip">' + u.tip + '</div>' : '') +
+      (u.tip ? '<div class="upd-tip">' + tipOf(u) + '</div>' : '') +
       '<div class="upd-stats">' +
         '<div class="upd-row"><span>Current</span><b>' + u.fmt(bought) + '</b></div>' +
         (!maxed ? '<div class="upd-row"><span>Next level</span><b>' + u.fmt(bought + 1) + '</b></div>' : '') +
@@ -1084,7 +1084,5 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   return { update, showMenu, refreshMenu, hideMenu, showOverview, hideOverview, showHint, hideHint, setMeta, root };
 }
 
-// Classic: the original, un-themed HUD. Synchronous, always-available, the host's crash fallback.
-export const Hud: HudFactory = (root, handlers) => buildHud(root, handlers, null);
 // Factory for a themed skin: same core + wiring, restyled by `theme = { cls, css }`.
 export const createThemedHud = (theme: ThemeDef): HudFactory => (root, handlers) => buildHud(root, handlers, theme);

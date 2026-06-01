@@ -45,7 +45,7 @@ export const SETTINGS = { goldOnKill: true, coinOnKill: true, enemyHp: true, dam
 // Seed localStorage before any app code runs, so the boot reads our fixed state.
 export async function seed(page: Page, opts: { hud?: string; meta?: object } = {}): Promise<void> {
   const meta = opts.meta || RICH_META;
-  const hud = opts.hud || 'classic';
+  const hud = opts.hud || 'dnd';
   await page.addInitScript(
     ([m, s, h]) => {
       localStorage.setItem('arena.meta', JSON.stringify(m));
@@ -59,7 +59,7 @@ export async function seed(page: Page, opts: { hud?: string; meta?: object } = {
 }
 
 // Navigate, seed, and wait until the HUD menu DOM has rendered the bottom tab strip.
-export async function bootToMenu(page: Page, hud = 'classic'): Promise<void> {
+export async function bootToMenu(page: Page, hud = 'dnd'): Promise<void> {
   await seed(page, { hud });
   await page.goto('/?dev=0');
   // The between-games menu is shown for a hasPlayed meta. Wait for its tab strip.
