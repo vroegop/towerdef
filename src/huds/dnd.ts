@@ -130,6 +130,24 @@ const CSS = `
 .hud.theme-dnd .chip .ic { position: relative; z-index: 1; color: var(--accent); }
 .hud.theme-dnd .chip b { position: relative; z-index: 1; margin: 0; font-family: 'Cinzel', serif; font-size: 14px; line-height: 1.05; color: var(--ink); }
 
+/* in-run Tower-style HUD (currency strip, wave banner, You/Foe stat lines) in parchment + ink. */
+.hud.theme-dnd .cur { color: var(--ink); }
+.hud.theme-dnd .cur b { color: var(--ink); font-family: 'Cinzel', serif; }
+.hud.theme-dnd .cur.gold b { color: var(--gold-ink); }
+.hud.theme-dnd .cur .ic { color: var(--ink-dim); }
+.hud.theme-dnd .wb-title { font-family: 'Cinzel', serif; }
+.hud.theme-dnd .wb-title b { color: var(--ink); }
+.hud.theme-dnd .wb-tier b { color: var(--crimson); }
+.hud.theme-dnd .wb-sub { color: var(--ink-dim); }
+.hud.theme-dnd .statline .sl { background: var(--parch-lt); border: 1px solid #8a6a3a; color: var(--ink);
+  box-shadow: inset 0 0 0 2px var(--parch); }
+.hud.theme-dnd .sl-h { color: var(--ink-dim); font-family: 'Cinzel', serif; }
+.hud.theme-dnd .sl.foe .sl-h { color: var(--crimson); }
+.hud.theme-dnd .sl b { color: var(--ink); font-family: 'Cinzel', serif; }
+.hud.theme-dnd .sl-row .ic { color: var(--ink-dim); }
+.hud.theme-dnd .sl-hp .slbar { background: #cdb89a; }
+.hud.theme-dnd .sl-hp .slbarfill { background: linear-gradient(90deg, #9a2a1a, #6a8a2a); }
+
 /* floating check-in: a small carved parchment tablet (no neon) matching the ability-score stones. */
 .hud.theme-dnd .checkin-float { background: var(--parch-lt); border: 1px solid #8a6a3a; color: var(--ink);
   box-shadow: inset 0 0 0 2px var(--parch), 0 3px 8px rgba(0,0,0,.3); font-family: 'Cinzel', serif; }

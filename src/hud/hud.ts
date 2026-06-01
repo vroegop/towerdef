@@ -2,13 +2,14 @@
    (5 bottom tabs), a spotlight tutorial, a milestones modal, and a settings modal.
    Handlers: onBuyRun, onBuyPerm, onClaimMilestone, onStartRun, onDev, onFF. */
 import type { BulkQty, CardDef, CardDrawResult, CardInstance, Hud as HudInstance, HudFactory, HudHandlers, MenuOpts, Meta, Settings, State, ThemeDef, EarnSummary, UpgradeDef } from '../types';
-import { WAVE, waveCount, tierDifficulty, coinMult, coinsForRun, MAX_TIER, TIER_UNLOCK_WAVE, tierUnlocked } from '../sim/waves';
+import { WAVE, waveCount, tierDifficulty, coinMult, coinsForRun, waveStr, MAX_TIER, TIER_UNLOCK_WAVE, tierUnlocked } from '../sim/waves';
+import { TYPES } from '../sim/registries';
 import {
   UPGRADES, UP_BY_ID, upgradesIn, boughtOf, permBought, runUpgradeCost, runAtMax, permCost, permAtMax,
   isUnlocked, SKILL_GROUPS, isGroupUnlocked, nextUnlockGroup, skillGroup,
   upgradeCap, tipOf, CARDS, CARD_INFO, MAX_STARS, CARD_ORDER, CARD_SLOTS, starSlot, buyCardCost, MILESTONES, milestoneReward,
   claimableCount, TAB_DEFS, FIRST_PERM_COST, cardSlotCost, MAX_CARD_SLOTS, activeCardIds,
-  availableBulkTiers, runBulkPlan, permBulkPlan,
+  availableBulkTiers, runBulkPlan, permBulkPlan, computeStats,
 } from '../sim/skills';
 import {
   LABS, LAB_BY_ID, labLevel, labUnlocked, labsTabUnlocked, labCoinCost, labTimeSec, labAtMax, researchOf, researchRemaining,
@@ -80,16 +81,35 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   root.innerHTML =
     // Fixed header: game info on the left, a single menu toggle pinned right. No wrapping, so
     // the layout is identical on every device and across themes (whose fonts have varying widths).
+    // Tower-style top: a currency strip (in-run gold + the banked meta currencies) on the left, the
+    // menu toggle pinned right. The wave banner + our/foe stat lines sit just below it.
     '<div class="topbar" id="h-top">' +
-    '  <div class="stat wave"><span class="lbl">Wave</span><b id="h-wave">1</b></div>' +
-    '  <div class="stat hp"><span class="hpbar">' +
-    '<span class="hptrail" id="h-hptrail"></span>' +
-    '<span class="hpclip" id="h-hpclip"><i class="hpfill"></i></span>' +
-    '<span class="hpheart">' + icon('heart', 11) + '</span>' +
-    '<b class="hpnum" id="h-hp">1</b>' +
-    '</span></div>' +
-    '  <div class="stat gold">' + icon('coin', 15, 'gold') + '<b id="h-gold">0</b></div>' +
+    '  <div class="curbar">' +
+    '    <span class="cur gold" title="Gold (this run)">' + icon('coin', 15, 'gold') + '<b id="h-gold">0</b></span>' +
+    '    <span class="cur" title="Coins">' + icon('coinstar', 14, 'coin') + '<b id="h-coins">0</b></span>' +
+    '    <span class="cur" title="Gems">' + icon('gem', 14, 'gem') + '<b id="h-gems">0</b></span>' +
+    '    <span class="cur" title="Vials">' + icon('vial', 14, 'vial') + '<b id="h-vials">0</b></span>' +
+    '  </div>' +
     '  <button class="iconbtn menutoggle" id="h-menu-btn" title="Menu">' + icon('menu', 22) + '</button>' +
+    '</div>' +
+    // Wave banner (Tier · Wave + foes left) and the You-vs-Foe stat lines.
+    '<div class="wavebanner" id="h-wavebanner">' +
+    '  <div class="wb-title"><span class="wb-tier">Tier <b id="h-tier">1</b></span>' +
+    '<span class="wb-dot">·</span><span class="wb-wave">Wave <b id="h-wave">1</b></span></div>' +
+    '  <div class="wb-sub"><b id="h-foes">0</b> foes</div>' +
+    '</div>' +
+    '<div class="statline" id="h-statline">' +
+    '  <div class="sl us">' +
+    '    <span class="sl-h">You</span>' +
+    '    <span class="sl-hp"><span class="slbar"><i class="slbarfill" id="h-hpfill"></i></span><b id="h-hp">1</b></span>' +
+    '    <span class="sl-row">' + icon('bow', 11) + '<b id="h-dmg">0</b></span>' +
+    '    <span class="sl-row">' + icon('rate', 11) + '<b id="h-spd">0</b></span>' +
+    '  </div>' +
+    '  <div class="sl foe">' +
+    '    <span class="sl-h">Foe</span>' +
+    '    <span class="sl-row">' + icon('heart', 11) + '<b id="h-fhp">0</b></span>' +
+    '    <span class="sl-row">' + icon('bow', 11) + '<b id="h-fdmg">0</b></span>' +
+    '  </div>' +
     '</div>' +
     // Persistent side menu: a narrow, one-icon-wide rail that opens from the menu toggle and stays
     // open (game interactions never auto-dismiss it). It is only as tall as its content, so it stays
@@ -531,20 +551,35 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     lastS = s;
     if (!uel)
       uel = {
-        wave: $('#h-wave'), hp: $('#h-hp'), gold: $('#h-gold'), hpclip: $('#h-hpclip'), hptrail: $('#h-hptrail'),
-        hpstat: $('.stat.hp'), wavebar: $('#h-wavebar'), wavefill: $('#h-wavefill'), tabbar: $('#h-tabbar'), stats: $('#h-stats'),
+        wave: $('#h-wave'), tier: $('#h-tier'), foes: $('#h-foes'), hp: $('#h-hp'), gold: $('#h-gold'),
+        coins: $('#h-coins'), gems: $('#h-gems'), vials: $('#h-vials'),
+        dmg: $('#h-dmg'), spd: $('#h-spd'), fhp: $('#h-fhp'), fdmg: $('#h-fdmg'),
+        hpfill: $('#h-hpfill'), statline: $('#h-statline'),
+        wavebar: $('#h-wavebar'), wavefill: $('#h-wavefill'), tabbar: $('#h-tabbar'), stats: $('#h-stats'),
       };
+    const tier = s.meta.tier || 1;
     uel.wave.textContent = String(s.wave.n);
-    uel.hp.textContent = abbr(Math.ceil(s.hero.hp)) + '/' + abbr(Math.ceil(s.hero.hpMax));
+    uel.tier.textContent = String(tier);
+    uel.foes.textContent = String(s.enemies.length + Math.max(0, s.wave.toSpawn));
+    // currency strip: in-run gold + banked meta currencies.
     uel.gold.textContent = abbr(s.econ.gold);
-    // HP bar: a red→green gradient revealed by clipping to the current fraction (mirrors the enemy
-    // bars), with a translucent "damage trail" that drains a beat behind each hit and a low-HP danger
-    // pulse. The value lives inside the bar.
+    uel.coins.textContent = abbr(s.meta.coins || 0);
+    uel.gems.textContent = abbr(s.meta.gems || 0);
+    uel.vials.textContent = abbr(s.meta.vials || 0);
+    // You vs Foe stat lines: our live damage/fire-rate from computeStats, the baseline foe's HP/dmg
+    // from the wave-strength curve at this (tier-scaled) wave.
+    const st = computeStats(s);
+    uel.dmg.textContent = abbr(Math.round(st.rangedDamage));
+    uel.spd.textContent = st.fireRate.toFixed(2) + '/s';
+    const eff = Math.max(1, s.wave.n) * tierDifficulty(tier);
+    const fstr = waveStr(eff);
+    uel.fhp.textContent = abbr(Math.max(1, Math.round(TYPES.melee.hp * fstr)));
+    uel.fdmg.textContent = abbr(Math.max(1, Math.round(TYPES.melee.dmg * fstr)));
+    // HP: number + an inline bar that drains as the hero is hurt (low-HP danger pulse).
+    uel.hp.textContent = abbr(Math.ceil(s.hero.hp)) + '/' + abbr(Math.ceil(s.hero.hpMax));
     const hpf = s.hero.hpMax > 0 ? Math.max(0, Math.min(1, s.hero.hp / s.hero.hpMax)) : 0;
-    const hpPct = hpf * 100 + '%';
-    uel.hpclip.style.width = hpPct;
-    uel.hptrail.style.width = hpPct;
-    uel.hpstat.classList.toggle('low', hpf > 0 && hpf <= 0.3);
+    uel.hpfill.style.width = hpf * 100 + '%';
+    uel.statline.classList.toggle('low', hpf > 0 && hpf <= 0.3);
     const wbar = uel.wavebar;
     if (s.firstRun) wbar.style.display = 'none';
     else {

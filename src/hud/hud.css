@@ -20,6 +20,34 @@
 .hud .iconbtn:hover { color: #fff; }
 .hud .topbar .menutoggle { margin-left: auto; flex: 0 0 auto; } /* always pinned to the right edge */
 
+/* ---- Tower-style in-run top: a currency strip, a centered wave banner, and You-vs-Foe stat lines.
+   (Colours here are the default skin; the D&D theme restyles them to parchment + ink.) ---- */
+.hud .curbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.hud .cur { display: inline-flex; align-items: center; gap: 4px; font: 700 13px system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.hud .cur b { color: #d8deea; }
+.hud .cur.gold b { color: #ffd24a; min-width: 5ch; display: inline-block; }
+.hud .wavebanner { position: absolute; top: 38px; left: 0; right: 0; text-align: center; pointer-events: none;
+  text-shadow: 0 1px 3px rgba(0,0,0,.85); }
+.hud .wb-title { font: 800 18px system-ui, sans-serif; letter-spacing: .5px; }
+.hud .wb-title b { color: #fff; }
+.hud .wb-tier b { color: #e64cff; }
+.hud .wb-dot { margin: 0 7px; opacity: .55; }
+.hud .wb-sub { font-size: 11px; color: #8b93a7; margin-top: 1px; }
+.hud .statline { position: absolute; top: 74px; left: 8px; right: 8px; display: flex; justify-content: center;
+  flex-wrap: wrap; gap: 6px; pointer-events: none; text-shadow: 0 1px 2px rgba(0,0,0,.8); }
+.hud .sl { display: flex; align-items: center; gap: 6px; background: rgba(15,18,27,.55); border: 1px solid #262c3d;
+  border-radius: 7px; padding: 3px 8px; font-size: 10px; }
+.hud .sl-h { font: 800 10px system-ui, sans-serif; text-transform: uppercase; letter-spacing: .5px; color: #8b93a7; }
+.hud .sl.foe .sl-h { color: #ff6b6b; }
+.hud .sl-row { display: inline-flex; align-items: center; gap: 3px; }
+.hud .sl-row .ic { color: #8b93a7; }
+.hud .sl b { color: #d8deea; font-variant-numeric: tabular-nums; }
+.hud .sl-hp { display: inline-flex; align-items: center; gap: 4px; }
+.hud .sl-hp .slbar { width: 42px; height: 7px; border-radius: 4px; background: #2a3142; overflow: hidden; }
+.hud .sl-hp .slbarfill { display: block; height: 100%; background: linear-gradient(90deg, #ff5d6c, #3ddc84); transition: width .15s linear; }
+.hud .statline.low .sl-hp .slbarfill { animation: hppulse .8s ease-in-out infinite; }
+@keyframes hppulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+
 /* ---- side menu: a narrow, one-icon-wide rail pinned under the header toggle. It is only as tall as
        its content (icon buttons + padding), so it never blocks the arena. Toggled by the header menu
        button; each icon opens a self-dismissing modal/panel rather than an always-on side panel. ---- */
