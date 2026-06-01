@@ -114,9 +114,9 @@ const CSS = `
 /* hero "character sheet": the currency + max-wave chips become carved hexagonal ability-score stones.
    The rim colour is the chip background; an inset hexagonal ::before paints the parchment face, so the
    3px gap reads as an engraved border (clip-path can't take a border directly). */
-.hud.theme-dnd .chips { gap: 14px; }
+.hud.theme-dnd .chips { gap: 6px; }
 .hud.theme-dnd .chip {
-  position: relative; width: 80px; height: 88px; padding: 0; border: 0; border-radius: 0;
+  position: relative; width: 76px; height: 84px; padding: 0; border: 0; border-radius: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   background: #7a5a2a; color: var(--ink-dim); text-align: center;
   clip-path: polygon(50% 1%, 95% 25%, 95% 75%, 50% 99%, 5% 75%, 5% 25%);
