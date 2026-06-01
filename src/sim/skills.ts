@@ -357,11 +357,23 @@ const UPGRADE_SPECS: UpgradeSpec[] = [
     max: 149, gated: true, curve: { kind: 'linear', base: 1, per: 0.01 }, fmt: (v) => '×' + v.toFixed(2),
     gold: tcurve(COINS_COST), coin: tcurve(COINS_COST) },
 ];
-// Generate each upgrade's `value` from its `curve`. The closure reads `def.curve` live, so the
-// dev dashboard can rebalance a curve in place and have graphs + the sim update with no rebuild.
+// In-round GOLD costs TRACK the permanent COIN curve's shape, but are a flat fraction cheaper — so
+// gold is ALWAYS cheaper than coin (never the geometric curve that started cheap then exploded past
+// coin). Tune GOLD_FACTOR to rebalance the whole economy at once; COIN costs are untouched.
+const GOLD_FACTOR = 0.33; // gold ≈ ⅓ of the coin price at every level
+
+// Generate each upgrade's `value` from its `curve`, and derive its `gold` cost from its `coin` curve
+// scaled by GOLD_FACTOR (floored at 1). Closures read live, so the dev dashboard can rebalance a
+// coin curve in place and have gold + graphs + the sim follow with no rebuild.
 export const UPGRADES: UpgradeDef[] = UPGRADE_SPECS.map((spec) => {
   const def = { ...spec } as UpgradeDef;
   def.value = (b: number) => evalCurve(def.curve, b);
+  const coinCurve = def.coin;
+  def.gold = {
+    base: Math.max(1, Math.round(coinCurve.cost(0) * GOLD_FACTOR)),
+    grow: 0,
+    cost: (n: number) => Math.max(1, Math.round(coinCurve.cost(n) * GOLD_FACTOR)),
+  };
   return def;
 });
 export const UP_BY_ID: Record<string, UpgradeDef> = {};
