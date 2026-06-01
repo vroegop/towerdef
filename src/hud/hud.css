@@ -374,23 +374,21 @@
 .hud .menutabs .lk { font-size: 14px; }
 .hud .menutabs .ml { font-size: 11px; }
 
-/* ---- milestones panel: an in-flow page that sits in the content region, NOT a fullscreen
-   overlay, so the bottom tab strip stays visible and clicking a tab returns to it ---- */
-.hud .menu-content { order: 1; }
-.hud .modal { order: 2; flex: 1; min-height: 0; display: flex; flex-direction: column;
-  background: radial-gradient(900px 600px at 50% -10%, #141b2e 0%, #07090f 75%); }
-.hud .menutabs { order: 3; }
-.hud .menu.ms-open .menu-content { display: none; } /* panel takes over the content region */
+/* ---- milestones modal: a centered, contained card over a dimmed backdrop — matches the
+   settings/upgrade-detail modal idiom (fixed backdrop + bounded inner, click-outside to close) ---- */
+.hud .modal { position: fixed; inset: 0; z-index: 70; display: flex; align-items: flex-start; justify-content: center;
+  background: rgba(6,8,14,.6); pointer-events: auto; }
 .hud .modal.hide { display: none; }
-.hud .modal-inner { flex: 1; overflow: auto; padding: 22px 18px 16px; }
-.hud .modal-inner > * { max-width: 560px; margin-left: auto; margin-right: auto; }
-.hud .modal h2 { margin: 4px auto 4px; }
-.hud .modal .msnote { color: #8b93a7; font-size: 13px; margin: 0 auto 12px; }
-.hud .modal .close { display: block; background: transparent; border: 0; color: #8b93a7; font: inherit; cursor: pointer; padding: 0 0 8px; }
+.hud .modal-inner { position: relative; margin-top: 56px; width: min(440px, 92vw); max-height: calc(100% - 96px);
+  display: flex; flex-direction: column; background: #11151f; border: 1px solid #2a3550; border-radius: 8px; overflow: hidden; }
+.hud .modal h2 { margin: 16px 18px 2px; }
+.hud .modal .msnote { color: #8b93a7; font-size: 13px; margin: 0 18px 10px; }
+.hud .modal .close { position: absolute; top: 12px; right: 14px; background: transparent; border: 0; color: #8b93a7;
+  font: 700 20px system-ui; line-height: 1; cursor: pointer; padding: 2px 4px; }
 .hud .modal .close:hover { color: #fff; }
 /* ---- milestones: a hexagon trail down a spine — gold up to the furthest wave, dim beyond, with a
    "you are here" pin sitting between the last reached node and the next ---- */
-.hud .mspath { display: flex; flex-direction: column; max-width: 460px; margin: 4px auto 0; }
+.hud .mspath { display: flex; flex-direction: column; overflow: auto; padding: 0 16px 16px; }
 .hud .msrow { display: flex; align-items: stretch; gap: 12px; min-height: 52px; }
 .hud .msrail { position: relative; flex: 0 0 44px; display: flex; align-items: center; justify-content: center; }
 .hud .msrail::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; transform: translateX(-50%); background: #232a3d; }

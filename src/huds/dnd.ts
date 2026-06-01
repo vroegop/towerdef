@@ -15,17 +15,14 @@ const CSS = `
 }
 .hud.theme-dnd b, .hud.theme-dnd .stat b { color: var(--ink); }
 
-/* parchment backdrop for every full-screen surface (menu / overview / modals / stats) */
+/* parchment backdrop for every full-screen surface (menu / overview / stats) */
 .hud.theme-dnd .menu,
-.hud.theme-dnd .modal,
 .hud.theme-dnd .over { background: #2b1d10; }
-.hud.theme-dnd .menu-content,
-.hud.theme-dnd .modal-inner {
+.hud.theme-dnd .menu-content {
   background: var(--parch);
   background-image: radial-gradient(circle at 30% 8%, var(--parch-lt), #e3d3b0 70%);
 }
-.hud.theme-dnd .menu-content,
-.hud.theme-dnd .modal { box-shadow: inset 0 0 0 3px #8a6a3a, inset 0 0 0 6px var(--parch); }
+.hud.theme-dnd .menu-content { box-shadow: inset 0 0 0 3px #8a6a3a, inset 0 0 0 6px var(--parch); }
 
 /* ---- in-run top stats: engraved on the arena ---- */
 .hud.theme-dnd .topbar { text-shadow: 0 1px 2px rgba(243,233,210,.4); }
@@ -80,6 +77,7 @@ const CSS = `
 .hud.theme-dnd .statscard,
 .hud.theme-dnd .over-card,
 .hud.theme-dnd .cardmodal-inner,
+.hud.theme-dnd .modal-inner,
 .hud.theme-dnd .updmodal-inner {
   background: var(--parch);
   background-image: radial-gradient(circle at 30% 8%, var(--parch-lt), #e3d3b0 70%);
@@ -307,6 +305,9 @@ const CSS = `
 .hud.theme-dnd .mn-done { color: #5e7a3a; }
 .hud.theme-dnd .mn-claim { background: rgba(107,138,58,.16); border-color: #6b8a3a; color: #4a6b2a; }
 .hud.theme-dnd .mn-claim:hover { background: rgba(107,138,58,.28); }
+.hud.theme-dnd .modal .msnote { color: var(--ink-dim); }
+.hud.theme-dnd .modal .close { color: var(--ink-dim); }
+.hud.theme-dnd .modal .close:hover { color: var(--ink); }
 .hud.theme-dnd .msnow .mspin { background: var(--crimson); color: var(--parch-lt); box-shadow: 0 0 0 3px rgba(154,42,26,.25); }
 .hud.theme-dnd .msnow .mn-info b { color: var(--crimson); }
 .hud.theme-dnd .msnow .mn-reward { color: var(--ink-dim); }
