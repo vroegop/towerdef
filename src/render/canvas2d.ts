@@ -7,7 +7,7 @@ import type { Settings, State } from '../types';
 import { TIERS } from '../sim/registries';
 import { BASE_RANGE_M, PX_PER_METER } from '../sim/skills';
 
-const EDGE_PAD = 6; // px gap left between the range ring and the nearest screen edge (full-immersion zoom)
+const RANGE_PAD = 0.1; // fraction of range kept as padding outside the ring so bounced enemies stay visible
 
 type Ctx = CanvasRenderingContext2D;
 interface Spark { x: number; y: number; vx: number; vy: number; life: number; color: string }
@@ -181,9 +181,9 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     const W = canvas.clientWidth,
       H = canvas.clientHeight;
     const range = (s.hero && s.hero.range) || BASE_RANGE_M * PX_PER_METER;
-    // Fit the full range ring (diameter 2·range) into the smaller screen dimension with EDGE_PAD
-    // breathing room. Using min(W,H) guarantees the ring fits in both axes on any aspect ratio.
-    const scale = (Math.min(W, H) - 2 * EDGE_PAD) / (2 * range);
+    // Fit the range ring plus 10% padding into the smaller screen dimension on any aspect ratio.
+    // The extra range*RANGE_PAD on each side keeps bounced enemies visible outside the ring.
+    const scale = Math.min(W, H) / (2 * range * (1 + RANGE_PAD));
     const hp = ipos(HERO_ID, s.hero.x, s.hero.y);
     let shx = 0,
       shy = 0;
