@@ -569,6 +569,14 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     if (e.target === endmodal) hideEnd();
   });
 
+  // Dismiss every in-run modal/panel (Display, End-run confirm, Run Stats) — called when a run ends
+  // or we return to the menu, so a left-open modal never lingers over the overview/menu screen.
+  const closeRunModals = (): void => {
+    setmodal.classList.add('hide');
+    endmodal.classList.add('hide');
+    $('#h-stats').classList.add('hide');
+  };
+
   // ---------- MENU ----------
   const menuEl = $('#h-menu'),
     menuContent = $('#h-menu-content'),
@@ -999,6 +1007,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     renderMenu();
     menuEl.classList.add('show');
     sidemenu.classList.remove('open'); // the side menu is in-game chrome — Settings lives there, not on the menu screen
+    closeRunModals();
     tabbarEl.style.display = 'none';
     topEl.style.display = 'none';
   }
@@ -1019,7 +1028,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   function showOverview(meta: Meta, earn: EarnSummary): void {
     lastMeta = meta;
     const e = earn || {};
-    $('#h-stats').classList.add('hide');
+    closeRunModals(); // a run just ended — don't leave an in-run modal floating over the overview
     const tier = meta.tier || 1;
     const rew = '<div class="rew"><span>Coins</span><b>+' + (e.coins || 0) + ' ' + coinsIc(16) + '</b></div>';
     const row = (label: string, val: string): string => '<div class="strow"><span>' + label + '</span><b>' + val + '</b></div>';
