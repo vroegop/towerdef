@@ -11,15 +11,15 @@ import type { Page } from '@playwright/test';
 
 // A rich meta that unlocks every menu tab (cards, labs, tier 2) so each screen renders real content.
 export const RICH_META = {
-  cores: 125000,
+  coins: 125000,
   perm: { attackSpeed: 4, rangedDamage: 6, health: 8, regen: 3 },
   hasPlayed: true,
   bestWave: 120,
   claimedMilestones: { '10': true, '50': true },
   tier: 2,
-  coreMult: 1,
+  coinMult: 1,
   tierBest: { 1: 320, 2: 120 },
-  tokens: 240,
+  gems: 240,
   cards: [
     { id: 'damage', stars: 7 },
     { id: 'power', stars: 3 },
@@ -33,14 +33,14 @@ export const RICH_META = {
   labs: { dmgScale: 12, hpScale: 8, gameSpeed: 2 },
   research: [],
   labSlots: 2,
-  cells: 60,
+  vials: 60,
   // far in the past so the check-in button shows as "ready" deterministically
   lastCheckIn: 0,
   ultimates: {},
   ver: 2,
 };
 
-export const SETTINGS = { goldOnKill: true, coreOnKill: true, enemyHp: true, damageNumbers: true };
+export const SETTINGS = { goldOnKill: true, coinOnKill: true, enemyHp: true, damageNumbers: true };
 
 // Seed localStorage before any app code runs, so the boot reads our fixed state.
 export async function seed(page: Page, opts: { hud?: string; meta?: object } = {}): Promise<void> {

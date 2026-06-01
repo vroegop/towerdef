@@ -100,30 +100,30 @@ export function researchOf(meta: Meta, id: string): Research | null {
 }
 export const freeSlots = (meta: Meta): number => Math.max(0, (meta.labSlots || 1) - (meta.research || []).length);
 
-// Begin researching a lab's next level. Deducts cores up front (refunded on cancel).
+// Begin researching a lab's next level. Deducts coins up front (refunded on cancel).
 export function startResearch(meta: Meta, id: string, nowMs: number): boolean {
   if (!labUnlocked(meta, id) || labAtMax(meta, id)) return false;
   if (researchOf(meta, id)) return false;
   if (freeSlots(meta) <= 0) return false;
   const cost = labCoinCost(meta, id);
-  if ((meta.cores || 0) < cost) return false;
-  meta.cores -= cost;
+  if ((meta.coins || 0) < cost) return false;
+  meta.coins -= cost;
   meta.research = meta.research || [];
   meta.research.push({ id, cost, endsAt: nowMs + labTimeSec(meta, id) * 1000 });
   return true;
 }
 
-// Cancel an in-progress lab: refund its cores, free the slot.
+// Cancel an in-progress lab: refund its coins, free the slot.
 export function cancelResearch(meta: Meta, id: string): boolean {
   const r = researchOf(meta, id);
   if (!r) return false;
-  meta.cores = (meta.cores || 0) + (r.cost || 0);
+  meta.coins = (meta.coins || 0) + (r.cost || 0);
   meta.research = (meta.research || []).filter((x) => x.id !== id);
   return true;
 }
 
-// Rush an in-progress lab by spending cells: halves its remaining time.
-export function rushCellCost(meta: Meta, id: string, nowMs: number): number {
+// Rush an in-progress lab by spending vials: halves its remaining time.
+export function rushVialCost(meta: Meta, id: string, nowMs: number): number {
   const r = researchOf(meta, id);
   if (!r) return 0;
   return Math.max(1, Math.ceil(Math.max(0, (r.endsAt - nowMs) / 1000) / 120));
@@ -131,9 +131,9 @@ export function rushCellCost(meta: Meta, id: string, nowMs: number): number {
 export function rushResearch(meta: Meta, id: string, nowMs: number): boolean {
   const r = researchOf(meta, id);
   if (!r) return false;
-  const cost = rushCellCost(meta, id, nowMs);
-  if ((meta.cells || 0) < cost) return false;
-  meta.cells -= cost;
+  const cost = rushVialCost(meta, id, nowMs);
+  if ((meta.vials || 0) < cost) return false;
+  meta.vials -= cost;
   r.endsAt = nowMs + Math.max(0, (r.endsAt - nowMs) * 0.5);
   return true;
 }
@@ -154,36 +154,41 @@ export function reconcileResearch(meta: Meta, nowMs: number): string[] {
   return done;
 }
 
-// ---- concurrent research slots (a premium-currency / token sink; 1 → MAX_SLOTS) ----
+// ---- concurrent research slots (a premium-currency / gem sink; 1 → MAX_SLOTS) ----
 export const MAX_SLOTS = 5;
 export const labSlotCost = (meta: Meta): number => 25 * Math.pow(2, Math.max(0, (meta.labSlots || 1) - 1));
 export function buyLabSlot(meta: Meta): boolean {
   if ((meta.labSlots || 1) >= MAX_SLOTS) return false;
   const cost = labSlotCost(meta);
-  if ((meta.tokens || 0) < cost) return false;
-  meta.tokens -= cost;
+  if ((meta.gems || 0) < cost) return false;
+  meta.gems -= cost;
   meta.labSlots = (meta.labSlots || 1) + 1;
   return true;
 }
 
-// ---- 15-minute check-in: the SOLE source of cells & card currency ----
+// ---- 15-minute check-in: the SOLE source of vials & card currency ----
 export const CHECKIN_MS = 15 * 60 * 1000; // one claim every 15 minutes
 export const CHECKIN_CAP = 8; // bank up to 8 claims (~2 hours) while away
-export const CHECKIN_CELLS = 5; // cells per claim
-export const CHECKIN_TOKENS = 5; // card currency (tokens) per claim
+export const CHECKIN_VIALS = 5; // vials per claim
+export const CHECKIN_GEMS = 5; // card currency (gems) per claim
 export function checkInPending(meta: Meta, nowMs: number): number {
   const last = meta.lastCheckIn || nowMs;
   return Math.max(0, Math.min(CHECKIN_CAP, Math.floor((nowMs - last) / CHECKIN_MS)));
 }
-export function claimCheckIn(meta: Meta, nowMs: number): { claims: number; cells: number; tokens: number } | null {
+export function checkInNextMs(meta: Meta, nowMs: number): number {
+  const last = meta.lastCheckIn || nowMs;
+  if (checkInPending(meta, nowMs) >= CHECKIN_CAP) return 0;
+  return Math.max(0, CHECKIN_MS - ((nowMs - last) % CHECKIN_MS));
+}
+export function claimCheckIn(meta: Meta, nowMs: number): { claims: number; vials: number; gems: number } | null {
   const n = checkInPending(meta, nowMs);
   if (n <= 0) return null;
-  const cells = n * CHECKIN_CELLS,
-    tokens = n * CHECKIN_TOKENS;
-  meta.cells = (meta.cells || 0) + cells;
-  meta.tokens = (meta.tokens || 0) + tokens;
+  const vials = n * CHECKIN_VIALS,
+    gems = n * CHECKIN_GEMS;
+  meta.vials = (meta.vials || 0) + vials;
+  meta.gems = (meta.gems || 0) + gems;
   meta.lastCheckIn = nowMs;
-  return { claims: n, cells, tokens };
+  return { claims: n, vials, gems };
 }
 
 // ---- meta defaults / migration (idempotent; additive only, never destructive) ----
@@ -193,8 +198,7 @@ export function migrateMeta(meta: Meta): Meta {
   if (meta.labs == null) meta.labs = {};
   if (!Array.isArray(meta.research)) meta.research = [];
   if (meta.labSlots == null) meta.labSlots = 1;
-  if (meta.cells == null) meta.cells = 0;
-  if (meta.ultimates == null) meta.ultimates = {};
+  if (meta.vials == null) meta.vials = 0;
   meta.ver = META_VER;
   return meta;
 }

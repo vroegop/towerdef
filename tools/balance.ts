@@ -40,10 +40,10 @@ const N = Number(process.argv[2]) || 4;
 const heavyPerm = { health: 300, rangedDamage: 300, attackSpeed: 150, regen: 150, critChance: 100, critDamage: 300, armor: 200 };
 const maxLabs = { dmgScale: 50, rateScale: 50, critScale: 50, hpScale: 50, regenScale: 50, coinScale: 40, gameSpeed: 10 };
 const profiles: Record<string, Partial<Meta>> = {
-  'fresh                ': { cores: 0, perm: {}, tier: 1, cards: [] },
-  'light perm           ': { cores: 0, perm: { health: 50, rangedDamage: 50, attackSpeed: 30, regen: 30 }, tier: 1, cards: [] },
-  'heavy perm           ': { cores: 0, perm: heavyPerm, tier: 1, cards: [] },
-  'heavy perm + max labs': { cores: 0, perm: heavyPerm, labs: maxLabs, tier: 1, cards: [] },
+  'fresh                ': { coins: 0, perm: {}, tier: 1, cards: [] },
+  'light perm           ': { coins: 0, perm: { health: 50, rangedDamage: 50, attackSpeed: 30, regen: 30 }, tier: 1, cards: [] },
+  'heavy perm           ': { coins: 0, perm: heavyPerm, tier: 1, cards: [] },
+  'heavy perm + max labs': { coins: 0, perm: heavyPerm, labs: maxLabs, tier: 1, cards: [] },
 };
 console.log('wall depth (avg wave reached over ' + N + ' runs, expBase ' + WAVE.expBase + '):');
 for (const [name, meta] of Object.entries(profiles)) console.log('  ' + name + '  ' + avg(meta as Meta, N));

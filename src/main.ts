@@ -6,10 +6,9 @@ import type { EarnSummary, HudHandlers, Meta, Settings, State } from './types';
 import { DT, catchUp } from './sim/offline';
 import { Sim, tickDying } from './sim/core';
 import { createState } from './sim/state';
-import { migrateMeta, reconcileResearch, claimCheckIn, startResearch, cancelResearch, rushResearch, buyLabSlot } from './sim/labs';
-import { gameSpeed } from './sim/labs';
+import { migrateMeta, reconcileResearch, claimCheckIn, startResearch, cancelResearch, rushResearch, buyLabSlot, gameSpeed } from './sim/labs';
 import { buyRunUpgrade, buyPerm, claimMilestone, buyCard, grantInitialCard, FIRST_PERM_COST } from './sim/skills';
-import { MAX_TIER, tierUnlocked, coreMult } from './sim/waves';
+import { MAX_TIER, tierUnlocked, coinsForRun } from './sim/waves';
 import { makeEnemy } from './sim/enemies';
 import { BULLET_SPEED, BULLET_R } from './sim/projectiles';
 import { Canvas2DRenderer } from './render/canvas2d';
@@ -32,7 +31,7 @@ function loadSettings(): Settings {
   }
   return {
     goldOnKill: s.goldOnKill !== false,
-    coreOnKill: s.coreOnKill !== false,
+    coinOnKill: s.coinOnKill !== false,
     enemyHp: s.enemyHp !== false,
     damageNumbers: s.damageNumbers !== false,
   };
@@ -42,32 +41,29 @@ function saveSettings(): void {
 }
 
 function loadMeta(): Meta {
-  let m: any = {};
+  let m: Partial<Meta> = {};
   try {
     m = JSON.parse(localStorage.getItem(METAK) || '{}') || {};
   } catch {
     /* ignore */
   }
   const meta: Meta = {
-    cores: m.cores || 0,
+    coins: m.coins || 0,
     perm: m.perm || {},
     hasPlayed: !!m.hasPlayed,
     bestWave: m.bestWave || 0,
     claimedMilestones: m.claimedMilestones || {},
     tier: m.tier || 1,
-    coreMult: m.coreMult || 1,
     tierBest: m.tierBest || {},
-    tokens: m.tokens || 0,
+    gems: m.gems || 0,
     cards: m.cards || [],
     cardBuys: m.cardBuys || 0,
     totalWaves: m.totalWaves || 0,
-    waveTokensGranted: m.waveTokensGranted || 0,
     labs: m.labs || {},
     research: Array.isArray(m.research) ? m.research : [],
     labSlots: m.labSlots || 1,
-    cells: m.cells || 0,
+    vials: m.vials || 0,
     lastCheckIn: m.lastCheckIn || Date.now(),
-    ultimates: m.ultimates || {},
     ver: m.ver || 0,
   };
   return migrateMeta(meta);
@@ -157,14 +153,18 @@ const handlers: HudHandlers = {
     if (kind === 'reset') {
       localStorage.clear();
       location.reload();
-    } else if (kind === 'cores') {
-      meta.cores = 999999;
+    } else if (kind === 'coins') {
+      meta.coins = 999999;
       saveMeta();
       hud.refreshMenu(meta);
     } else if (kind === 'gold') {
       if (sim) sim.s.econ.gold = 999999;
-    } else if (kind === 'tokens') {
-      meta.tokens = 999999;
+    } else if (kind === 'gems') {
+      meta.gems = 999999;
+      saveMeta();
+      hud.refreshMenu(meta);
+    } else if (kind === 'vials') {
+      meta.vials = 999999;
       saveMeta();
       hud.refreshMenu(meta);
     } else if (kind === 'lightning') {
@@ -296,10 +296,8 @@ function bankRun(): EarnSummary {
   const firstRunJustEnded = !meta.hasPlayed;
   const s = sim!.s;
   const wave = s.wave.maxWave || s.wave.n;
-  const cores = firstRunJustEnded
-    ? FIRST_PERM_COST
-    : Math.max(1, Math.round((Math.floor(s.econ.kills / 10) + (s.wave.maxWave || 0) + (s.econ.bonusCores || 0)) * coreMult(meta.tier || 1)));
-  meta.cores = (meta.cores || 0) + cores;
+  const coins = firstRunJustEnded ? FIRST_PERM_COST : coinsForRun(s, meta.tier || 1);
+  meta.coins = (meta.coins || 0) + coins;
   meta.bestWave = Math.max(meta.bestWave || 0, wave);
   const runTier = meta.tier || 1;
   meta.tierBest = meta.tierBest || {};
@@ -307,7 +305,7 @@ function bankRun(): EarnSummary {
   meta.totalWaves = (meta.totalWaves || 0) + wave;
   if (firstRunJustEnded) meta.hasPlayed = true;
   saveMeta();
-  return { cores, kills: s.econ.kills, wave };
+  return { coins, kills: s.econ.kills, wave };
 }
 
 function startDying(): void {
@@ -354,6 +352,7 @@ function frame(now: number): void {
   acc += dt * gs;
   let g = 0;
   const maxSteps = Math.ceil(8 * gs);
+  sim!.refreshStats(); // recompute the stat sheet ONCE per frame; the batch of steps reuses it
   while (acc >= DT && g++ < maxSteps) {
     sim!.step(DT);
     acc -= DT;

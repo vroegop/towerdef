@@ -64,7 +64,7 @@ export function createHudHost(root: HTMLElement, handlers: HudHandlers, opts?: {
     root.innerHTML = '';
   }
 
-  // Swap to HUD `name`. Async-shaped so a HUD whose load() returns a promise still works.
+  // Swap to HUD `name`. Returns a Promise for a uniform async-style API; the swap itself runs synchronously.
   function switchTo(name: string, isRevert?: boolean): Promise<boolean> {
     const entry = HUDS[name];
     if (!entry) {

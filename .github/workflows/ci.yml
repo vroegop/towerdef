@@ -1,0 +1,30 @@
+name: CI
+
+# Gate every PR (and pushes to main) on the same checks the deploy relies on. Previously only
+# `pages.yml` ran, and it builds-and-deploys without running typecheck/lint/tests — so a change
+# that broke sim determinism or lint could land on main and deploy green. This closes that gap.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # typecheck + lint + unit/determinism tests (see package.json "check")
+      - name: Check
+        run: npm run check

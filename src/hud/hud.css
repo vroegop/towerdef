@@ -67,9 +67,9 @@
 .hud .over-rewards .rew b { color: #ff2e4e; font-size: 18px; display: inline-flex; align-items: center; gap: 4px; }
 .hud .over-rewards .rew b.tok { color: #5fd0ff; }
 .hud .over-sub { text-align: center; color: #8b93a7; font-size: 13px; padding: 4px 16px 14px; }
-.hud .over-stats { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin: 0; border: 0; border-top: 1px solid #2a3550; border-radius: 0;
+.hud .over-back { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin: 0; border: 0; border-top: 1px solid #2a3550; border-radius: 0;
   padding: 13px; font: inherit; font-weight: 700; cursor: pointer; background: #1c2030; color: #d8deea; }
-.hud .over-stats:hover { background: #232838; color: #fff; }
+.hud .over-back:hover { background: #232838; color: #fff; }
 
 /* ---- in-game bottom 3-tab bar ---- */
 .hud .tabbar { position: absolute; left: 0; right: 0; bottom: 0; pointer-events: auto;
@@ -130,9 +130,9 @@
 .hud .chip { background: rgba(21,24,35,.8); border: 1px solid #262c3d; border-radius: 4px; padding: 5px 12px; font-size: 12px; color: #8b93a7; }
 .hud .chip b { color: #d8deea; margin-left: 3px; }
 
-.hud .cores-chip { display: inline-block; background: rgba(21,24,35,.8); border: 1px solid #262c3d; border-radius: 4px;
+.hud .coins-chip { display: inline-block; background: rgba(21,24,35,.8); border: 1px solid #262c3d; border-radius: 4px;
   padding: 6px 14px; color: #8b93a7; margin: 0 auto 14px; }
-.hud .cores-chip b { color: #ff2e4e; font-size: 17px; margin-left: 4px; } /* cores chip = neon red */
+.hud .coins-chip b { color: #ff2e4e; font-size: 17px; margin-left: 4px; } /* coins chip = neon red */
 
 /* framed avatar — vertical gradient, more intense at the middle than top/bottom */
 .hud .avatar-frame { width: 200px; height: 200px; margin: 4px auto 0; border-radius: 5px;
@@ -152,8 +152,8 @@
 .hud .tiersel .tierlabel { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
   min-width: 116px; background: #171b27; border: 1px solid #2a3550; border-radius: 4px; padding: 7px 14px; }
 .hud .tiersel .tl-tier { display: inline-flex; align-items: center; gap: 5px; font-weight: 800; }
-.hud .tiersel .tl-core { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: #8b93a7; }
-.hud .tiersel .tl-core b { color: #ffd24a; }
+.hud .tiersel .tl-coin { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: #8b93a7; }
+.hud .tiersel .tl-coin b { color: #ffd24a; }
 .hud .tiersel .tierstep { display: inline-flex; align-items: center; justify-content: center; background: #171b27;
   border: 1px solid #2a3550; color: #d8deea; border-radius: 4px; padding: 0 12px; cursor: pointer; }
 .hud .tiersel .tierstep:hover { border-color: #4aa8ff; color: #fff; }
@@ -174,9 +174,9 @@
 .hud .ic { display: inline-block; vertical-align: -0.18em; flex: 0 0 auto; }
 .hud .ic.gold { color: #ffd24a; }
 .hud .ic.green { color: #2dff8c; }
-.hud .ic.token { color: #5fd0ff; }
-.hud .ic.core { color: #ff2e4e; filter: drop-shadow(0 0 3px rgba(255,46,78,.6)); } /* cores = neon red */
-.hud .ic.cell { color: #37d7ff; } /* cells = cyan */
+.hud .ic.gem { color: #5fd0ff; } /* gems (card currency) = blue */
+.hud .ic.coin { color: #ff2e4e; filter: drop-shadow(0 0 3px rgba(255,46,78,.6)); } /* coins (run reward) = neon red */
+.hud .ic.vial { color: #37d7ff; } /* vials (lab currency) = cyan */
 .hud .ic.hp { color: #ff5d6c; } /* heart (HP) */
 .hud .startsq .ic { vertical-align: middle; }
 
@@ -191,14 +191,15 @@
 
 /* permanent upgrades list */
 .hud .permlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 8px; }
-.hud .perm { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: space-between;
-  gap: 4px; background: #151823; border: 1px solid #262c3d; border-radius: 4px; padding: 8px 5px; margin: 0;
+.hud .perm { aspect-ratio: 1; display: grid; grid-template-rows: auto 1fr auto;
+  gap: 4px; background: #151823; border: 1px solid #262c3d; border-radius: 4px; padding: 8px; margin: 0;
   cursor: pointer; font: inherit; color: #d8deea; text-align: center; }
 .hud .perm:hover:not(:disabled):not(.cant) { border-color: #ffd24a; }
 .hud .perm:disabled, .hud .perm.cant { opacity: .4; cursor: default; }
 .hud .perm.tut { border-color: #ffd24a; box-shadow: 0 0 0 3px rgba(255,210,74,.15); }
-.hud .perm .ptop { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.hud .perm .pname { font-size: 10px; line-height: 1.1; font-weight: 700; }
+.hud .perm .phead { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.hud .perm .phead .ic { color: #8b93a7; }
+.hud .perm .pname { align-self: center; font-size: 11px; line-height: 1.15; font-weight: 700; }
 .hud .perm .pcur { font-size: 17px; font-weight: 800; color: #fff; }
 .hud .perm .pcost { color: #ff2e4e; font-size: 11px; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
 
@@ -213,7 +214,7 @@
 @keyframes checkinpulse { 0%,100% { box-shadow: 0 0 10px rgba(55,215,255,.25); } 50% { box-shadow: 0 0 18px rgba(55,215,255,.5); } }
 
 /* ---- LAB tab (research rows + progress bars) ---- */
-.hud .cores-chip .slotchip { margin-left: 10px; color: #8b93a7; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
+.hud .coins-chip .slotchip { margin-left: 10px; color: #8b93a7; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
 .hud .lablist { display: flex; flex-direction: column; gap: 7px; }
 .hud .lab { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px;
   background: #151823; border: 1px solid #262c3d; border-radius: 6px; padding: 9px 11px; }
@@ -351,7 +352,7 @@
 
 /* ---- cards v3: tactile "paper" cards, labelled draw/upgrade buttons, reveal theatre ---- */
 .hud .ic.cyan { color: #37d7ff; }
-.hud .token-chip { display: inline-flex; align-items: center; gap: 6px; }
+.hud .gem-chip { display: inline-flex; align-items: center; gap: 6px; }
 
 /* draw / upgrade: two clearly distinct labelled buttons, equal width, aligned in a row */
 .hud .cardbtns { display: flex; gap: 12px; justify-content: center; margin: 10px auto 18px; max-width: 460px; }
