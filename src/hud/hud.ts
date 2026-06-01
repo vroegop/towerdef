@@ -39,8 +39,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     coinstar: '<circle cx="12" cy="12" r="9"/><path transform="translate(12 12) scale(.42) translate(-11.8 -11.4)" fill="currentColor" stroke="none" d="M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6z"/>',
     // gems = faceted brilliant-cut gem (card currency)
     gem: '<path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/>',
-    // vials = test tube with a liquid line (lab currency)
-    vial: '<path d="M8.5 3h7"/><path d="M10 3v12.5a2 2 0 1 0 4 0V3"/><path d="M10 12h4"/>',
+    // vials = erlenmeyer flask with liquid level (lab currency)
+    vial: '<path d="M9 2h6"/><path d="M15 2v8l4 9q0 2-3 2H8q-3 0-3-2l4-9V2"/><path d="M7.5 16h9"/>',
     burst: '<path d="M12 2v5M12 17v5M2 12h5M17 12h5M5.2 5.2l3.4 3.4M18.8 5.2l-3.4 3.4M5.2 18.8l3.4-3.4M18.8 18.8l-3.4-3.4"/>',
     bow: '<path d="M8 3a10 10 0 0 1 0 18"/><path d="M8 3v18"/><path d="M5 12h13"/><path d="M15 9l3 3-3 3"/><path d="M5 12l2.5-2M5 12l2.5 2"/>',
     bullseye: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.6"/>',
