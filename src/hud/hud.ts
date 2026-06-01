@@ -708,10 +708,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     return html;
   }
 
-  const mmss = (ms: number): string => {
+  function mmss(ms: number): string {
     const s = Math.ceil(ms / 1000);
     return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
-  };
+  }
   function fmtTime(sec: number): string {
     sec = Math.ceil(sec);
     if (sec < 60) return sec + 's';
