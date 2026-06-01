@@ -95,7 +95,7 @@
 .hud .up:hover:not(:disabled):not(.cant) .pcost { background: rgba(74,168,255,.14); border-top-color: rgba(74,168,255,.28); }
 .hud .up:disabled, .hud .up.cant { opacity: .4; cursor: default; }
 /* in-run header: compact single row */
-.hud .up .phead { padding: 5px 8px; }
+.hud .up .phead { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 5px 8px; }
 /* in-run main: horizontal cur → nxt on one line */
 .hud .up .pcur { flex-direction: row; gap: 4px; font-size: 13px; padding: 3px 8px; }
 .hud .up .cur { font-size: 13px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
@@ -209,7 +209,7 @@
 .hud .perm .phead { display: flex; align-items: center; justify-content: space-between; gap: 4px;
   padding: 7px 10px; background: rgba(0,0,0,.28); border-bottom: 1px solid rgba(255,255,255,.05); }
 .hud .perm .phead .ic { color: #8b93a7; flex: 0 0 auto; }
-.hud .perm .pname { flex: 1; min-width: 0; text-align: left; font-size: 12px; line-height: 1.15; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hud .phead .pname { flex: 1; min-width: 0; text-align: left; font-size: 12px; line-height: 1.15; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* main zone: big current-value centred in remaining space */
 .hud .perm .pcur { display: flex; align-items: center; justify-content: center;
   font-size: 18px; font-weight: 800; color: #fff; padding: 2px 6px; }
