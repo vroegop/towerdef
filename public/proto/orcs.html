@@ -35,6 +35,10 @@
   <div class="panel">
     <div class="label">Arena preview — orcs advancing on the hero</div>
     <canvas id="arena" width="520" height="400"></canvas>
+    <div class="label">Directions (A/B)</div>
+    <div class="controls" id="dirsPick"></div>
+    <p class="note">Sheets here have 4 rows, so <b>8-dir</b> falls back to the nearest cardinal until you add diagonal art. To enable real diagonals, replace a sheet with an <b>8-row</b> version ordered top→bottom:
+    <br>0 S · 1 SW · 2 W · 3 NW · 4 N · 5 NE · 6 E · 7 SE.</p>
   </div>
 
   <!-- Inspector: view any orc / animation / direction -->
@@ -66,15 +70,26 @@ function load(orc, anim) {
 }
 ORCS.forEach(o => ANIMS.forEach(a => load(o, a)));
 
-// Sheet row order (vertical) = facing direction:
-//   0 = front / facing down (we see the face)
-//   1 = left, 2 = right (side profiles)
-//   3 = back / facing up (we see the back)
-const DIR = { down: 0, left: 1, right: 2, up: 3 };
-// Pick the facing row from a travel vector (canvas Y points down). Horizontal travel wins ties.
-function dirRow(vx, vy) {
-  if (Math.abs(vx) >= Math.abs(vy)) return vx >= 0 ? DIR.right : DIR.left;
-  return vy >= 0 ? DIR.down : DIR.up;
+// --- Facing rows ---
+// 4-row sheets (the current art):   0 = down/front, 1 = left, 2 = right, 3 = up/back.
+const DIR4 = { down: 0, left: 1, right: 2, up: 3 };
+function row4(vx, vy) {
+  if (Math.abs(vx) >= Math.abs(vy)) return vx >= 0 ? DIR4.right : DIR4.left;
+  return vy >= 0 ? DIR4.down : DIR4.up;
+}
+// 8-row sheets (when diagonal art exists), ordered top→bottom:
+//   0 S · 1 SW · 2 W · 3 NW · 4 N · 5 NE · 6 E · 7 SE
+// Compass sectors from atan2 (canvas Y down): 0 E, 1 SE, 2 S, 3 SW, 4 W, 5 NW, 6 N, 7 NE.
+const SECTOR_TO_ROW8 = [6, 7, 0, 1, 2, 3, 4, 5];
+function row8(vx, vy) {
+  const sector = ((Math.round(Math.atan2(vy, vx) / (Math.PI / 4)) % 8) + 8) % 8;
+  return SECTOR_TO_ROW8[sector];
+}
+// Resolve a facing row from a travel vector, the chosen target (4 or 8), and the sheet's real
+// row count. 8-dir only kicks in when the sheet actually has ≥8 rows; otherwise nearest cardinal.
+function facingRow(vx, vy, targetDirs, rows) {
+  if (targetDirs === 8 && rows >= 8) return row8(vx, vy);
+  return row4(vx, vy);
 }
 
 // Draw one frame from a sheet: cols = width/FRAME, rows = height/FRAME (4 directions).
@@ -86,6 +101,9 @@ function drawFrame(ctx, img, dir, frame, dx, dy, scale) {
   const c = ((frame % cols) + cols) % cols;
   ctx.drawImage(img, c * FRAME, r * FRAME, FRAME, FRAME, dx, dy, FRAME * scale, FRAME * scale);
 }
+
+let targetDirs = 4; // 4 or 8 — toggled in the UI to A/B diagonal art
+function sheetRows(img) { return img.complete && img.naturalHeight ? Math.floor(img.naturalHeight / FRAME) : 4; }
 
 // ---- Arena preview ----
 const arena = document.getElementById('arena');
@@ -138,8 +156,9 @@ function arenaLoop() {
     const x = cx + Math.cos(m.ang) * m.dist - FRAME * m.scale / 2;
     const y = cy + Math.sin(m.ang) * m.dist - FRAME * m.scale / 2;
     // travelling toward the centre → face that way (back to us when coming from below, etc.)
-    const row = dirRow(-Math.cos(m.ang), -Math.sin(m.ang));
-    drawFrame(actx, load(m.orc, 'walk'), row, frameIndex(8) + Math.floor(m.phase), x, y, m.scale);
+    const sheet = load(m.orc, 'walk');
+    const row = facingRow(-Math.cos(m.ang), -Math.sin(m.ang), targetDirs, sheetRows(sheet));
+    drawFrame(actx, sheet, row, frameIndex(8) + Math.floor(m.phase), x, y, m.scale);
   });
   requestAnimationFrame(arenaLoop);
 }
@@ -160,10 +179,18 @@ function buttons(containerId, items, getSel, setSel) {
     c.appendChild(b);
   });
 }
+const ROW_LABELS_4 = ['front', 'left', 'right', 'back'];
+const ROW_LABELS_8 = ['S', 'SW', 'W', 'NW', 'N', 'NE', 'E', 'SE'];
 function renderPickers() {
   buttons('orcPick', ORCS.map(o => ({ val: o, label: o.toUpperCase() })), () => selOrc, v => selOrc = v);
   buttons('animPick', ANIMS.map(a => ({ val: a, label: a })), () => selAnim, v => selAnim = v);
-  buttons('dirPick', [0, 1, 2, 3].map(d => ({ val: d, label: 'Row ' + d })), () => selDir, v => selDir = v);
+  buttons('dirsPick', [4, 8].map(n => ({ val: n, label: n + '-dir' })), () => targetDirs, v => targetDirs = v);
+  // Row buttons follow the selected sheet's real row count.
+  const rows = sheetRows(load(selOrc, selAnim));
+  const labels = rows >= 8 ? ROW_LABELS_8 : ROW_LABELS_4;
+  if (selDir >= rows) selDir = 0;
+  const rowItems = Array.from({ length: rows }, (_, d) => ({ val: d, label: 'Row ' + d + (labels[d] ? ' · ' + labels[d] : '') }));
+  buttons('dirPick', rowItems, () => selDir, v => selDir = v);
 }
 renderPickers();
 function inspectLoop() {
