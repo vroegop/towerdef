@@ -199,7 +199,7 @@ const DEFABS_COST: [number, number][] = [
 // are the cost curves. `tip` is static or (up) => string and derives any numbers via up.value/fmt.
 const UPGRADE_SPECS: UpgradeSpec[] = [
   // ---- ATTACK ----
-  { id: 'attackSpeed', tab: 'attack', icon: 'rate', label: 'Atk Speed',
+  { id: 'attackSpeed', stat: 'fireRate', tab: 'attack', icon: 'rate', label: 'Atk Speed',
     name: 'Attack Speed',
     tip: (up) => 'Shots per second. Base: ' + up.fmt(up.value(0)) + ', max: ' + up.fmt(up.value(up.max)) + '.',
     max: 99, curve: { kind: 'linear', base: 1, per: 0.05 }, fmt: (v) => v.toFixed(2) + '/s',
@@ -213,7 +213,7 @@ const UPGRADE_SPECS: UpgradeSpec[] = [
     tip: (up) => 'Damage multiplier per metre of distance to the target. Max: ' + up.fmt(up.value(up.max)) + '/m.',
     max: 200, curve: { kind: 'linear', base: 0, per: 0.0005 }, fmt: (v) => '+' + v.toFixed(3) + '×/m',
     gold: curve(25, 1.55), coin: curve(6, 1.0018) },
-  { id: 'range', tab: 'attack', icon: 'range', label: 'Range',
+  { id: 'range', stat: 'rangeM', tab: 'attack', icon: 'range', label: 'Range',
     name: 'Attack Range',
     tip: (up) => 'How far the hero can target enemies. Base: ' + up.fmt(up.value(0)) + ', max: ' + up.fmt(up.value(up.max)) + '.',
     max: 79, curve: { kind: 'linear', base: BASE_RANGE_M, per: 0.5 },
@@ -223,7 +223,7 @@ const UPGRADE_SPECS: UpgradeSpec[] = [
     tip: (up) => 'Chance each shot critically strikes for increased damage. Max: ' + up.fmt(up.value(up.max)) + '.',
     max: 80, curve: { kind: 'linear', base: 0, per: 0.01, cap: 0.8 }, fmt: pctFmt,
     gold: curve(40, 1.6), coin: curve(20, 1.008) },
-  { id: 'critDamage', tab: 'attack', icon: 'burst', label: 'Crit DMG',
+  { id: 'critDamage', stat: 'critMult', tab: 'attack', icon: 'burst', label: 'Crit DMG',
     name: 'Critical Damage',
     tip: (up) => 'Damage multiplier on a critical hit. Starts at ' + up.fmt(up.value(0)) + ', max: ' + up.fmt(up.value(up.max)) + '.',
     max: 150, curve: { kind: 'linear', base: 1.2, per: 0.1 },
@@ -286,7 +286,7 @@ const UPGRADE_SPECS: UpgradeSpec[] = [
     gold: tcurve(RAPID_COST), coin: tcurve(RAPID_COST) },
 
   // ---- DEFENSE ----
-  { id: 'health', tab: 'defense', icon: 'heart', label: 'HP',
+  { id: 'health', stat: 'maxHp', tab: 'defense', icon: 'heart', label: 'HP',
     name: 'Max HP',
     tip: (up) => 'Maximum HP. Base ' + up.fmt(up.value(0)) + ' → ' + up.fmt(up.value(up.max)) + ' at level ' + up.max + '. Cards & labs multiply it.',
     max: 6000, curve: { kind: 'table', points: HEALTH_VALUE }, fmt: abbrNum, gold: tcurve(HP_COST), coin: tcurve(HP_COST) },
@@ -330,12 +330,12 @@ const UPGRADE_SPECS: UpgradeSpec[] = [
     name: 'Gold per Wave',
     tip: 'Bonus gold awarded at the start of each wave.',
     max: 149, gated: true, curve: { kind: 'linear', base: 0, per: 4 }, fmt: (v) => '+' + v, gold: tcurve(CASHBONUS_COST), coin: tcurve(CASHBONUS_COST) },
-  { id: 'goldPerKill', tab: 'economic', icon: 'coin', label: 'Gold/Kill',
+  { id: 'goldPerKill', stat: 'goldFind', tab: 'economic', icon: 'coin', label: 'Gold/Kill',
     name: 'Gold per Kill',
     tip: (up) => 'Multiplier on gold earned from kills. Max: ' + up.fmt(up.value(up.max)) + '.',
     max: 149, gated: true, curve: { kind: 'linear', base: 1, per: 0.01 }, fmt: (v) => '×' + v.toFixed(2),
     gold: tcurve(CASHBONUS_COST), coin: tcurve(CASHBONUS_COST) },
-  { id: 'cashBonus', tab: 'economic', icon: 'coin', label: 'Gold Bonus',
+  { id: 'cashBonus', stat: 'cashMult', tab: 'economic', icon: 'coin', label: 'Gold Bonus',
     name: 'Gold Bonus',
     tip: (up) => 'Global multiplier on all gold earned. Base: ' + up.fmt(up.value(0)) + '.',
     max: 149, gated: true, curve: { kind: 'linear', base: 1, per: 0.01 }, fmt: (v) => '×' + v.toFixed(2),
@@ -380,6 +380,7 @@ const GOLD_FACTOR = 0.33; // gold ≈ ⅓ of the coin price at every level
 // coin curve in place and have gold + graphs + the sim follow with no rebuild.
 export const UPGRADES: UpgradeDef[] = UPGRADE_SPECS.map((spec) => {
   const def = { ...spec } as UpgradeDef;
+  def.stat = spec.stat || spec.id; // default the display-stat mapping to the upgrade's own id
   def.value = (b: number) => evalCurve(def.curve, b);
   const coinCurve = def.coin;
   const goldTable = GOLD_COST[spec.id];
@@ -870,7 +871,10 @@ export function claimAllMilestones(meta: Meta): MilestoneReward {
 }
 
 // Turn levels into the numbers the sim runs on, then apply card bonuses.
-// Maps a card effect `stat` to the SIM stat key it touches.
+// Maps a CARD EFFECT `stat` name → the sim stat key it multiplies/adds. This is the card-authoring
+// vocabulary, NOT the same as UpgradeDef.stat: it has aliases with no upgrade (`gold`→goldFind) and
+// deliberately differs for range (cards scale `range` in PIXELS, while the Range upgrade *displays*
+// `rangeM` in metres). Keep it separate — don't try to derive it from UpgradeDef.stat.
 const STAT2SIM: Record<string, string> = {
   rangedDamage: 'rangedDamage', attackSpeed: 'fireRate', health: 'maxHp', regen: 'regen',
   critChance: 'critChance', critDamage: 'critMult', gold: 'goldFind', range: 'range',
@@ -1004,12 +1008,6 @@ export function computeStats(state: State): Stats {
   return out;
 }
 
-// Map an UPGRADE id to the Stats key its displayed number corresponds to (identity for most; a few
-// upgrades feed a differently-named sim stat). Used by effectiveUpgradeValue below.
-const UP2STAT: Record<string, string> = {
-  attackSpeed: 'fireRate', health: 'maxHp', range: 'rangeM', critDamage: 'critMult',
-  cashBonus: 'cashMult', goldPerKill: 'goldFind',
-};
 // The EFFECTIVE value of an upgrade at a hypothetical `level`: base curve × labs × active cards ×
 // cosmetics — exactly what the sim runs on. We get perfect parity (no formula duplication / drift) by
 // driving the real computeStats on a throwaway state with just this one upgrade overridden to `level`
@@ -1021,7 +1019,7 @@ export function effectiveUpgradeValue(meta: Meta, id: string, level: number): nu
   // run.levels stacks on top of perm in boughtOf, so a delta of (level - perm) lands boughtOf on `level`.
   const pseudo = { meta, run: { levels: { [id]: level - perm } } } as unknown as State;
   const st = computeStats(pseudo) as unknown as Record<string, number>;
-  const v = st[UP2STAT[id] || id];
+  const v = st[up.stat || id]; // up.stat is the single source of truth for the id→Stats-key mapping
   return typeof v === 'number' ? v : up.value(level);
 }
 

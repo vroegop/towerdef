@@ -217,6 +217,10 @@ export interface UpgradeDef {
   id: string;
   tab: string;
   icon: string;
+  // The Stats key this upgrade's displayed value maps to (defaults to `id`). Single source of truth
+  // for "which sim stat does this skill drive" — consumed by effectiveUpgradeValue. Most upgrades are
+  // 1:1 with their id; only a handful diverge (e.g. health→maxHp, attackSpeed→fireRate, range→rangeM).
+  stat?: string;
   label: string;      // short label shown on tile
   name?: string;      // full name shown in detail modal (falls back to label)
   tip?: string | ((up: UpgradeDef) => string); // derived at render time or static

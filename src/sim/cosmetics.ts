@@ -151,22 +151,3 @@ export function cosmeticBuffMult(meta: Meta, stat: string): number {
   }
   return m;
 }
-
-// Map a workshop UPGRADE id → the sim stat its value feeds, but ONLY for upgrades a cosmetic can
-// buff — so the menu can show buffed totals (e.g. Attack Speed shows base ×1.10). Upgrades absent
-// here are never cosmetic-buffed, so their displayed value is unchanged.
-const UPGRADE_BUFF_STAT: Record<string, string> = {
-  rangedDamage: 'rangedDamage',
-  attackSpeed: 'fireRate',
-  health: 'maxHp',
-  critChance: 'critChance',
-  critDamage: 'critMult',
-  range: 'range',
-  bounceChance: 'bounceChance',
-  goldPerKill: 'goldFind',
-};
-// The cosmetic multiplier to apply to an upgrade's DISPLAYED value (1 if it isn't buffed).
-export function upgradeBuffMult(meta: Meta, upgradeId: string): number {
-  const stat = UPGRADE_BUFF_STAT[upgradeId];
-  return stat ? cosmeticBuffMult(meta, stat) : 1;
-}
