@@ -205,22 +205,28 @@ describe('permanent upgrades', () => {
     const buffed = computeStats(createState(1, freshMeta({ perm: { rangedDamage: 10 } }), false));
     expect(buffed.rangedDamage).toBeGreaterThan(base.rangedDamage);
   });
-  it('unlocks skills as GROUPS, sequentially by ascending cost', () => {
+  it('unlocks skills as GROUPS, sequentially by ascending cost WITHIN each category', () => {
     const meta = freshMeta({ coins: 1e9 });
     // range starts locked (its group is not yet unlocked), so it can't be bought.
     expect(isUnlocked(meta, 'range')).toBe(false);
     expect(buyPerm(meta, 'range')).toBe(false);
-    // groups unlock cheapest-first: the next group is Gold (40), not Range — Range is out of sequence.
-    expect(nextUnlockGroup(meta)!.id).toBe('gold');
-    expect(unlockGroup(meta, 'range')).toBe(false);
+    // Each category advances independently. In the ATTACK tab, Range (50) is the next group (the
+    // cost-0 starter groups are pre-unlocked); in ECONOMIC, Gold (40) is next. Range can be unlocked
+    // without first buying the globally-cheaper Gold group in another tab.
+    expect(nextUnlockGroup(meta, 'attack')!.id).toBe('range');
+    expect(nextUnlockGroup(meta, 'economic')!.id).toBe('gold');
     // unlocking a group unlocks ALL its members at once for the single group price.
+    expect(unlockGroup(meta, 'range')).toBe(true);
+    expect(isUnlocked(meta, 'range')).toBe(true);
+    expect(isUnlocked(meta, 'dmgPerMeter')).toBe(true);
+    expect(buyPerm(meta, 'range')).toBe(true);
+    // within the attack tab, a pricier group stays gated until the next-cheapest one is bought.
+    expect(unlockGroup(meta, 'burst')).toBe(false); // Multishot (400) comes first in attack
+    expect(nextUnlockGroup(meta, 'attack')!.id).toBe('multishot');
+    // a DIFFERENT category is unaffected by attack's progress — Gold is still freely unlockable.
     expect(unlockGroup(meta, 'gold')).toBe(true);
     expect(isUnlocked(meta, 'cashBonus')).toBe(true);
     expect(isUnlocked(meta, 'goldPerWave')).toBe(true);
-    // now Range (50) is next; unlocking it makes the skill buyable.
-    expect(nextUnlockGroup(meta)!.id).toBe('range');
-    expect(unlockGroup(meta, 'range')).toBe(true);
-    expect(buyPerm(meta, 'range')).toBe(true);
     // a multi-skill group (Amp) maps both stats to one group; cost 0 starter groups are pre-unlocked.
     expect(skillGroup('rendChance')!.id).toBe('amp');
     expect(skillGroup('rendMult')!.id).toBe('amp');

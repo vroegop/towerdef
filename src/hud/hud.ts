@@ -1035,7 +1035,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     if (locked) {
       const grp = skillGroup(id),
         gcost = grp ? grp.cost : 0,
-        canNow = !!grp && (nextUnlockGroup(lastMeta) || { id: '' }).id === grp.id,
+        canNow = !!grp && (nextUnlockGroup(lastMeta, grp.tab) || { id: '' }).id === grp.id,
         uafford = (lastMeta.coins || 0) >= gcost;
       updmodalInner.innerHTML =
         '<div class="upd-head">' +
@@ -1274,7 +1274,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
 
   function permRowsHtml(meta: Meta, tutoring: boolean): string {
     const groups = SKILL_GROUPS.filter((g) => g.tab === menuUpTab);
-    const next = nextUnlockGroup(meta);
+    const next = nextUnlockGroup(meta, menuUpTab); // next unlockable group within THIS category
     let html = '';
     let idx = 0; // running buyable-skill index in this tab (for the first-run tutorial highlight)
     for (const g of groups) {

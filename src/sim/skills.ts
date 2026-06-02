@@ -445,8 +445,9 @@ export function skillUnlockCost(id: string): number {
   return up ? Math.round(up.coin.cost(0) * 10) : 0;
 }
 // ---- skill GROUPS: related skills (e.g. Amp Chance + Amp Power) unlock together for ONE price (the
-// per-skill price, not the sum). Groups unlock sequentially in ascending cost order — buying one frees
-// the next. The Workshop lists skills in this order, keeping each group's members adjacent. ----
+// per-skill price, not the sum). Within each category groups unlock sequentially in ascending cost
+// order — buying one frees the next IN THAT TAB, so the categories advance independently. The Workshop
+// lists skills in this order, keeping each group's members adjacent. ----
 export interface SkillGroup { id: string; label: string; tab: string; cost: number; skills: string[]; }
 const RAW_GROUPS: { id: string; label: string; skills: string[] }[] = [
   { id: 'damage', label: 'Damage', skills: ['rangedDamage'] },
@@ -491,17 +492,22 @@ export function isUnlocked(meta: Meta, id: string): boolean {
   const gid = GROUP_OF[id];
   return gid ? isGroupUnlocked(meta, gid) : true;
 }
-// The single group the player may unlock next: the cheapest still-locked group (global cost order).
-export function nextUnlockGroup(meta: Meta): SkillGroup | null {
-  for (const g of SKILL_GROUPS) if (!isGroupUnlocked(meta, g.id)) return g;
+// The single group the player may unlock next: the cheapest still-locked group. Unlock order is
+// per-category — pass a tab to get that category's next group, so each tab advances independently.
+export function nextUnlockGroup(meta: Meta, tab?: string): SkillGroup | null {
+  for (const g of SKILL_GROUPS) {
+    if (tab && g.tab !== tab) continue;
+    if (!isGroupUnlocked(meta, g.id)) return g;
+  }
   return null;
 }
-// Spend coins (outside a run) to unlock a group. Only the next-in-sequence group may be bought.
+// Spend coins (outside a run) to unlock a group. Only the next-in-sequence group within the group's
+// OWN category may be bought, so progress in one tab never gates another.
 export function unlockGroup(meta: Meta, gid: string): boolean {
   const g = GROUP_BY_ID[gid];
   if (!g || isGroupUnlocked(meta, gid)) return false;
-  const next = nextUnlockGroup(meta);
-  if (!next || next.id !== gid) return false; // must unlock in ascending-cost order
+  const next = nextUnlockGroup(meta, g.tab);
+  if (!next || next.id !== gid) return false; // must unlock in ascending-cost order within the category
   if ((meta.coins || 0) < g.cost) return false;
   meta.coins -= g.cost;
   meta.unlocked = meta.unlocked || {};
