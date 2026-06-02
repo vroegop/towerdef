@@ -195,19 +195,6 @@
         }
         ctx.closePath();
       }
-      // The classic 💧 silhouette: round bottom, pointed top.
-      function pathDrop(ctx, x, y, rx, ry) {
-        const gap = 0.62;
-        const a0 = -Math.PI / 2 + gap; // just right of the top
-        const a1 = -Math.PI / 2 - gap; // just left of the top
-        const sx = x + Math.cos(a0) * rx, sy = y + Math.sin(a0) * ry;
-        const tipx = x, tipy = y - ry * 1.34;
-        ctx.beginPath();
-        ctx.ellipse(x, y, rx, ry, 0, a0, a1 + TAU, false); // long way round the bottom
-        ctx.quadraticCurveTo(x - rx * 0.16, y - ry * 1.02, tipx, tipy);
-        ctx.quadraticCurveTo(x + rx * 0.16, y - ry * 1.02, sx, sy);
-        ctx.closePath();
-      }
 
       // The wet, water-drop look: a fat specular hotspot, a pin-sharp sparkle, and a
       // refractive light crescent along the lower rim where light passes through the body.
@@ -286,9 +273,9 @@
         { key: 'melee', name: 'Melee', color: '#ff6b6b', scale: 1.0, bob: 1.0, desc: 'the baseline grunt — a plain coral blob.' },
         { key: 'fast', name: 'Fast', color: '#37d7ff', scale: 0.8, bob: 1.7, desc: 'a small darting cyan jelly with speed streaks.' },
         { key: 'ranged', name: 'Ranged', color: '#4aa8ff', scale: 0.94, bob: 1.15, desc: 'a spitter — charges a glowing droplet up front.' },
-        { key: 'tank', name: 'Tank', color: '#9aa7b3', scale: 1.42, bob: 0.55, desc: 'a heavy slate bulwark with a thick double rim.' },
+        { key: 'tank', name: 'Tank', color: '#ffb3d1', scale: 1.42, bob: 0.55, desc: 'a heavy bulwark in light pink with a thick double rim.' },
         { key: 'boss', name: 'Boss', color: '#e64cff', scale: 1.7, bob: 0.5, desc: 'a huge magenta behemoth ringed by an aura halo.' },
-        { key: 'splitter', name: 'Splitter', color: '#ff5db0', scale: 1.12, bob: 0.95, desc: 'a brood-blob — inner nuclei seam, ready to divide.' },
+        { key: 'splitter', name: 'Splitter', color: '#ff8a33', scale: 1.12, bob: 0.95, desc: 'an orange brood-blob — inner nuclei seam, ready to divide.' },
       ];
       const TYPE_BY = Object.fromEntries(TYPES.map((t) => [t.key, t]));
 
@@ -365,70 +352,86 @@
       // ============================ THE 10 PROTOTYPES ===========================
       // draw(ctx, cx, cy, R, t, type, vx, vy) — R already scaled by type.scale.
 
-      // 1 — Dewdrop: the iconic translucent water-drop with a glossy crown highlight.
-      function dewdrop(ctx, x, y, R, t, type, vx, vy) {
-        const rx = R * 0.9, ry = R * 1.04;
-        pathDrop(ctx, x, y, rx, ry);
-        gelFill(ctx, x, y, rx, ry, type.color, 0.85, 0.26);
-        refract(ctx, x, y, rx, ry, type.color);
-        eyes(ctx, x, y, rx, ry, vx, vy, rx * 0.15, 0.4);
-        sheen(ctx, x, y, rx, ry);
-      }
-
-      // 2 — Globule: a wobbling amoeba with a drifting inner nucleus.
-      function globule(ctx, x, y, R, t, type, vx, vy) {
-        const seed = (type.key.length * 7) % 6;
-        pathBlob(ctx, x, y, R * 0.92, R * 0.92, 3, 0.07, t, seed);
-        gelFill(ctx, x, y, R, R, type.color, 0.82, 0.24);
-        // nucleus floats with a little lag
-        const nx = x + Math.sin(t * 1.3) * R * 0.18, ny = y + Math.cos(t * 1.1) * R * 0.16;
-        const ng = ctx.createRadialGradient(nx, ny, 0, nx, ny, R * 0.4);
-        ng.addColorStop(0, rgba(lighten(type.color, 0.55), 0.85));
-        ng.addColorStop(1, rgba(type.color, 0));
-        ctx.fillStyle = ng;
-        ctx.beginPath();
-        ctx.arc(nx, ny, R * 0.36, 0, TAU);
-        ctx.fill();
-        eyes(ctx, x, y, R * 0.9, R * 0.9, vx, vy);
-        sheen(ctx, x, y, R, R);
-      }
-
-      // 3 — Medusa: a domed jelly-bell with swaying translucent tentacles.
-      function medusa(ctx, x, y, R, t, type, vx, vy) {
+      // 1 — Comet: a glassy tear-drop head trailing a long fading tail. No face.
+      function comet(ctx, x, y, R, t, type, vx, vy) {
         const fa = Math.atan2(vy, vx);
-        const tx = -Math.cos(fa), tyv = -Math.sin(fa); // tentacles trail behind travel
         ctx.save();
-        ctx.lineCap = 'round';
-        for (let i = -2; i <= 2; i++) {
-          const baseX = x + i * R * 0.3, baseY = y + R * 0.35;
-          ctx.strokeStyle = rgba(lighten(type.color, 0.35), 0.4);
-          ctx.lineWidth = Math.max(1, R * 0.09);
-          ctx.beginPath();
-          ctx.moveTo(baseX, baseY);
-          for (let s = 1; s <= 4; s++) {
-            const f = s / 4;
-            const sway = Math.sin(t * 3 + i + s * 0.7) * R * 0.18 * f;
-            ctx.lineTo(baseX + tx * R * f * 0.9 + sway, baseY + tyv * R * f * 0.4 + R * f * 0.9);
-          }
-          ctx.stroke();
-        }
-        ctx.restore();
-        // the bell (upper dome)
+        ctx.translate(x, y);
+        ctx.rotate(fa); // +x points along travel; the tail streams out behind (−x)
+        const g = ctx.createLinearGradient(0, 0, -R * 2.5, 0);
+        g.addColorStop(0, rgba(type.color, 0.55));
+        g.addColorStop(1, rgba(type.color, 0));
+        ctx.fillStyle = g;
         ctx.beginPath();
-        ctx.ellipse(x, y, R * 0.95, R * 0.78, 0, Math.PI, TAU);
-        ctx.lineTo(x + R * 0.95, y);
-        // scalloped lower edge
-        const lobes = 5;
-        for (let i = 0; i <= lobes; i++) {
-          const a = (i / lobes) * Math.PI;
-          const px = x + Math.cos(Math.PI - a) * R * 0.95;
-          const py = y + Math.sin(a * lobes > 0 ? 0 : 0) + R * 0.14 * Math.sin(a * lobes);
-          ctx.lineTo(px, py + R * 0.05);
-        }
+        ctx.moveTo(R * 0.2, -R * 0.5);
+        ctx.quadraticCurveTo(-R * 1.2, -R * 0.16 + Math.sin(t * 6) * R * 0.12, -R * 2.5, 0);
+        ctx.quadraticCurveTo(-R * 1.2, R * 0.16 + Math.sin(t * 6) * R * 0.12, R * 0.2, R * 0.5);
         ctx.closePath();
-        gelFill(ctx, x, y - R * 0.1, R * 0.95, R * 0.85, type.color, 0.8, 0.22);
-        eyes(ctx, x, y - R * 0.18, R * 0.9, R * 0.7, vx, vy, R * 0.13, 0.34);
-        sheen(ctx, x, y - R * 0.12, R * 0.9, R * 0.7);
+        ctx.fill();
+        ctx.restore();
+        // the glassy head
+        const hr = R * 0.72;
+        ctx.beginPath();
+        ctx.arc(x, y, hr, 0, TAU);
+        gelFill(ctx, x, y, hr, hr, type.color, 0.86, 0.28);
+        refract(ctx, x, y, hr, hr, type.color);
+        sheen(ctx, x, y, hr, hr);
+      }
+
+      // 2 — Capsule: a smooth gel pill that leans into its travel direction. No face.
+      function capsule(ctx, x, y, R, t, type, vx, vy) {
+        const fa = Math.atan2(vy, vx);
+        const rad = R * 0.62, hx = R * 0.62; // cap radius + centre offset → length ≈ 2.5R
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(fa);
+        ctx.beginPath();
+        ctx.arc(hx, 0, rad, -Math.PI / 2, Math.PI / 2, false);
+        ctx.arc(-hx, 0, rad, Math.PI / 2, (3 * Math.PI) / 2, false);
+        ctx.closePath();
+        gelFill(ctx, 0, 0, hx + rad, rad, type.color, 0.84, 0.26);
+        // long top gloss-line + a sheen blob
+        ctx.lineCap = 'round';
+        ctx.lineWidth = Math.max(1, R * 0.12);
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.beginPath();
+        ctx.moveTo(-hx, -rad * 0.5);
+        ctx.lineTo(hx, -rad * 0.5);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.beginPath();
+        ctx.ellipse(-hx * 0.2, -rad * 0.42, rad * 0.32, rad * 0.18, 0, 0, TAU);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 3 — Halo: a translucent ring/torus — its open centre shows the floor through it.
+      function halo(ctx, x, y, R, t, type) {
+        const pulse = 1 + Math.sin(t * 3) * 0.03;
+        const outer = R * 0.95 * pulse, inner = R * 0.44;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, outer, 0, TAU, false);
+        ctx.arc(x, y, inner, 0, TAU, true); // punch the hole (concentric → clean annulus)
+        const g = ctx.createRadialGradient(x - outer * 0.3, y - outer * 0.3, inner, x, y, outer);
+        g.addColorStop(0, rgba(lighten(type.color, 0.6), 0.88));
+        g.addColorStop(1, rgba(type.color, 0.3));
+        ctx.shadowColor = rgba(type.color, 0.85);
+        ctx.shadowBlur = R * 0.8;
+        ctx.fillStyle = g;
+        ctx.fill('evenodd');
+        ctx.restore();
+        ctx.lineWidth = Math.max(1, R * 0.05);
+        ctx.strokeStyle = rgba(deepen(type.color, 0.4), 0.4);
+        ctx.beginPath(); ctx.arc(x, y, outer, 0, TAU); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, y, inner, 0, TAU); ctx.stroke();
+        // glossy highlight along the upper-left of the ring
+        ctx.lineCap = 'round';
+        ctx.lineWidth = Math.max(1, R * 0.13);
+        ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+        ctx.beginPath();
+        ctx.arc(x, y, (outer + inner) / 2, Math.PI * 1.05, Math.PI * 1.5);
+        ctx.stroke();
       }
 
       // 4 — Marble: a near-perfect glass sphere, double specular + inner caustic ring.
@@ -457,21 +460,32 @@
         ctx.fill();
       }
 
-      // 5 — Googly: a squishy cartoon head with oversized wobbling eyes.
-      function googly(ctx, x, y, R, t, type, vx, vy) {
-        const squash = 1 + Math.sin(t * 3.4) * 0.06;
-        pathBlob(ctx, x, y, R * 0.95 * squash, (R * 0.95) / squash, 3, 0.05, t, 1);
-        gelFill(ctx, x, y, R, R, type.color, 0.82, 0.26);
-        // big eyes
-        eyes(ctx, x, y, R, R, vx, vy, R * 0.3, 0.4);
-        // a little smile that follows the bob
-        ctx.strokeStyle = 'rgba(16,19,28,0.7)';
-        ctx.lineWidth = Math.max(1.4, R * 0.06);
-        ctx.lineCap = 'round';
+      // 5 — Kite: a rounded gem-rhombus lit like cut glass. Four soft points, no face.
+      function kite(ctx, x, y, R, t, type) {
+        const spin = Math.sin(t * 1.4) * 0.12;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(spin);
+        const a = R * 1.05, b = R * 0.8; // vertical / horizontal reach
         ctx.beginPath();
-        ctx.arc(x, y + R * 0.34, R * 0.3, 0.18 * Math.PI, 0.82 * Math.PI);
-        ctx.stroke();
-        sheen(ctx, x, y, R, R);
+        ctx.moveTo(0, -a);
+        ctx.quadraticCurveTo(b * 0.62, -a * 0.18, b, 0);
+        ctx.quadraticCurveTo(b * 0.62, a * 0.18, 0, a);
+        ctx.quadraticCurveTo(-b * 0.62, a * 0.18, -b, 0);
+        ctx.quadraticCurveTo(-b * 0.62, -a * 0.18, 0, -a);
+        ctx.closePath();
+        gelFill(ctx, 0, 0, b, a, type.color, 0.84, 0.26);
+        // a bright cut-glass facet down the centre
+        ctx.fillStyle = 'rgba(255,255,255,0.32)';
+        ctx.beginPath();
+        ctx.moveTo(0, -a * 0.9);
+        ctx.lineTo(b * 0.42, 0);
+        ctx.lineTo(0, a * 0.55);
+        ctx.lineTo(-b * 0.2, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        sheen(ctx, x, y, b, a);
       }
 
       // 6 — Frogspawn: a cluster of fused soap-bubbles with iridescent rims.
@@ -538,39 +552,31 @@
         sheen(ctx, x, y, R * 0.95, R * 0.95);
       }
 
-      // 8 — Wraith: a barely-there spectre with a long rippling translucent veil.
-      function wraith(ctx, x, y, R, t, type, vx, vy) {
-        // the veil/skirt — a wavy translucent curtain below the head
-        ctx.save();
-        const g = ctx.createLinearGradient(x, y, x, y + R * 1.6);
-        g.addColorStop(0, rgba(type.color, 0.42));
-        g.addColorStop(1, rgba(type.color, 0));
-        ctx.fillStyle = g;
+      // 8 — Star: a soft five-point gel star with a glowing core. Slowly spins, no face.
+      function star(ctx, x, y, R, t, type) {
+        const rot = t * 0.5, pts = 5, outer = R * 1.08, inner = R * 0.5;
         ctx.beginPath();
-        ctx.moveTo(x - R * 0.8, y + R * 0.2);
-        const tips = 6;
-        for (let i = 0; i <= tips; i++) {
-          const f = i / tips;
-          const px = x - R * 0.8 + f * R * 1.6;
-          const py = y + R * (1.1 + 0.34 * Math.sin(t * 4 + f * 7)) + (i % 2 ? R * 0.2 : 0);
-          ctx.lineTo(px, py);
+        for (let i = 0; i < pts * 2; i++) {
+          const a = rot - Math.PI / 2 + (i / (pts * 2)) * TAU;
+          const rr = i % 2 ? inner : outer;
+          const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr;
+          i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
         }
-        ctx.lineTo(x + R * 0.8, y + R * 0.2);
         ctx.closePath();
+        gelFill(ctx, x, y, outer, outer, type.color, 0.82, 0.24);
+        // a brighter inner core glow
+        ctx.save();
+        ctx.shadowColor = rgba(lighten(type.color, 0.5), 0.9);
+        ctx.shadowBlur = R * 0.7;
+        const cg = ctx.createRadialGradient(x, y, 0, x, y, inner);
+        cg.addColorStop(0, 'rgba(255,255,255,0.85)');
+        cg.addColorStop(1, rgba(type.color, 0));
+        ctx.fillStyle = cg;
+        ctx.beginPath();
+        ctx.arc(x, y, inner * 0.9, 0, TAU);
         ctx.fill();
         ctx.restore();
-        // the ghostly head (very transparent)
-        ctx.beginPath();
-        ctx.ellipse(x, y, R * 0.82, R * 0.9, 0, 0, TAU);
-        gelFill(ctx, x, y, R * 0.82, R * 0.9, type.color, 0.5, 0.1);
-        // hollow eyes
-        ctx.fillStyle = rgba(deepen(type.color, 0.55), 0.6);
-        for (const s of [-1, 1]) {
-          ctx.beginPath();
-          ctx.ellipse(x + s * R * 0.3, y - R * 0.05, R * 0.13, R * 0.2, 0, 0, TAU);
-          ctx.fill();
-        }
-        sheen(ctx, x, y - R * 0.1, R * 0.8, R * 0.8);
+        sheen(ctx, x, y, outer * 0.7, outer * 0.7);
       }
 
       // 9 — Magma: a clear gel shell with a pulsing molten core glowing through.
@@ -607,73 +613,26 @@
         sheen(ctx, x, y, R * 0.94, R * 0.94);
       }
 
-      // 10 — Monarch: a regal jelly orbited by satellite droplets under a bead-crown.
-      function monarch(ctx, x, y, R, t, type, vx, vy) {
-        // orbiting satellite droplets (behind)
-        for (let i = 0; i < 3; i++) {
-          const a = t * 1.1 + (i / 3) * TAU;
-          if (Math.sin(a) >= 0) continue;
-          drawSatellite(ctx, x + Math.cos(a) * R * 1.2, y + Math.sin(a) * R * 0.55, R * 0.16, type.color, 0.5);
-        }
-        // body
-        pathBlob(ctx, x, y, R * 0.9, R * 0.95, 4, 0.04, t, 3);
-        gelFill(ctx, x, y, R, R, type.color, 0.85, 0.26);
-        eyes(ctx, x, y, R * 0.9, R * 0.9, vx, vy, R * 0.15, 0.36);
-        // crown of beads
-        const cn = 5;
-        for (let i = 0; i < cn; i++) {
-          const a = -Math.PI / 2 + (i - (cn - 1) / 2) * 0.34;
-          const cx = x + Math.cos(a) * R * 1.0, cy = y + Math.sin(a) * R * 1.0;
-          ctx.save();
-          ctx.shadowColor = '#ffe27a';
-          ctx.shadowBlur = R * 0.4;
-          const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.18);
-          g.addColorStop(0, '#fff6d0');
-          g.addColorStop(1, '#ffb52a');
-          ctx.fillStyle = g;
-          ctx.beginPath();
-          ctx.arc(cx, cy, R * (i === Math.floor(cn / 2) ? 0.13 : 0.1), 0, TAU);
-          ctx.fill();
-          ctx.restore();
-        }
-        sheen(ctx, x, y, R, R);
-        // orbiting satellites (front)
-        for (let i = 0; i < 3; i++) {
-          const a = t * 1.1 + (i / 3) * TAU;
-          if (Math.sin(a) < 0) continue;
-          drawSatellite(ctx, x + Math.cos(a) * R * 1.2, y + Math.sin(a) * R * 0.55, R * 0.2, type.color, 0.85);
-        }
-      }
-      function drawSatellite(ctx, x, y, r, color, a) {
-        ctx.save();
-        ctx.shadowColor = rgba(color, 0.8);
-        ctx.shadowBlur = r * 1.4;
-        const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 0, x, y, r);
-        g.addColorStop(0, rgba(lighten(color, 0.7), a));
-        g.addColorStop(1, rgba(color, a * 0.5));
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, TAU);
-        ctx.fill();
-        ctx.restore();
-        ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        ctx.beginPath();
-        ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.28, 0, TAU);
-        ctx.fill();
+      // 10 — Trefoil: a wobbling three-lobed clover of goo that turns as it drifts. No face.
+      function trefoil(ctx, x, y, R, t, type) {
+        pathBlob(ctx, x, y, R * 0.84, R * 0.84, 3, 0.3, t, 0);
+        gelFill(ctx, x, y, R, R, type.color, 0.84, 0.26);
+        refract(ctx, x, y, R * 0.84, R * 0.84, type.color);
+        sheen(ctx, x, y, R * 0.78, R * 0.78);
       }
 
       // ----------------------------- registry -----------------------------------
       const STYLES = [
-        { nm: 'Dewdrop', draw: dewdrop, sub: 'The iconic <b>💧 water-drop</b>: round-bottomed, pointed top, glossy crown highlight and a refractive light-crescent along the base.' },
-        { nm: 'Globule', draw: globule, sub: 'A <b>wobbling amoeba</b> with a soft inner nucleus that drifts with a little lag — the most "alive" blob.' },
-        { nm: 'Medusa', draw: medusa, sub: 'A domed <b>jelly-bell</b> with scalloped rim and translucent tentacles that sway and trail behind its travel.' },
+        { nm: 'Comet', draw: comet, sub: 'A glassy <b>tear-drop head with a long fading tail</b> that streams behind its travel. Sleek and directional — no face.' },
+        { nm: 'Capsule', draw: capsule, sub: 'A smooth <b>gel pill</b> that leans into its travel direction, with a long top gloss-line. Calm and clean — no face.' },
+        { nm: 'Halo', draw: halo, sub: 'A translucent <b>ring / torus</b> with an open centre you can see the floor through. The most graphic silhouette — no face.' },
         { nm: 'Marble', draw: marble, sub: 'A near-perfect <b>glass sphere</b>: double specular, an inner caustic ring and a vertical refraction streak. Very clean.' },
-        { nm: 'Googly', draw: googly, sub: 'A squishy <b>cartoon head</b> with oversized wobbling eyes and a little smile. Maximum charm, minimum menace.' },
+        { nm: 'Kite', draw: kite, sub: 'A rounded <b>gem-rhombus</b> — four soft points, lit like cut glass. Angular without being spiky — no face.' },
         { nm: 'Frogspawn', draw: frogspawn, sub: 'A <b>cluster of fused soap-bubbles</b> of mixed sizes, each with an iridescent rim. Reads as gooey and unstable.' },
         { nm: 'Prism', draw: prism, sub: 'A <b>faceted gel</b> — gem-like internal planes catching light — that is still see-through. Crystalline but wet.' },
-        { nm: 'Wraith', draw: wraith, sub: 'A barely-there <b>spectre</b> trailing a long rippling veil, with hollow eye-sockets. The most ghostly take.' },
+        { nm: 'Star', draw: star, sub: 'A soft five-point <b>gel star</b> with a glowing core. Spins slowly; reads as a threat with no face needed.' },
         { nm: 'Magma', draw: magma, sub: 'A clear gel <b>shell over a pulsing molten core</b> that glows through, shedding embers. A lava-lamp creature.' },
-        { nm: 'Monarch', draw: monarch, sub: 'A regal blob orbited by <b>satellite droplets</b> beneath a floating bead-crown. Built for the boss slot.' },
+        { nm: 'Trefoil', draw: trefoil, sub: 'A wobbling <b>three-lobed clover</b> of goo that turns as it drifts. Organic and unmistakably alive — no face.' },
       ];
 
       // ----------------------------- board state --------------------------------
