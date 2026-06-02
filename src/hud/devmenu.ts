@@ -71,14 +71,14 @@ export function createDevMenu(cfg: { handlers?: HudHandlers; hudHost?: HudHost }
     const attrs = r.toggle ? ' data-toggle="1" data-label="' + r.label + '" id="dev-' + r.dev + '"' : '';
     return '<button data-dev="' + r.dev + '"' + attrs + '>' + lbl + '</button>';
   }
-  function sectionHtml(sec: DevSection, i: number): string {
+  function sectionHtml(sec: DevSection): string {
     let body = sec.note ? '<div class="devnote">' + sec.note + '</div>' : '';
     if (sec.rows) body += '<div class="devbtns' + (sec.grid ? ' grid' : '') + '">' + sec.rows.map(rowBtn).join('') + '</div>';
     else if (sec.ff) body += '<div class="ffrow">' + sec.ff.map((f) => '<button data-ff="' + f[0] + '">' + f[1] + '</button>').join('') + '</div>';
     else if (sec.hud) body += '<div class="hudlist" id="dev-hudlist"></div><div class="devstatus" id="dev-status"></div>';
     return (
-      '<div class="devsec' + (i === 0 ? ' open' : '') + '">' +
-      '<button class="devsec-h" data-sec="' + i + '">' + sec.title + '<span class="caret">›</span></button>' +
+      '<div class="devsec">' +
+      '<div class="devsec-h">' + sec.title + '</div>' +
       '<div class="devsec-b">' + body + '</div></div>'
     );
   }
@@ -92,11 +92,17 @@ export function createDevMenu(cfg: { handlers?: HudHandlers; hudHost?: HudHost }
   document.body.appendChild(el);
 
   const panel = el.querySelector('#dev-panel') as HTMLElement;
-  (el.querySelector('#dev-toggle') as HTMLElement).addEventListener('click', () => panel.classList.toggle('hide'));
+  (el.querySelector('#dev-toggle') as HTMLElement).addEventListener('click', (e) => {
+    e.stopPropagation();
+    panel.classList.toggle('hide');
+  });
   (el.querySelector('#dev-close') as HTMLElement).addEventListener('click', () => panel.classList.add('hide'));
 
-  // collapsible submenus
-  panel.querySelectorAll<HTMLElement>('[data-sec]').forEach((h) => h.addEventListener('click', () => (h.parentNode as HTMLElement).classList.toggle('open')));
+  // auto-collapse when clicking anywhere outside the dev overlay
+  document.addEventListener('mousedown', (e) => {
+    if (panel.classList.contains('hide')) return;
+    if (!el.contains(e.target as Node)) panel.classList.add('hide');
+  });
 
   // cheat / combat buttons → onDev, time buttons → onFF
   panel.querySelectorAll<HTMLElement>('[data-dev]').forEach((b) => b.addEventListener('click', () => handlers.onDev && handlers.onDev(b.dataset.dev!)));
