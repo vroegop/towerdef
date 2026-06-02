@@ -25,7 +25,7 @@ const CSS = `
 .hud.theme-dnd .menu-content { box-shadow: inset 0 0 0 3px #8a6a3a, inset 0 0 0 6px var(--parch); }
 
 /* ---- in-run top stats: engraved on the arena ---- */
-.hud.theme-dnd .topbar { text-shadow: 0 1px 2px rgba(243,233,210,.4); }
+.hud.theme-dnd .topbar, .hud.theme-dnd .wavebanner, .hud.theme-dnd .statline { text-shadow: none; }
 .hud.theme-dnd .stat .lbl { color: var(--ink-dim); font-family: 'Cinzel', serif; font-weight: 700; }
 .hud.theme-dnd .wave b { color: var(--crimson); font-family: 'Cinzel', serif; }
 .hud.theme-dnd .gold b { color: var(--gold-ink); font-family: 'Cinzel', serif; }
