@@ -413,9 +413,16 @@ export class Sim {
               bLock = e2.kb > 0;
             let wa = 0.5,
               wb = 0.5;
-            if (aLock && !bLock) (wa = 0), (wb = 1);
-            else if (bLock && !aLock) (wa = 1), (wb = 0);
-            else if (aLock && bLock) (wa = 0), (wb = 0);
+            if (aLock && !bLock) {
+              wa = 0;
+              wb = 1;
+            } else if (bLock && !aLock) {
+              wa = 1;
+              wb = 0;
+            } else if (aLock && bLock) {
+              wa = 0;
+              wb = 0;
+            }
             a.x -= nx * overlap * wa;
             a.y -= ny * overlap * wa;
             e2.x += nx * overlap * wb;
