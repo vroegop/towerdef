@@ -5,35 +5,28 @@
    current baseline — hoarding a ball of enemies becomes lethal over time. */
 import type { Arena, Enemy, Rng, State } from '../types';
 import { TYPES } from './registries';
-import { waveSpeed, waveStr } from './waves';
+import { SPAWN, allowedSpecials, isBossWave, waveCount, waveSpeed, waveStr } from './waves';
 
-// Archetypes are introduced as the (effective) wave climbs, so early waves stay simple.
-export function pickType(rng: Rng, n: number): string {
-  if (n % 10 === 0 && rng.next() < 0.2) return 'boss';
-  const r = rng.next();
-  if (n >= 8 && r < 0.1) return 'fast';
-  if (n >= 12 && r < 0.18) return 'tank';
-  if (n >= 16 && r < 0.25) return 'splitter';
-  return rng.next() < 0.55 ? 'melee' : 'ranged';
-}
-
-// Per-type spawn probabilities at wave n — mirrors pickType's branch cuts, for the HUD enemy panel.
-// On every 10th wave a fraction of spawns roll as bosses; the rest split by the same r-cuts.
-export function spawnChances(n: number): Record<string, number> {
-  const boss = n % 10 === 0 ? 0.2 : 0;
-  const rest = 1 - boss;
-  const fast = n >= 8 ? 0.10 : 0; // r in [0, .10)
-  const tank = n >= 12 ? 0.08 : 0; // r in [.10, .18)
-  const splitter = n >= 16 ? 0.07 : 0; // r in [.18, .25)
-  const base = Math.max(0, 1 - fast - tank - splitter); // the rest fall through to melee/ranged (55/45)
-  return {
-    boss,
-    fast: rest * fast,
-    tank: rest * tank,
-    splitter: rest * splitter,
-    melee: rest * base * 0.55,
-    ranged: rest * base * 0.45,
-  };
+// Expected per-type share of a wave at (real) wave n in `tier`, for the HUD enemy panel. Mirrors
+// waveRoster's composition (caps + unlocks + boss rule) using a representative wave size, with the
+// special pool split evenly among the unlocked specials.
+export function spawnChances(n: number, tier: number): Record<string, number> {
+  const count = Math.max(1, waveCount(n));
+  const out: Record<string, number> = {};
+  if (isBossWave(n)) {
+    const normals = Math.min(SPAWN.normalCap, count - 1);
+    const total = 1 + normals;
+    out.boss = 1 / total;
+    out.melee = normals / total;
+    return out;
+  }
+  const specials = allowedSpecials(n, tier);
+  const specialN = specials.length ? Math.min(SPAWN.specialCap, count) : 0;
+  const normalN = Math.min(SPAWN.normalCap, count - specialN);
+  const total = normalN + specialN || 1;
+  out.melee = normalN / total;
+  for (const t of specials) out[t] = specialN / specials.length / total;
+  return out;
 }
 
 const ihp = (base: number, mult: number): number => Math.max(1, Math.round(base * mult));
