@@ -9,7 +9,7 @@ import {
   UPGRADES, UP_BY_ID, upgradesIn, boughtOf, permBought, runUpgradeCost, runAtMax, permCost, permAtMax,
   isUnlocked, SKILL_GROUPS, isGroupUnlocked, nextUnlockGroup, skillGroup,
   upgradeCap, tipOf, CARDS, CARD_INFO, MAX_STARS, CARD_ORDER, CARD_SLOTS, starSlot, buyCardCost, MILESTONES, milestoneReward,
-  claimableCount, TAB_DEFS, FIRST_PERM_COST, cardSlotCost, MAX_CARD_SLOTS, activeCardIds,
+  tierClaimableCount, TAB_DEFS, FIRST_PERM_COST, cardSlotCost, MAX_CARD_SLOTS, activeCardIds,
   availableBulkTiers, runBulkPlan, permBulkPlan, computeStats,
 } from '../sim/skills';
 import {
@@ -17,7 +17,7 @@ import {
   researchProgress, freeSlots, rushVialCost, labSlotCost, MAX_SLOTS, checkInPending, CHECKIN_VIALS, CHECKIN_GEMS,
   availableSpeeds, gameSpeed, speedAtLevel,
 } from '../sim/labs';
-import { cosmeticsOf, isCosmeticUnlocked, selectedCosmeticId, buffText, upgradeBuffMult } from '../sim/cosmetics';
+import { cosmeticsOf, isCosmeticUnlocked, selectedCosmeticId, buffText, upgradeBuffMult, cosmeticById } from '../sim/cosmetics';
 import { drawTowerSkin } from '../render/towers';
 
 // The HUD is a single themeable core: identical structure + wiring for every theme, restyled
@@ -1380,15 +1380,28 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     return h;
   }
 
-  // a milestone trail: hexagon nodes down a spine, gold up to the furthest wave reached, with a
-  // "you are here" pin sitting between the last reached node and the next.
+  // The milestone ladder for the SELECTED tier: a gilded hexagon spine, a wax-seal "you are here" pin,
+  // and one rung per milestone. Rungs pay coins / gems / vials, except the wave-1000 rung whose reward
+  // IS that tier's tower skin (drawn as a live medallion). Progress + claims are per-tier.
   function renderMilestones(): void {
     const meta = lastMeta!,
+      tier = meta.tier || 1,
       cl = meta.claimedMilestones || {},
-      best = meta.bestWave || 0;
+      best = (meta.tierBest && meta.tierBest[tier]) || 0;
     const short = (w: number): string => (w >= 1000 ? w / 1000 + 'K' : '' + w);
     const reachedCount = MILESTONES.filter((w) => best >= w).length;
-    const claimable = MILESTONES.filter((w) => best >= w && !cl[w]).length;
+    const claimable = tierClaimableCount(meta, tier);
+    // A reward as a chip (currency) or a tower-skin medallion (wave 1000).
+    const rewardHtml = (r: ReturnType<typeof milestoneReward>): string => {
+      if (r.tower) {
+        const t = cosmeticById(r.tower);
+        return '<span class="mn-tower"><canvas class="mn-twc" width="60" height="60" data-twc="' + r.tower + '"></canvas>' +
+          '<span class="mn-tw-tx"><b>' + (t ? t.name : 'Tower Skin') + '</b><span>tower skin</span></span></span>';
+      }
+      if (r.gems) return '<span class="rw">+' + r.gems.toLocaleString() + ' ' + icon('gem', 13, 'gem') + '</span>';
+      if (r.vials) return '<span class="rw">+' + r.vials.toLocaleString() + ' ' + icon('vial', 13, 'vial') + '</span>';
+      return '<span class="rw">+' + r.coins.toLocaleString() + ' ' + coinsIc(13) + '</span>';
+    };
     const marker =
       '<div class="msrow msnow"><div class="msrail"><span class="mspin">' + icon('best', 14) + '</span></div>' +
       '<div class="mscard"><div class="mn-info"><b>You are here</b>' +
@@ -1396,31 +1409,41 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     let rows = '';
     if (reachedCount === 0) rows += marker;
     MILESTONES.forEach((w, i) => {
-      const reward = milestoneReward(w, meta.tier || 1),
-        claimed = !!cl[w],
+      const reward = milestoneReward(w, tier),
+        isTower = !!reward.tower,
+        claimed = !!cl[tier + ':' + w],
         reached = best >= w,
-        can = reached && !claimed;
-      // a reward chip: gems if this milestone pays gems, else coins.
-      const rwIc = reward.gems > 0
-        ? '+' + reward.gems.toLocaleString() + ' ' + icon('gem', 12, 'gem')
-        : '+' + reward.coins.toLocaleString() + ' ' + coinsIc(12);
-      const cls = 'msrow' + (reached ? ' reached' : '') + (claimed ? ' claimed' : can ? ' can' : ' locked');
-      const cta = claimed
-        ? '<span class="mn-done">' + icon('check', 15) + ' Claimed</span>'
-        : can
-          ? '<button class="mn-claim" data-claim="' + w + '">Claim ' + rwIc + '</button>'
-          : '<span class="mn-reward locked">' + rwIc + '</span>';
+        can = reached && !claimed && !isTower;
+      const cls = 'msrow' + (reached ? ' reached' : '') + (isTower ? ' tower' : '') +
+        (isTower ? (reached ? ' unlocked' : ' locked') : claimed ? ' claimed' : can ? ' can' : ' locked');
+      let cta: string;
+      if (isTower) {
+        cta = rewardHtml(reward) +
+          '<span class="mn-tw-status">' + (reached ? icon('check', 13) + ' Unlocked' : icon('lock', 13) + ' Wave ' + short(w)) + '</span>';
+      } else if (claimed) {
+        cta = '<span class="mn-done">' + icon('check', 15) + ' Claimed</span>';
+      } else if (can) {
+        cta = '<button class="mn-claim" data-claim="' + w + '">Claim ' + rewardHtml(reward) + '</button>';
+      } else {
+        cta = '<span class="mn-reward locked">' + rewardHtml(reward) + '</span>';
+      }
       rows += '<div class="' + cls + '">' +
-        '<div class="msrail"><span class="msdot">' + short(w) + '</span></div>' +
-        '<div class="mscard"><div class="mn-info"><b>Wave ' + w.toLocaleString() + '</b></div>' + cta + '</div></div>';
+        '<div class="msrail"><span class="msdot">' + (isTower ? icon('best', 15) : short(w)) + '</span></div>' +
+        '<div class="mscard"><div class="mn-info"><b>Wave ' + w.toLocaleString() + '</b>' +
+        (isTower ? '<span class="mn-kind">tower skin unlock</span>' : '') + '</div>' + cta + '</div></div>';
       if (i === reachedCount - 1) rows += marker;
     });
     modalInner.innerHTML =
       '<button class="close" id="h-ms-close" title="Close">' + icon('close', 18) + '</button>' +
-      '<h2>Milestones</h2>' +
-      '<p class="msnote">Tier ' + (meta.tier || 1) + ' · ' +
-      (claimable > 0 ? claimable + ' reward' + (claimable > 1 ? 's' : '') + ' ready to claim.' : 'Reach further to unlock rewards.') + '</p>' +
+      '<div class="ms-head"><h2>Milestones</h2>' +
+      '<p class="msnote"><span class="ms-tierband">' + icon('tier', 13) + ' Tier ' + tier + '</span>' +
+      (claimable > 0 ? '<b class="ms-ready">' + claimable + ' reward' + (claimable > 1 ? 's' : '') + ' ready</b>' : '<span>reach further to unlock rewards</span>') +
+      '</p></div>' +
       '<div class="mspath">' + rows + '</div>';
+    // Paint any tower-skin reward medallions (same skin art the picker + avatar use).
+    modalInner.querySelectorAll<HTMLCanvasElement>('canvas[data-twc]').forEach((cv) => {
+      drawTowerSkin(cv.getContext('2d')!, cv.dataset.twc!, cv.width / 2, cv.height / 2, Math.min(cv.width, cv.height) * 0.34, 0.7);
+    });
     $('#h-ms-close').addEventListener('click', () => modal.classList.add('hide'));
     modalInner.querySelectorAll<HTMLElement>('[data-claim]').forEach((b) =>
       b.addEventListener('click', () => {
@@ -1509,8 +1532,6 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       // The check-in is surfaced by the floating #h-checkin-float button (menu + in-game), shown only
       // when a reward is claimable — so there's no inline button or idle countdown here anymore.
       html += '<div class="avatar-frame"><canvas id="h-avatar" width="200" height="200"></canvas></div>';
-      const claim = claimableCount(meta);
-      html += '<button class="msbtn" id="h-ms">Milestones' + (claim > 0 ? '<span class="badge">' + claim + '</span>' : '') + '</button>';
       const tier = meta.tier || 1,
         canUp = tier < MAX_TIER && tierUnlocked(meta, tier + 1);
       html += '<div class="tiersel">' +
@@ -1520,6 +1541,21 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         '<span class="tl-max">Max. ' + ((meta.tierBest && meta.tierBest[tier]) || 0) + '</span></span>' +
         '<button class="tierstep' + (canUp ? '' : ' locked') + '" id="h-tier-up">' + icon('fwd', 18) + '</button>' +
         '</div>';
+      // Milestones SECTION (replaces the old button): a clickable parchment plaque that opens the
+      // per-tier ladder. Its subtitle reflects the selected tier — claimable count, next rung, or done.
+      const tBest = (meta.tierBest && meta.tierBest[tier]) || 0,
+        tClaim = tierClaimableCount(meta, tier),
+        nextMs = MILESTONES.find((w) => w > tBest);
+      const msSub = tClaim > 0
+        ? tClaim + ' reward' + (tClaim > 1 ? 's' : '') + ' to claim'
+        : nextMs
+          ? 'Next at wave ' + nextMs.toLocaleString()
+          : 'All milestones reached';
+      html += '<div class="ms-section' + (tClaim > 0 ? ' has-claim' : '') + '" id="h-ms" role="button" tabindex="0" title="Milestones">' +
+        '<span class="ms-sec-ic">' + icon('best', 20) + '</span>' +
+        '<span class="ms-sec-tx"><b>Milestones</b><span class="ms-sec-sub">' + msSub + '</span></span>' +
+        (tClaim > 0 ? '<span class="ms-sec-badge">' + tClaim + '</span>' : '') +
+        '<span class="ms-sec-arrow">' + icon('fwd', 16) + '</span></div>';
       html += '<button class="startsq" id="h-start">' + icon('play', 35, 'green') + '</button>';
     } else if (menuTab === 'upgrades') {
       // shared centered column so the coins chip, subtabs and list all share one left edge

@@ -8,7 +8,7 @@
    Tabs: attack / defense / economic (icons, not words). */
 import type { BulkQty, CardDef, CardSpec, CardDrawResult, Curve, Meta, State, Stats, TabDef, UpgradeCurve, UpgradeDef, UpgradeSpec } from '../types';
 import { labCapBonus, labScaleMults } from './labs';
-import { cosmeticBuffMult } from './cosmetics';
+import { cosmeticBuffMult, towerForTier, TOWER_UNLOCK_WAVE } from './cosmetics';
 import {
   RAPID_COST, BOUNCECHANCE_COST, BOUNCETARGETS_COST, BOUNCERANGE_COST, SUPERCRIT_COST,
   SUPERCRITMULT_COST, REND_COST, DEFPCT_COST, THORNS_COST, KBCHANCE_COST, KBFORCE_COST, KBFORCE_VALUE,
@@ -741,70 +741,99 @@ export function buyCard(meta: Meta, rng?: () => number): CardDrawResult | null {
   return { id, before, after, unlocked };
 }
 
-// ---- tier / milestones (rewards for furthest-wave progress) ----
+// ---- tier / milestones (rewards for furthest-wave progress, tracked PER TIER) ----
 export const MILESTONES: number[] = (() => {
   const a = [10, 50, 100, 250, 500];
   for (let w = 1000; w <= 10000; w += 1000) a.push(w);
   return a;
 })();
-// A milestone pays EITHER coins or gems. Every other milestone (odd index) pays gems IN TIER 1 —
-// they fuel early card progress; in higher tiers those slots pay coins instead. Coin reward is the
-// wave × MS_COIN_MULT (20× the old flat `wave` value). Gem rewards escalate 10,20,30,… per gem slot.
-export interface MilestoneReward { coins: number; gems: number; }
+// Milestones are PER TIER: progress (the tier's furthest wave) and the claimed flag are both keyed by
+// the SELECTED tier, so switching tiers shows that tier's own ladder. A milestone pays one of:
+//   • a TOWER SKIN — the wave-1000 milestone IS that tier's tower-skin unlock, and pays nothing else;
+//   • COINS on even rungs (wave × MS_COIN_MULT);
+//   • a "special" currency on odd rungs — GEMS in tier 1, and in tier 2+ alternating gems / vials
+//     (coins, gems, coins, vials, …). Gem/vial amounts escalate 10, 20, 30, … per slot of that kind.
+export interface MilestoneReward { coins: number; gems: number; vials: number; tower?: string }
 const MS_COIN_MULT = 20;
+const msKey = (tier: number, wave: number): string => (tier || 1) + ':' + wave;
+const msBest = (meta: Meta, tier: number): number => (meta.tierBest && meta.tierBest[tier]) || 0;
+const msTiers = (meta: Meta): number[] => Object.keys(meta.tierBest || {}).map(Number).filter((t) => t >= 1);
 export function milestoneReward(wave: number, tier = 1): MilestoneReward {
+  const none: MilestoneReward = { coins: 0, gems: 0, vials: 0 };
   const i = MILESTONES.indexOf(wave);
-  if (i < 0) return { coins: 0, gems: 0 };
-  if (i % 2 === 1 && (tier || 1) === 1) {
-    const gemSlot = Math.floor(i / 2) + 1; // 1st gem milestone → 10, 2nd → 20, …
-    return { coins: 0, gems: 10 * gemSlot };
+  if (i < 0) return none;
+  // Wave 1000 in a tier that has a tower skin → the skin IS the reward (nothing else).
+  if (wave === TOWER_UNLOCK_WAVE) {
+    const t = towerForTier(tier || 1);
+    if (t) return { ...none, tower: t.id };
   }
-  return { coins: wave * MS_COIN_MULT, gems: 0 };
+  if (i % 2 === 0) return { ...none, coins: wave * MS_COIN_MULT }; // even rungs → coins
+  const oddSlot = (i - 1) / 2; // 0,1,2,… across the odd rungs
+  if ((tier || 1) === 1) return { ...none, gems: 10 * (oddSlot + 1) }; // tier 1: every odd rung pays gems
+  // tier 2+: odd rungs alternate gems / vials, each escalating on its own slot of that kind
+  return oddSlot % 2 === 0
+    ? { ...none, gems: 10 * (oddSlot / 2 + 1) }
+    : { ...none, vials: 10 * ((oddSlot - 1) / 2 + 1) };
 }
-export function claimableCount(meta: Meta): number {
-  const best = meta.bestWave || 0,
+// Whether a milestone is currency-claimable (tower skins unlock with progress — never "claimed").
+const isClaimable = (r: MilestoneReward): boolean => !r.tower && (r.coins > 0 || r.gems > 0 || r.vials > 0);
+// Claimable count for ONE tier (drives the hero-tab section badge).
+export function tierClaimableCount(meta: Meta, tier: number): number {
+  const best = msBest(meta, tier),
     cl = meta.claimedMilestones || {};
   let c = 0;
-  for (const w of MILESTONES) if (best >= w && !cl[w]) c++;
+  for (const w of MILESTONES) if (best >= w && !cl[msKey(tier, w)] && isClaimable(milestoneReward(w, tier))) c++;
   return c;
 }
-// Sum of all currently-claimable rewards (for the floating claim button's per-currency chips).
+// Claimable count ACROSS every reached tier (drives the floating claim-all badge).
+export function claimableCount(meta: Meta): number {
+  return msTiers(meta).reduce((sum, t) => sum + tierClaimableCount(meta, t), 0);
+}
+// Sum of all currently-claimable rewards across tiers (for the floating claim button's chips).
 export function claimableRewards(meta: Meta): MilestoneReward {
-  const best = meta.bestWave || 0,
-    cl = meta.claimedMilestones || {};
-  const out: MilestoneReward = { coins: 0, gems: 0 };
+  const cl = meta.claimedMilestones || {};
+  const out: MilestoneReward = { coins: 0, gems: 0, vials: 0 };
   const gemMult = cosmeticBuffMult(meta, 'gemMult');
-  for (const w of MILESTONES) {
-    if (best >= w && !cl[w]) {
-      const r = milestoneReward(w, meta.tier || 1);
-      out.coins += r.coins;
-      out.gems += Math.round(r.gems * gemMult);
+  for (const t of msTiers(meta)) {
+    const best = msBest(meta, t);
+    for (const w of MILESTONES) {
+      const r = milestoneReward(w, t);
+      if (best >= w && !cl[msKey(t, w)] && isClaimable(r)) {
+        out.coins += r.coins;
+        out.gems += Math.round(r.gems * gemMult);
+        out.vials += r.vials;
+      }
     }
   }
   return out;
 }
-export function claimMilestone(meta: Meta, wave: number): MilestoneReward {
-  const best = meta.bestWave || 0;
+export function claimMilestone(meta: Meta, tier: number, wave: number): MilestoneReward {
+  const out: MilestoneReward = { coins: 0, gems: 0, vials: 0 };
   meta.claimedMilestones = meta.claimedMilestones || {};
-  if (best >= wave && !meta.claimedMilestones[wave]) {
-    const r = milestoneReward(wave, meta.tier || 1);
+  const key = msKey(tier, wave);
+  const r = milestoneReward(wave, tier);
+  if (msBest(meta, tier) >= wave && !meta.claimedMilestones[key] && isClaimable(r)) {
     r.gems = Math.round(r.gems * cosmeticBuffMult(meta, 'gemMult')); // ×gem cosmetic buff
     meta.coins = (meta.coins || 0) + r.coins;
     meta.gems = (meta.gems || 0) + r.gems;
-    meta.claimedMilestones[wave] = true;
+    meta.vials = (meta.vials || 0) + r.vials;
+    meta.claimedMilestones[key] = true;
     return r;
   }
-  return { coins: 0, gems: 0 };
+  return out;
 }
-// Claim ALL currently-claimable milestones at once (the floating button does this). Returns the total.
+// Claim ALL currently-claimable milestones across every tier (the floating button does this).
 export function claimAllMilestones(meta: Meta): MilestoneReward {
-  const best = meta.bestWave || 0;
-  const out: MilestoneReward = { coins: 0, gems: 0 };
-  for (const w of MILESTONES) {
-    if (best >= w && !(meta.claimedMilestones || {})[w]) {
-      const r = claimMilestone(meta, w);
-      out.coins += r.coins;
-      out.gems += r.gems;
+  const out: MilestoneReward = { coins: 0, gems: 0, vials: 0 };
+  for (const t of msTiers(meta)) {
+    const best = msBest(meta, t);
+    for (const w of MILESTONES) {
+      if (best >= w) {
+        const r = claimMilestone(meta, t, w);
+        out.coins += r.coins;
+        out.gems += r.gems;
+        out.vials += r.vials;
+      }
     }
   }
   return out;

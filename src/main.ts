@@ -114,14 +114,14 @@ const handlers: HudHandlers = {
     return ok;
   },
   onClaimMilestone: (wave) => {
-    const r = claimMilestone(meta, wave);
-    const got = r.coins > 0 || r.gems > 0;
+    const r = claimMilestone(meta, meta.tier || 1, wave); // milestones are per-tier; claim the selected tier
+    const got = r.coins > 0 || r.gems > 0 || r.vials > 0;
     if (got) saveMeta();
     return got;
   },
   onClaimAllMilestones: () => {
     const r = claimAllMilestones(meta);
-    const got = r.coins > 0 || r.gems > 0;
+    const got = r.coins > 0 || r.gems > 0 || r.vials > 0;
     if (got) saveMeta();
     return got;
   },

@@ -92,6 +92,8 @@ export const COSMETICS: Cosmetic[] = [...TOWERS, ...HUDS, ...BACKGROUNDS];
 const BY_ID: Record<string, Cosmetic> = {};
 for (const c of COSMETICS) BY_ID[c.id] = c;
 export const cosmeticById = (id: string): Cosmetic | undefined => BY_ID[id];
+// The tower skin a given tier unlocks at TOWER_UNLOCK_WAVE (its milestone reward). undefined if none.
+export const towerForTier = (tier: number): Cosmetic | undefined => TOWERS.find((c) => c.tier === tier);
 export const cosmeticsOf = (kind: CosmeticKind): Cosmetic[] => COSMETICS.filter((c) => c.kind === kind);
 // The always-available basic item for a category (the selection a fresh save falls back to):
 // the free one (no tier gate AND no gem cost).

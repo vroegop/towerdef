@@ -206,10 +206,21 @@
 .hud .avatar-frame canvas { width: 176px; height: 176px; background: transparent; }
 .hud .hero-name { font-weight: 800; font-size: 18px; margin: 12px auto 6px; }
 
-/* milestones button + claimable badge */
-.hud .msbtn { position: relative; background: #171b27; border: 1px solid #2a3550; color: #d8deea; border-radius: 4px;
-  padding: 11px 20px; font: inherit; font-weight: 700; cursor: pointer; margin: 6px auto 0; }
-.hud .msbtn:hover { border-color: #4aa8ff; }
+/* milestones SECTION (replaces the old button): a clickable plaque on the hero tab */
+.hud .ms-section { position: relative; display: flex; align-items: center; gap: 10px; cursor: pointer;
+  width: min(280px, 78vw); margin: 10px auto 0; padding: 9px 12px; border-radius: 6px;
+  background: #161b27; border: 1px solid #2a3550; color: #d8deea; transition: border-color .12s, transform .12s; }
+.hud .ms-section:hover { border-color: #4aa8ff; transform: translateY(-1px); }
+.hud .ms-section .ms-sec-ic { flex: 0 0 auto; display: inline-flex; color: #ffd24a; }
+.hud .ms-section .ms-sec-tx { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 0; flex: 1 1 auto; }
+.hud .ms-section .ms-sec-tx b { font-size: 14px; font-weight: 800; letter-spacing: .3px; }
+.hud .ms-section .ms-sec-sub { font-size: 11px; color: #8b93a7; }
+.hud .ms-section.has-claim .ms-sec-sub { color: #5fe39a; }
+.hud .ms-section .ms-sec-badge { flex: 0 0 auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px;
+  background: #2bb673; color: #06210f; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center;
+  animation: ms-badge-pop 1.6s ease-in-out infinite; }
+.hud .ms-section .ms-sec-arrow { flex: 0 0 auto; display: inline-flex; color: #6e768c; }
+@keyframes ms-badge-pop { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
 
 /* tier stepper: < [Tier N / Core xM] > */
 .hud .tiersel { display: flex; align-items: stretch; justify-content: center; gap: 8px; margin: 8px auto 0; }
@@ -471,6 +482,36 @@
 .hud .msnow .mscard { border-bottom: 0; }
 .hud .msnow .mn-info b { color: #5fd0ff; }
 .hud .msnow .mn-reward { color: #8b93a7; }
+/* ---- milestones: header band, reward chips, animated nodes, tower-skin medallion ---- */
+.hud .ms-head { margin: 16px 18px 6px; }
+.hud .ms-head h2 { margin: 0; }
+.hud .modal .ms-head .msnote { margin: 4px 0 0; display: flex; align-items: center; gap: 8px; }
+.hud .ms-tierband { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 10px;
+  background: rgba(255,210,74,.14); color: #ffd24a; font-size: 11px; font-weight: 800; letter-spacing: .4px; }
+.hud .ms-ready { color: #5fe39a; font-weight: 800; }
+.hud .mn-info .mn-kind { font-size: 10px; color: #8b93a7; letter-spacing: .4px; text-transform: uppercase; }
+.hud .mn-reward .rw, .hud .mn-claim .rw { display: inline-flex; align-items: center; gap: 3px; }
+/* a reached node gets a soft gilded glow; a claimable one pulses to draw the eye */
+.hud .msrow.reached .msdot { animation: ms-reached-in .5s ease-out both; }
+.hud .msrow.can .msdot { animation: ms-can-pulse 1.5s ease-in-out infinite; }
+@keyframes ms-reached-in { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes ms-can-pulse { 0%,100% { box-shadow: 0 0 0 3px rgba(61,220,132,.25); } 50% { box-shadow: 0 0 0 6px rgba(61,220,132,.12); } }
+.hud .mn-claim { animation: ms-claim-breathe 2s ease-in-out infinite; }
+@keyframes ms-claim-breathe { 0%,100% { box-shadow: 0 0 0 0 rgba(61,220,132,0); } 50% { box-shadow: 0 0 10px 0 rgba(61,220,132,.35); } }
+/* tower-skin reward rung: a live medallion of the skin + an unlocked/locked status */
+.hud .msrow.tower .mscard { gap: 12px; }
+.hud .mn-tower { display: inline-flex; align-items: center; gap: 8px; }
+.hud .mn-twc { width: 50px; height: 50px; border-radius: 50%; background: radial-gradient(circle at 50% 38%, rgba(255,210,74,.18), transparent 70%); }
+.hud .mn-tw-tx { display: flex; flex-direction: column; gap: 1px; }
+.hud .mn-tw-tx b { font-size: 12px; color: #ffd24a; }
+.hud .mn-tw-tx span { font-size: 10px; color: #8b93a7; text-transform: uppercase; letter-spacing: .4px; }
+.hud .mn-tw-status { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.hud .msrow.tower.unlocked .mn-tw-status { color: #3ddc84; }
+.hud .msrow.tower.unlocked .mn-twc { filter: drop-shadow(0 0 6px rgba(255,210,74,.5)); animation: ms-tower-glow 2.4s ease-in-out infinite; }
+.hud .msrow.tower.locked .mn-tw-status { color: #6b7488; }
+.hud .msrow.tower.locked .mn-twc, .hud .msrow.tower.locked .mn-tw-tx b { filter: grayscale(.7); opacity: .45; }
+@keyframes ms-tower-glow { 0%,100% { filter: drop-shadow(0 0 5px rgba(255,210,74,.4)); } 50% { filter: drop-shadow(0 0 11px rgba(255,210,74,.75)); } }
+.hud .msrow.tower .msdot { background: linear-gradient(180deg, #e6c45a, #b07e1a); color: #2a1a06; }
 
 /* ---- spotlight tutorial (flashlight) ---- */
 .hud .tut-dim { position: fixed; border-radius: 4px; pointer-events: none; z-index: 60;

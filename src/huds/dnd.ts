@@ -169,18 +169,23 @@ const CSS = `
   border: 2px solid #7a5a2a; box-shadow: inset 0 0 26px rgba(122,74,26,.25), 0 4px 14px rgba(0,0,0,.35);
 }
 
-/* milestones / tier stepper / buttons — carved wood + brass */
-.hud.theme-dnd .msbtn,
+/* milestones section / tier stepper / buttons — carved wood + brass */
+.hud.theme-dnd .ms-section,
 .hud.theme-dnd .tiersel .tierlabel,
 .hud.theme-dnd .tiersel .tierstep,
 .hud.theme-dnd .slotbtn {
   background: #c9b285; border: 2px solid #7a5a2a; color: var(--ink); box-shadow: 2px 2px 0 #7a5a2a;
   font-family: 'Cinzel', serif; border-radius: 4px;
 }
-.hud.theme-dnd .msbtn:hover, .hud.theme-dnd .tiersel .tierstep:hover { border-color: var(--crimson); color: var(--ink); }
+.hud.theme-dnd .ms-section:hover, .hud.theme-dnd .tiersel .tierstep:hover { border-color: var(--crimson); color: var(--ink); }
+.hud.theme-dnd .ms-section .ms-sec-ic { color: var(--gold-ink); }
+.hud.theme-dnd .ms-section .ms-sec-tx b { color: var(--ink); }
+.hud.theme-dnd .ms-section .ms-sec-sub { color: var(--ink-dim); }
+.hud.theme-dnd .ms-section.has-claim .ms-sec-sub { color: #4a6b2a; }
+.hud.theme-dnd .ms-section .ms-sec-badge { background: var(--crimson); color: var(--parch-lt); }
+.hud.theme-dnd .ms-section .ms-sec-arrow { color: var(--ink-dim); }
 .hud.theme-dnd .tiersel .tl-tier { color: var(--ink); }
 .hud.theme-dnd .tiersel .tl-coin b { color: var(--gold-ink); }
-.hud.theme-dnd .msbtn .badge { background: var(--crimson); color: var(--parch-lt); }
 
 /* the Start button: an embossed wax seal, not neon */
 .hud.theme-dnd .startsq {
@@ -341,6 +346,15 @@ const CSS = `
 .hud.theme-dnd .msnow .mspin { background: var(--crimson); color: var(--parch-lt); box-shadow: 0 0 0 3px rgba(154,42,26,.25); }
 .hud.theme-dnd .msnow .mn-info b { color: var(--crimson); }
 .hud.theme-dnd .msnow .mn-reward { color: var(--ink-dim); }
+/* milestones modal header band + tower-skin reward rung on parchment */
+.hud.theme-dnd .ms-tierband { background: rgba(154,106,26,.16); color: var(--gold-ink); }
+.hud.theme-dnd .ms-ready { color: #4a6b2a; }
+.hud.theme-dnd .mn-info .mn-kind { color: var(--ink-dim); }
+.hud.theme-dnd .mn-tw-tx b { color: var(--gold-ink); }
+.hud.theme-dnd .mn-tw-tx span { color: var(--ink-dim); }
+.hud.theme-dnd .msrow.tower.unlocked .mn-tw-status { color: #4a6b2a; }
+.hud.theme-dnd .msrow.tower.locked .mn-tw-status { color: var(--ink-dim); }
+.hud.theme-dnd .msrow.tower .msdot { background: linear-gradient(180deg, #e2bd66, var(--gold-ink)); color: #2a1a08; }
 .hud.theme-dnd .ghint { background: var(--parch-lt); border: 1px solid var(--accent); color: var(--ink); }
 .hud.theme-dnd .lk-tip, .hud.theme-dnd .tut-thought { background: #c9b285; color: var(--ink); border: 1px solid #7a5a2a; }
 .hud.theme-dnd .lk-tip:after, .hud.theme-dnd .tut-thought:after { border-top-color: #c9b285; }
