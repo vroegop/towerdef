@@ -37,7 +37,7 @@ three together.
 src/sim/      pure game logic & rules — no DOM, no canvas, no Date.now() in a step
 src/render/   reads a sim snapshot and paints it — never mutates the sim, holds no rules
 src/hud/      DOM overlay: menus, upgrade docks, modals, the swappable-HUD host + dev menu
-src/huds/     themed HUD skins (D&D, Arcade) built on the one themeable HUD core
+src/huds/     themed HUD skins (D&D) built on the one themeable HUD core
 src/main.ts   boot + fixed-timestep loop + persistence + offline catch-up (the only lifecycle owner)
 ```
 
