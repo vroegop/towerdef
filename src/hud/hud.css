@@ -556,17 +556,12 @@
 .dev .devbtns.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .dev .devnote { color: #7e8aa3; font: 11px system-ui; line-height: 1.35; margin-bottom: 2px; }
 .dev .ffrow { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-/* collapsible submenus */
+/* section groups in the single scrollable list */
 .dev .devsec { border-top: 1px solid #2a2030; padding-top: 6px; display: flex; flex-direction: column; gap: 6px; }
 .dev .devsec:first-child { border-top: 0; padding-top: 0; }
-.dev .devsec-h { display: flex; align-items: center; justify-content: space-between; background: transparent !important;
-  border: 0 !important; color: #b48ad6 !important; font: 700 11px ui-monospace, monospace !important; letter-spacing: 1px;
-  text-transform: uppercase; padding: 3px 2px !important; cursor: pointer; }
-.dev .devsec-h:hover { color: #e8c6ff !important; }
-.dev .devsec-h .caret { transition: transform .12s; opacity: .7; }
-.dev .devsec.open .devsec-h .caret { transform: rotate(90deg); }
-.dev .devsec-b { display: none; flex-direction: column; gap: 6px; }
-.dev .devsec.open .devsec-b { display: flex; }
+.dev .devsec-h { color: #b48ad6; font: 700 11px ui-monospace, monospace; letter-spacing: 1px;
+  text-transform: uppercase; padding: 3px 2px; }
+.dev .devsec-b { display: flex; flex-direction: column; gap: 6px; }
 /* HUD switcher list */
 .dev .hudlist { display: flex; flex-direction: column; gap: 5px; }
 .dev .hudpick { display: flex; align-items: center; gap: 8px; text-align: left; }
