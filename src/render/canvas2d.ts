@@ -255,12 +255,16 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     // drop hit-flash memory for enemies that no longer exist, so `seen` can't grow over a run
     for (const id of seen.keys()) if (!curPos.has(id)) seen.delete(id);
 
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = '#fffbe6';
+    ctx.strokeStyle = '#2a1c08';
     for (const p of s.projectiles) {
       const pp = ipos(p.id, p.x, p.y);
+      const r = Math.max(1.5, p.r * 0.42 * scale);
+      ctx.lineWidth = Math.max(1, r * 0.4);
       ctx.beginPath();
-      ctx.arc(tx(pp.x), ty(pp.y), Math.max(1, p.r * 0.32 * scale), 0, Math.PI * 2);
+      ctx.arc(tx(pp.x), ty(pp.y), r, 0, Math.PI * 2);
       ctx.fill();
+      ctx.stroke();
     }
 
     if (!resync) {
