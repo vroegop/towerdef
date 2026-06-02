@@ -32,6 +32,9 @@ const CSS = `
 .hud.theme-dnd .stat.hp b { color: var(--ink); font-family: 'Cinzel', serif; }
 .hud.theme-dnd .iconbtn { color: var(--ink-dim); }
 .hud.theme-dnd .iconbtn:hover { color: var(--ink); }
+.hud.theme-dnd .speedbtn { background: rgba(122,74,26,.12); border: 1px solid var(--rule); }
+.hud.theme-dnd .speedbtn:hover { background: rgba(122,74,26,.2); }
+.hud.theme-dnd .speedbtn b { color: var(--ink); font-family: 'Cinzel', serif; }
 
 /* side menu: a small parchment rail pinned in the margin */
 .hud.theme-dnd .sidemenu { background: var(--parch); background-image: radial-gradient(circle at 70% 8%, var(--parch-lt), #e3d3b0 70%);

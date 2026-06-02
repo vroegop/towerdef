@@ -7,7 +7,7 @@ import { makeRng } from '../../src/sim/rng';
 import { Sim } from '../../src/sim/core';
 import { createState, ARENA_W, ARENA_H } from '../../src/sim/state';
 import { makeEnemy } from '../../src/sim/enemies';
-import { migrateMeta } from '../../src/sim/labs';
+import { migrateMeta, availableSpeeds, gameSpeed, setGameSpeed, SPEED_STEPS, LAB_BY_ID } from '../../src/sim/labs';
 import { buyPerm, permCost, computeStats, waveStrSafe } from './helpers';
 import { waveCount, waveStr, tierUnlocked, coinMult, waveRoster, allowedSpecials, isBossWave } from '../../src/sim/waves';
 import { buyCard, buyCardCost, MAX_STARS, CARD_ORDER, evalCurve, UP_BY_ID, PX_PER_METER, isUnlocked, unlockGroup, nextUnlockGroup, skillGroup } from '../../src/sim/skills';
@@ -235,6 +235,43 @@ describe('labs scale stats', () => {
     const labbed = computeStats(createState(1, freshMeta({ labs: { dmgLab: 10 } }), false));
     expect(labbed.rangedDamage).toBeCloseTo(base.rangedDamage * (1 + 0.02 * 10)); // Damage Lab: +0.02/level
     expect(waveStrSafe()).toBe(true);
+  });
+});
+
+describe('game speed lab', () => {
+  it('defaults to 1x and offers only 0.5x / 1x out of the box', () => {
+    const meta = freshMeta();
+    expect(meta.gameSpeed).toBe(1);
+    expect(gameSpeed(meta)).toBe(1);
+    expect(availableSpeeds(meta)).toEqual([0.5, 1]);
+  });
+
+  it('each completed level unlocks the next speed tier, up to 5x at level 7', () => {
+    expect(availableSpeeds(freshMeta({ labs: { gameSpeed: 1 } }))).toEqual([0.5, 1, 2]);
+    expect(availableSpeeds(freshMeta({ labs: { gameSpeed: 3 } }))).toEqual([0.5, 1, 2, 2.5, 3]);
+    expect(availableSpeeds(freshMeta({ labs: { gameSpeed: 7 } }))).toEqual(SPEED_STEPS);
+  });
+
+  it('setGameSpeed accepts only currently-unlocked speeds', () => {
+    const meta = freshMeta();
+    expect(setGameSpeed(meta, 0.5)).toBe(0.5); // always available
+    expect(setGameSpeed(meta, 3)).toBe(0.5); // locked → selection unchanged (still 0.5)
+    const fast = freshMeta({ labs: { gameSpeed: 3 } });
+    expect(setGameSpeed(fast, 3)).toBe(3);
+  });
+
+  it('clamps a no-longer-unlocked selection down to the highest available speed', () => {
+    expect(gameSpeed(freshMeta({ labs: { gameSpeed: 1 }, gameSpeed: 5 }))).toBe(2); // 5x picked, only ≤2x unlocked
+    expect(gameSpeed(freshMeta({ gameSpeed: 5 }))).toBe(1); // nothing past 1x unlocked
+  });
+
+  it('is a "special" lab — it never scales a sim stat (stays out of computeStats)', () => {
+    expect(LAB_BY_ID.gameSpeed.kind).toBe('special');
+    expect(LAB_BY_ID.gameSpeed.max).toBe(7);
+    const base = computeStats(createState(1, freshMeta(), false));
+    const maxed = computeStats(createState(1, freshMeta({ labs: { gameSpeed: 7 } }), false));
+    expect(maxed.rangedDamage).toBeCloseTo(base.rangedDamage);
+    expect(maxed.maxHp).toBeCloseTo(base.maxHp);
   });
 });
 

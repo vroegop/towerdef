@@ -19,6 +19,18 @@ const LAB_TIME: [number, number][] = [[0,0],[1,360],[2,960],[3,1860],[4,3120],[5
 // prettier-ignore
 const LAB_COST: [number, number][] = [[0,30],[1,71],[2,178],[3,398],[4,772],[5,1340],[6,2120],[7,3170],[8,4510],[9,6170],[10,8170],[11,10560],[12,13350],[13,16580],[14,20270],[15,24440],[16,29130],[17,34360],[18,40160],[19,46540],[20,53530],[21,61160],[22,69460],[23,78430],[24,88120],[25,98530],[26,109700],[27,121650],[28,134390],[29,147950],[30,162350],[31,177620],[32,193780],[33,210830],[34,228820],[35,247760],[36,267660],[37,288560],[38,310470],[39,333400],[40,357390],[41,382450],[42,408600],[43,435870],[44,464260],[45,493810],[46,524530],[47,556430],[48,589550],[49,623890],[50,659490],[51,696340],[52,734490],[53,773940],[54,814710],[55,856830],[56,900300],[57,945160],[58,991410],[59,1040000],[60,1090000],[61,1140000],[62,1190000],[63,1240000],[64,1300000],[65,1360000],[66,1410000],[67,1470000],[68,1530000],[69,1600000],[70,1660000],[71,1730000],[72,1800000],[73,1870000],[74,1940000],[75,2010000],[76,2080000],[77,2160000],[78,2240000],[79,2320000],[80,2400000],[81,2480000],[82,2570000],[83,2650000],[84,2740000],[85,2830000],[86,2930000],[87,3020000],[88,3120000],[89,3220000],[90,3320000],[91,3420000],[92,3520000],[93,3630000],[94,3740000],[95,3850000],[96,3960000],[97,4070000],[98,4190000],[99,4310000]];
 
+// ---- Game Speed lab: its own exact cost/time tables (7 levels; point [L-1, x] = price/time to REACH
+// level L). Unlike the shared LAB tables above, level 1 is NOT instant — it costs 9m. ----
+// prettier-ignore
+const SPEED_COST: [number, number][] = [[0,300],[1,2500],[2,12000],[3,50000],[4,150000],[5,500000],[6,1000000]];
+// prettier-ignore
+const SPEED_TIME: [number, number][] = [[0,540],[1,9000],[2,35280],[3,122520],[4,329940],[5,1215960],[6,2199960]];
+
+// The selectable battle-speed ladder. Indices 0..1 (0.5x, 1x) are ALWAYS available; indices 2..8
+// (2x → 5x) unlock one-per-level as the Game Speed lab is completed (level 1 → 2x, … level 7 → 5x).
+export const SPEED_STEPS = [0.5, 1, 2, 2.5, 3, 3.5, 4, 4.5, 5];
+export const SPEED_LAB = 'gameSpeed';
+
 // linear interpolation over a sampled [level, value] table (mirrors interpTable in skills.ts).
 function interp(points: [number, number][], n: number): number {
   if (n <= points[0][0]) return points[0][1];
@@ -48,11 +60,15 @@ export const LABS: LabDef[] = [
     per: 0.02, max: 100, coin: tcurve(LAB_COST), time: tcurve(LAB_TIME), gate: { wave: 30 } },
   { id: 'hpLab', cat: 'defense', kind: 'scale', target: 'maxHp', label: 'Health Lab',
     per: 0.03, max: 100, coin: tcurve(LAB_COST), time: tcurve(LAB_TIME), gate: { wave: 30 } },
+  // Game Speed: a 'special' lab. It does NOT scale a sim stat (so it never enters labScaleMults /
+  // computeStats) — completing a level just widens the set of selectable battle speeds (see below).
+  { id: SPEED_LAB, cat: 'speed', kind: 'special', target: 'gameSpeed', label: 'Game Speed',
+    per: 0.5, max: 7, coin: tcurve(SPEED_COST), time: tcurve(SPEED_TIME), gate: { wave: 30 } },
 ];
 export const LAB_BY_ID: Record<string, LabDef> = {};
 for (const L of LABS) LAB_BY_ID[L.id] = L;
 export const labsIn = (cat: string): LabDef[] => LABS.filter((L) => L.cat === cat);
-export const LAB_CATS = ['attack', 'defense'];
+export const LAB_CATS = ['attack', 'defense', 'speed'];
 
 // ---- internal cap effects: each pickable lab ALSO raises a WORKSHOP UPGRADE's max cap. These
 // share the lab's completed level, so the scale + cap halves always advance together. `target` here
@@ -221,8 +237,34 @@ export function claimCheckIn(meta: Meta, nowMs: number): { claims: number; vials
   return { claims: n, vials, gems };
 }
 
-// special hooks kept as no-ops for compatibility with callers (game/research speed labs removed).
-export const gameSpeed = (_meta: Meta): number => 1;
+// ---- game speed: a player-chosen battle multiplier, clamped to what the Game Speed lab unlocks ----
+// This is PURE math entering the loop (main.ts runs more fixed steps per real second), so the seeded
+// replay stays identical — the determinism invariant holds (see README "Wall-clock vs sim-clock").
+
+// The speeds the player may pick right now: the 2 always-free steps + one ladder step per completed
+// Game Speed level (capped at the ladder length).
+export function availableSpeeds(meta: Meta): number[] {
+  return SPEED_STEPS.slice(0, Math.min(SPEED_STEPS.length, 2 + lvl(meta, SPEED_LAB)));
+}
+// Top selectable speed at a given completed level (level 0 → 1x; level L≥1 → SPEED_STEPS[L+1]).
+export const speedAtLevel = (level: number): number => SPEED_STEPS[Math.min(SPEED_STEPS.length - 1, level + 1)];
+export const maxGameSpeed = (meta: Meta): number => speedAtLevel(lvl(meta, SPEED_LAB));
+
+// The speed currently in effect: the saved selection if still unlockable, else the highest unlocked
+// speed not exceeding it (defends against a corrupt/edited save), else 1x.
+export function gameSpeed(meta: Meta): number {
+  const avail = availableSpeeds(meta);
+  const sel = (meta && meta.gameSpeed) || 1;
+  if (avail.includes(sel)) return sel;
+  return avail.filter((v) => v <= sel).pop() || 1;
+}
+// Persist a chosen speed if it's currently selectable; returns the value now in effect.
+export function setGameSpeed(meta: Meta, speed: number): number {
+  if (availableSpeeds(meta).includes(speed)) meta.gameSpeed = speed;
+  return gameSpeed(meta);
+}
+
+// special hook kept as a no-op for compatibility with callers (research-speed lab removed).
 export const labSpeedReduction = (_meta: Meta): number => 0;
 
 // ---- meta defaults / migration (idempotent; additive only, never destructive) ----
@@ -243,6 +285,7 @@ export function migrateMeta(meta: Meta): Meta {
   if (meta.vials == null) meta.vials = 0;
   if (meta.cardSlots == null) meta.cardSlots = 1;
   if (!Array.isArray(meta.activeCards)) meta.activeCards = [];
+  if (meta.gameSpeed == null) meta.gameSpeed = 1; // default battle speed (0.5x/1x are always available)
   meta.ver = META_VER;
   return meta;
 }
