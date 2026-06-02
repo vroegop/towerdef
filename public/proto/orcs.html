@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Arena — Orc Sprite Prototype</title>
+<style>
+  :root { --ink:#2d1f0c; --parch:#dcc596; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:#1a1510; color:#ecdcb6;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  header { padding:14px 18px; border-bottom:1px solid #3a2d18; }
+  header h1 { margin:0; font-size:18px; letter-spacing:.02em; }
+  header p { margin:4px 0 0; font-size:13px; opacity:.7; }
+  .wrap { display:flex; flex-wrap:wrap; gap:20px; padding:18px; }
+  .panel { background:#211a10; border:1px solid #3a2d18; border-radius:10px; padding:14px; }
+  canvas { image-rendering:pixelated; display:block; border-radius:8px; }
+  .controls { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  button { background:#3a2d18; color:#ecdcb6; border:1px solid #5a4628; border-radius:6px;
+    padding:6px 11px; font-size:13px; cursor:pointer; }
+  button.on { background:#b89a62; color:#211a10; border-color:#b89a62; font-weight:600; }
+  .label { font-size:11px; text-transform:uppercase; letter-spacing:.08em; opacity:.6; margin:10px 0 4px; }
+  .note { font-size:12px; opacity:.6; max-width:360px; line-height:1.5; }
+  a.back { color:#e7c987; }
+</style>
+</head>
+<body>
+<header>
+  <h1>⚔️ Arena — Orc Sprite Prototype</h1>
+  <p>Throwaway prototype · CraftPix top-down orc pack on the parchment battle map. <a class="back" href="../index.html">← back to game</a></p>
+</header>
+
+<div class="wrap">
+  <!-- Live arena: orcs marching on the centre -->
+  <div class="panel">
+    <div class="label">Arena preview — orcs advancing on the hero</div>
+    <canvas id="arena" width="520" height="400"></canvas>
+  </div>
+
+  <!-- Inspector: view any orc / animation / direction -->
+  <div class="panel">
+    <div class="label">Sprite inspector</div>
+    <canvas id="inspect" width="256" height="256" style="background:#181208"></canvas>
+    <div class="label">Orc</div>
+    <div class="controls" id="orcPick"></div>
+    <div class="label">Animation</div>
+    <div class="controls" id="animPick"></div>
+    <div class="label">Facing (sheet row)</div>
+    <div class="controls" id="dirPick"></div>
+    <p class="note">Each sheet is a grid of 64×64 frames: 4 rows (facing directions) × N columns (animation frames). The arena on the left maps the sim's enemy roles onto these orcs — swap which orc plays which role to taste.</p>
+  </div>
+</div>
+
+<script>
+const FRAME = 64;
+const ORCS = ['orc1', 'orc2', 'orc3'];
+const ANIMS = ['idle', 'walk', 'attack', 'death'];
+const cache = {};
+function load(orc, anim) {
+  const key = orc + '_' + anim;
+  if (cache[key]) return cache[key];
+  const img = new Image();
+  img.src = 'assets/' + key + '.png';
+  cache[key] = img;
+  return img;
+}
+ORCS.forEach(o => ANIMS.forEach(a => load(o, a)));
+
+// Draw one frame from a sheet: cols = width/FRAME, rows = height/FRAME (4 directions).
+function drawFrame(ctx, img, dir, frame, dx, dy, scale) {
+  if (!img.complete || !img.naturalWidth) return;
+  const cols = Math.floor(img.naturalWidth / FRAME);
+  const rows = Math.floor(img.naturalHeight / FRAME);
+  const r = Math.min(dir, rows - 1);
+  const c = ((frame % cols) + cols) % cols;
+  ctx.drawImage(img, c * FRAME, r * FRAME, FRAME, FRAME, dx, dy, FRAME * scale, FRAME * scale);
+}
+
+// ---- Arena preview ----
+const arena = document.getElementById('arena');
+const actx = arena.getContext('2d');
+// Roles → orc + facing toward centre. Spawned around the edge, walking inward.
+const roleOrc = { melee: 'orc1', tank: 'orc2', boss: 'orc3' };
+const movers = [];
+function spawnMovers() {
+  movers.length = 0;
+  const cx = arena.width / 2, cy = arena.height / 2;
+  const defs = [
+    { orc: 'orc1', scale: 1.4 }, { orc: 'orc1', scale: 1.4 },
+    { orc: 'orc2', scale: 1.6 }, { orc: 'orc3', scale: 2.4 },
+    { orc: 'orc1', scale: 1.2 },
+  ];
+  defs.forEach((d, i) => {
+    const ang = (i / defs.length) * Math.PI * 2 + 0.4;
+    movers.push({
+      orc: d.orc, scale: d.scale, ang,
+      dist: 200 + Math.random() * 40,
+      phase: Math.random() * 6,
+    });
+  });
+}
+spawnMovers();
+
+let t = 0;
+function frameIndex(speed) { return Math.floor(t * speed); }
+function arenaLoop() {
+  t += 1 / 60;
+  const cx = arena.width / 2, cy = arena.height / 2;
+  // parchment + grid
+  const g = actx.createRadialGradient(cx, cy, 0, cx, cy, 280);
+  g.addColorStop(0, '#ecdcb6'); g.addColorStop(0.55, '#dcc596'); g.addColorStop(1, '#b89a62');
+  actx.fillStyle = g; actx.fillRect(0, 0, arena.width, arena.height);
+  actx.strokeStyle = 'rgba(90,60,25,.16)'; actx.lineWidth = 1;
+  for (let x = 0; x <= arena.width; x += 40) { actx.beginPath(); actx.moveTo(x, 0); actx.lineTo(x, arena.height); actx.stroke(); }
+  for (let y = 0; y <= arena.height; y += 40) { actx.beginPath(); actx.moveTo(0, y); actx.lineTo(arena.width, y); actx.stroke(); }
+  actx.strokeStyle = 'rgba(60,40,15,.55)'; actx.lineWidth = 6; actx.strokeRect(3, 3, arena.width - 6, arena.height - 6);
+  // hero token (the wizard) at centre
+  actx.beginPath(); actx.fillStyle = '#2f8fff'; actx.shadowColor = '#2f8fff'; actx.shadowBlur = 14;
+  actx.arc(cx, cy, 16, 0, Math.PI * 2); actx.fill(); actx.shadowBlur = 0;
+  actx.lineWidth = 2; actx.strokeStyle = 'rgba(38,26,10,.85)'; actx.stroke();
+  actx.strokeStyle = 'rgba(95,62,24,.4)'; actx.setLineDash([6, 6]); actx.lineWidth = 1.5;
+  actx.beginPath(); actx.arc(cx, cy, 150, 0, Math.PI * 2); actx.stroke(); actx.setLineDash([]);
+  // orcs creep inward, loop back out
+  movers.forEach(m => {
+    m.dist -= 0.25;
+    if (m.dist < 30) m.dist = 210;
+    const x = cx + Math.cos(m.ang) * m.dist - FRAME * m.scale / 2;
+    const y = cy + Math.sin(m.ang) * m.dist - FRAME * m.scale / 2;
+    drawFrame(actx, load(m.orc, 'walk'), 0, frameIndex(8) + Math.floor(m.phase), x, y, m.scale);
+  });
+  requestAnimationFrame(arenaLoop);
+}
+arenaLoop();
+
+// ---- Inspector ----
+const inspect = document.getElementById('inspect');
+const ictx = inspect.getContext('2d');
+let selOrc = 'orc1', selAnim = 'walk', selDir = 0;
+function buttons(containerId, items, getSel, setSel) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = '';
+  items.forEach(it => {
+    const b = document.createElement('button');
+    b.textContent = it.label;
+    if (getSel() === it.val) b.classList.add('on');
+    b.onclick = () => { setSel(it.val); renderPickers(); };
+    c.appendChild(b);
+  });
+}
+function renderPickers() {
+  buttons('orcPick', ORCS.map(o => ({ val: o, label: o.toUpperCase() })), () => selOrc, v => selOrc = v);
+  buttons('animPick', ANIMS.map(a => ({ val: a, label: a })), () => selAnim, v => selAnim = v);
+  buttons('dirPick', [0, 1, 2, 3].map(d => ({ val: d, label: 'Row ' + d })), () => selDir, v => selDir = v);
+}
+renderPickers();
+function inspectLoop() {
+  ictx.clearRect(0, 0, inspect.width, inspect.height);
+  drawFrame(ictx, load(selOrc, selAnim), selDir, frameIndex(8), 0, 0, 4);
+  requestAnimationFrame(inspectLoop);
+}
+inspectLoop();
+</script>
+</body>
+</html>

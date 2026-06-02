@@ -20,13 +20,20 @@ export interface Renderer {
   draw(s: State, alpha: number, paused: boolean): void;
 }
 
-function drawShape(ctx: Ctx, shape: string, x: number, y: number, r: number, color: string, facing: number, flash: number, veteran?: boolean): void {
+// Mix a hex colour toward white — used for the lit top-left face of each token.
+function lighten(hex: string, amt = 0.5): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16),
+    g = parseInt(h.slice(2, 4), 16),
+    b = parseInt(h.slice(4, 6), 16);
+  const m = (c: number): number => Math.round(c + (255 - c) * amt);
+  return `rgb(${m(r)},${m(g)},${m(b)})`;
+}
+
+function drawShape(ctx: Ctx, shape: string, x: number, y: number, r: number, color: string, facing: number, flash: number): void {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(facing || 0);
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = color;
-  ctx.fillStyle = flash > 0 ? '#ffffff' : color + '22';
   ctx.beginPath();
   if (shape === 'circle') ctx.arc(0, 0, r, 0, Math.PI * 2);
   else if (shape === 'square') ctx.rect(-r, -r, r * 2, r * 2);
@@ -58,15 +65,19 @@ function drawShape(ctx: Ctx, shape: string, x: number, y: number, r: number, col
     }
     ctx.closePath();
   }
+  // Polished "C" look: a radial gradient lit from the top-left, a soft coloured glow,
+  // then a dark ink rim so the token reads as a piece sitting on the parchment map.
+  const g = ctx.createRadialGradient(-r * 0.35, -r * 0.35, r * 0.1, 0, 0, r * 1.1);
+  g.addColorStop(0, flash > 0 ? '#ffffff' : lighten(color));
+  g.addColorStop(1, color);
+  ctx.shadowColor = color;
+  ctx.shadowBlur = flash > 0 ? 18 : 9;
+  ctx.fillStyle = flash > 0 ? '#ffffff' : g;
   ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(38,26,10,.85)';
   ctx.stroke();
-  if (veteran) {
-    ctx.globalAlpha = 0.5;
-    ctx.beginPath();
-    ctx.arc(0, 0, r + 4, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-  }
   ctx.restore();
 }
 
@@ -208,12 +219,46 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     ctx.clearRect(0, 0, W, H);
     const hsx = tx(hp.x),
       hsy = ty(hp.y);
-    const fg = ctx.createRadialGradient(hsx, hsy, 0, hsx, hsy, Math.max(W, H) * 0.78);
-    fg.addColorStop(0, '#121826');
-    fg.addColorStop(0.55, '#0a0e16');
-    fg.addColorStop(1, '#06080d');
-    ctx.fillStyle = fg;
+    // Dark void beyond the map edges.
+    ctx.fillStyle = '#0b0d0a';
     ctx.fillRect(0, 0, W, H);
+    // Parchment battle-map: the arena rect (world 0..w, 0..h) painted as worn parchment with a
+    // warm glow under the hero, a faint grid, and an inked border. Everything is clipped to the
+    // arena so the surrounding void stays dark.
+    const aL = tx(0),
+      aT = ty(0),
+      aW = s.arena.w * scale,
+      aH = s.arena.h * scale;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(aL, aT, aW, aH);
+    ctx.clip();
+    const fg = ctx.createRadialGradient(hsx, hsy, 0, hsx, hsy, Math.max(aW, aH) * 0.75);
+    fg.addColorStop(0, '#ecdcb6');
+    fg.addColorStop(0.55, '#dcc596');
+    fg.addColorStop(1, '#b89a62');
+    ctx.fillStyle = fg;
+    ctx.fillRect(aL, aT, aW, aH);
+    const GRID = 48; // world units between grid lines
+    ctx.strokeStyle = 'rgba(90,60,25,.16)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let gx = 0; gx <= s.arena.w + 0.5; gx += GRID) {
+      const X = tx(gx);
+      ctx.moveTo(X, aT);
+      ctx.lineTo(X, aT + aH);
+    }
+    for (let gy = 0; gy <= s.arena.h + 0.5; gy += GRID) {
+      const Y = ty(gy);
+      ctx.moveTo(aL, Y);
+      ctx.lineTo(aL + aW, Y);
+    }
+    ctx.stroke();
+    // Inked inner border / map vignette.
+    ctx.strokeStyle = 'rgba(60,40,15,.55)';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(aL + 3, aT + 3, aW - 6, aH - 6);
+    ctx.restore();
 
     for (const e of s.enemies) {
       const col = e.color;
@@ -221,7 +266,7 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
         esx = tx(ep.x),
         esy = ty(ep.y);
       const rot = e.shape === 'triangle' ? e.facing + Math.PI / 2 : 0;
-      drawShape(ctx, e.shape, esx, esy, e.r * scale, col, rot, e.hitFlash, e.veteran);
+      drawShape(ctx, e.shape, esx, esy, e.r * scale, col, rot, e.hitFlash);
       const prev = seen.get(e.id) || 0;
       if (e.hitFlash > 0 && prev <= 0) {
         spawnSparks(esx, esy, col);
@@ -288,13 +333,15 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
 
     const h = s.hero;
     if (s.alive) {
-      ctx.strokeStyle = 'rgba(74,168,255,.12)';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(95,62,24,.4)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 6]);
       ctx.beginPath();
       ctx.arc(hsx, hsy, range * scale, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.setLineDash([]);
       const heroCol = s.run && s.run.rapidT > 0 ? '#ffd24a' : '#4aa8ff';
-      drawShape(ctx, 'circle', hsx, hsy, h.r * scale, heroCol, 0, 0, false);
+      drawShape(ctx, 'circle', hsx, hsy, h.r * scale, heroCol, 0, 0);
       const frac = h.hpMax > 0 ? h.hp / h.hpMax : 0;
       ctx.strokeStyle = frac > 0.3 ? '#3ddc84' : '#ff5d6c';
       ctx.lineWidth = 3;
