@@ -244,10 +244,10 @@ export function claimCheckIn(meta: Meta, nowMs: number): { claims: number; vials
 // This is PURE math entering the loop (main.ts runs more fixed steps per real second), so the seeded
 // replay stays identical — the determinism invariant holds (see README "Wall-clock vs sim-clock").
 
-// The speeds the player may pick right now: the 2 always-free steps + one ladder step per completed
-// Game Speed level (capped at the ladder length).
+// The speeds the player may pick right now: 0x (pause) is always offered, then the 2 always-free
+// steps + one ladder step per completed Game Speed level (capped at the ladder length).
 export function availableSpeeds(meta: Meta): number[] {
-  return SPEED_STEPS.slice(0, Math.min(SPEED_STEPS.length, 2 + lvl(meta, SPEED_LAB)));
+  return [0, ...SPEED_STEPS.slice(0, Math.min(SPEED_STEPS.length, 2 + lvl(meta, SPEED_LAB)))];
 }
 // Top selectable speed at a given completed level (level 0 → 1x; level L≥1 → SPEED_STEPS[L+1]).
 export const speedAtLevel = (level: number): number => SPEED_STEPS[Math.min(SPEED_STEPS.length - 1, level + 1)];
@@ -257,9 +257,11 @@ export const maxGameSpeed = (meta: Meta): number => speedAtLevel(lvl(meta, SPEED
 // speed not exceeding it (defends against a corrupt/edited save), else 1x.
 export function gameSpeed(meta: Meta): number {
   const avail = availableSpeeds(meta);
-  const sel = (meta && meta.gameSpeed) || 1;
+  // null-check rather than `|| 1` so a stored 0 (pause) isn't coerced back to 1x.
+  const sel = meta && meta.gameSpeed != null ? meta.gameSpeed : 1;
   if (avail.includes(sel)) return sel;
-  return avail.filter((v) => v <= sel).pop() || 1;
+  const lower = avail.filter((v) => v <= sel).pop();
+  return lower != null ? lower : 1;
 }
 // Persist a chosen speed if it's currently selectable; returns the value now in effect.
 export function setGameSpeed(meta: Meta, speed: number): number {
