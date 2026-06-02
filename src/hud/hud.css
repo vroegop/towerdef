@@ -839,6 +839,19 @@
 .hud .upd-buy:disabled { opacity: .45; cursor: default; }
 .hud .upd-buy.maxed { color: #6b7488; background: transparent; border-top-color: rgba(255,255,255,.06); cursor: default; }
 
+/* ---- in-game management modals (Cards / Labs, opened from the side rail) ---- */
+.hud .mgmtmodal { position: fixed; inset: 0; z-index: 70; display: flex; align-items: flex-start; justify-content: center;
+  background: rgba(6,8,14,.62); pointer-events: auto; }
+.hud .mgmtmodal.hide { display: none; }
+.hud .mgmtmodal-inner { display: flex; flex-direction: column; margin-top: 40px; width: min(680px, 94vw);
+  max-height: calc(100% - 72px); background: #11151f; border: 1px solid #2a3550; border-radius: 10px; overflow: hidden; }
+.hud .mgmt-head { display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto;
+  padding: 12px 16px; border-bottom: 1px solid #1f2740; }
+.hud .mgmt-head h2 { margin: 0; font-size: 18px; }
+.hud .mgmt-body { flex: 1 1 auto; overflow: auto; padding: 16px 18px 18px; }
+/* a rail icon for a still-locked feature (Labs before wave 30) reads as dimmed */
+.hud .sideitem.locked .ic { color: #4a5168; }
+
 /* ---- tower picker (cosmetics modal) + clickable menu avatar ---- */
 .hud .avatar-frame.clickable { cursor: pointer; transition: filter .12s; }
 .hud .avatar-frame.clickable:hover { filter: brightness(1.06); }

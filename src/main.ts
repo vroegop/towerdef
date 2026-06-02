@@ -7,7 +7,7 @@ import { DT, catchUp } from './sim/offline';
 import { Sim, tickDying } from './sim/core';
 import { createState } from './sim/state';
 import { migrateMeta, reconcileResearch, claimCheckIn, startResearch, cancelResearch, rushResearch, buyLabSlot, gameSpeed, setGameSpeed, LABS, MAX_SLOTS } from './sim/labs';
-import { buyRunUpgradeBulk, buyPermBulk, unlockGroup, claimMilestone, claimAllMilestones, buyCard, buyCardSlot, setActiveCard, FIRST_PERM_COST } from './sim/skills';
+import { buyRunUpgradeBulk, buyPermBulk, unlockGroup, claimMilestone, claimAllMilestones, buyCard, buyCardSlot, setActiveCard, FIRST_PERM_COST, UPGRADES, SKILL_GROUPS, upgradeCap, CARD_ORDER, MAX_STARS, MAX_CARD_SLOTS } from './sim/skills';
 import { MAX_TIER, tierUnlocked, coinsForRun } from './sim/waves';
 import { selectCosmetic, type CosmeticKind } from './sim/cosmetics';
 import { makeEnemy } from './sim/enemies';
@@ -208,14 +208,29 @@ const handlers: HudHandlers = {
       meta.vials = 999999;
       saveMeta();
       hud.refreshMenu(meta);
-    } else if (kind === 'labs') {
-      // unlock everything lab-side: clear the wave-30 gate (tab + each lab), max every lab slot,
+    } else if (kind === 'finishlabs') {
+      // finish everything lab-side: clear the wave-30 gate (tab + each lab), max every lab slot,
       // complete each lab at max level, clear in-progress research.
       meta.bestWave = Math.max(meta.bestWave || 0, 30);
       meta.labs = meta.labs || {};
       for (const L of LABS) meta.labs[L.id] = L.max;
       meta.labSlots = MAX_SLOTS;
       meta.research = [];
+      saveMeta();
+      hud.refreshMenu(meta);
+    } else if (kind === 'maxskills') {
+      // unlock every skill group, then max each permanent upgrade to its (lab-lifted) cap.
+      meta.unlocked = meta.unlocked || {};
+      for (const g of SKILL_GROUPS) meta.unlocked[g.id] = true;
+      meta.perm = meta.perm || {};
+      for (const u of UPGRADES) meta.perm[u.id] = upgradeCap(meta, u.id);
+      saveMeta();
+      hud.refreshMenu(meta);
+    } else if (kind === 'maxcards') {
+      // own every card at max level, unlock every active slot, and equip them all.
+      meta.cards = CARD_ORDER.map((id) => ({ id, stars: MAX_STARS }));
+      meta.cardSlots = MAX_CARD_SLOTS;
+      meta.activeCards = CARD_ORDER.slice(0, MAX_CARD_SLOTS);
       saveMeta();
       hud.refreshMenu(meta);
     } else if (kind === 'lightning') {

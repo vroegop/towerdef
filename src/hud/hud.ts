@@ -105,6 +105,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     // The cog only toggles on-screen visual indicators, so it's an EYE ("what you see"), not a gear.
     '  <button class="sideitem" id="h-set" title="Display">' + icon('eye', 20) + '</button>' +
     '  <button class="sideitem" id="h-chart" title="Run Stats">' + icon('chart', 20) + '</button>' +
+    '  <button class="sideitem" id="h-rail-cards" title="Cards">' + icon('cards', 20) + '</button>' +
+    '  <button class="sideitem" id="h-rail-labs" title="Labs">' + icon('flask', 20) + '</button>' +
     '  <button class="sideitem danger" id="h-rail-exit" title="End run">' + icon('close', 20) + '</button>' +
     '</aside>' +
     '<div class="statswrap hide" id="h-stats"><div class="statscard" id="h-statscard"></div></div>' +
@@ -137,6 +139,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     '  <div class="menutabs" id="h-menu-tabs"></div>' +
     '  <div class="modal hide" id="h-modal"><div class="modal-inner" id="h-modal-inner"></div></div>' +
     '</div>' +
+    // In-game management modals opened from the side rail: manage active cards + research labs without
+    // leaving the run. They live OUTSIDE #h-menu (which is hidden in-game) so they show during play.
+    '<div class="mgmtmodal hide" id="h-cardsmodal"><div class="mgmtmodal-inner" id="h-cardsmodal-inner"></div></div>' +
+    '<div class="mgmtmodal hide" id="h-labsmodal"><div class="mgmtmodal-inner" id="h-labsmodal-inner"></div></div>' +
     '<div class="setmodal hide" id="h-setmodal"><div class="setmodal-inner" id="h-setmodal-inner"></div></div>' +
     '<div class="updmodal hide" id="h-updmodal"><div class="updmodal-inner" id="h-updmodal-inner"></div></div>' +
     // End-run confirm (opened from the side-rail X). Reuses the centered setmodal shell + themed .exitrun.
@@ -436,6 +442,121 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     el.addEventListener('pointerleave', () => { clear(); held = true; }); // sliding off cancels the tap
     el.addEventListener('pointercancel', () => { clear(); held = true; });
     el.addEventListener('contextmenu', (e) => e.preventDefault()); // long-press shouldn't pop the OS menu
+  }
+
+  // ---------- shared CARDS pane (the Workshop "cards" tab AND the in-game cards modal) ----------
+  // One source of HTML + wiring, so managing cards mid-run behaves exactly like the menu tab.
+  // `rerender` is the refresh to run after a change (renderMenu, or the modal's own re-render).
+  function cardsPaneHtml(meta: Meta): string {
+    const owned = meta.cards || [];
+    const bc = buyCardCost(meta);
+    // A draw is impossible only once every card type is owned AND maxed (the non-maxed pool is
+    // empty) — mirrors buyCard()'s own guard so the button greys out instead of shaking.
+    const allMaxed = Object.keys(CARDS).every((id) => {
+      const c = owned.find((x) => x.id === id);
+      return c && (c.stars || 0) >= MAX_STARS;
+    });
+    const slots = Math.max(1, meta.cardSlots || 1);
+    // One centered column so the chip, headers, active strip and grid all share a left edge.
+    let html = '<div class="cardspane">';
+    // Top row: gem balance + slot count on the left, the Draw Card action sized to its content on the right.
+    html += '<div class="cards-top">' +
+      '<div class="coins-chip gem-chip">' + icon('gem', 15, 'gem') + ' <b>' + (meta.gems || 0) + '</b>' +
+      '<span class="slotchip">' + icon('cards', 13) + ' ' + activeCardIds(meta).length + '/' + slots + '</span></div>' +
+      '<button class="cardbtn draw' + ((meta.gems || 0) < bc || allMaxed ? ' cant' : '') + '" id="h-buycard"' + (allMaxed ? ' disabled' : '') + '>' +
+      '<span class="cb-ic">' + icon('cards', 24) + '</span>' +
+      '<span class="cb-tx"><span class="cb-t">Draw Card</span><span class="cb-s">' + (allMaxed ? 'All maxed!' : 'New card or +1 level') + '</span></span>' +
+      '<span class="cb-cost">' + bc + ' ' + icon('gem', 13, 'gem') + '</span></button>' +
+      '</div>';
+    // Active cards: only these affect a run. Tap a collection card to equip it into a free slot;
+    // tap an active card to unequip it. Hold any card for its details. The last tile buys a slot.
+    html += '<div class="cards-section-h">Active Cards <span class="ac-count">' + activeCardIds(meta).length + '/' + slots + '</span></div>';
+    html += activeCardsHtml(meta);
+    html += '<div class="cards-section-h">Collection</div>';
+    html += '<div class="cardgrid">' + cardGridHtml(meta) + '</div>';
+    html += '</div>';
+    return html;
+  }
+  function wireCardsPane(scope: HTMLElement, rerender: () => void): void {
+    const bb = scope.querySelector<HTMLElement>('#h-buycard');
+    if (bb) bb.addEventListener('click', () => {
+      const r = handlers.onBuyCard && handlers.onBuyCard();
+      if (r) {
+        rerender();
+        revealCard(r);
+      } else shake(bb);
+    });
+    // Every card tile (active strip + collection): tap acts, hold opens the info popup.
+    scope.querySelectorAll<HTMLElement>('.card[data-card]').forEach((el) => {
+      const id = el.dataset.card!;
+      const aslot = el.dataset.aslot; // present only on ACTIVE cards
+      bindCardPress(
+        el,
+        () => {
+          if (aslot !== undefined) {
+            // active card → unequip (free the slot)
+            if (handlers.onSetActiveCard && handlers.onSetActiveCard(parseInt(aslot, 10), null)) rerender();
+          } else {
+            // collection card → equip into the first free slot
+            const r = equipCard(id);
+            if (r === 'ok') rerender();
+            else if (r === 'full') shake(el); // no free slot — tap an active card to free one
+            // 'active' → already equipped, no-op
+          }
+        },
+        () => openCardModal(id),
+      );
+    });
+    // Buy-slot holder: a click purchases another active slot.
+    scope.querySelectorAll<HTMLElement>('[data-buyslot]').forEach((el) =>
+      el.addEventListener('click', () => {
+        if (handlers.onBuyCardSlot && handlers.onBuyCardSlot()) rerender();
+        else shake(el);
+      }),
+    );
+  }
+
+  // ---------- shared LABS pane (the Workshop "labs" tab AND the in-game labs modal) ----------
+  function labsPaneHtml(meta: Meta): string {
+    const used = (meta.research || []).length,
+      slots = meta.labSlots || 1;
+    let html = '<div class="coins-chip">' + coinsIc(15) + ' <b>' + (meta.coins || 0) + '</b>' +
+      '<span class="slotchip">' + icon('gem', 13, 'gem') + ' ' + (meta.gems || 0) + '</span>' +
+      '<span class="slotchip">' + icon('flask', 13) + ' ' + used + '/' + slots + '</span></div>';
+    html += '<div class="labslots">' + labSlotsHtml(meta) + '</div>';
+    const sc = labSlotCost(meta),
+      canSlot = slots < MAX_SLOTS;
+    if (canSlot) html += '<button class="slotbtn' + ((meta.gems || 0) < sc ? ' cant' : '') + '" id="h-buyslot">+1 Slot · ' + sc + ' ' + icon('gem', 13, 'gem') + '</button>';
+    return html;
+  }
+  function wireLabsPane(scope: HTMLElement, rerender: () => void): void {
+    // Clicking an empty vial slot opens the lab picker modal.
+    scope.querySelectorAll<HTMLElement>('[data-pickslot]').forEach((el) =>
+      el.addEventListener('click', () => openLabPicker(rerender)),
+    );
+    // "Change" frees this slot (refunds the in-progress research) and opens the picker so you can
+    // start a different lab — you rarely want to just STOP, you want to switch what's researching.
+    scope.querySelectorAll<HTMLElement>('[data-changelab]').forEach((b) =>
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (handlers.onCancelResearch && handlers.onCancelResearch(b.dataset.changelab!)) {
+          rerender();
+          openLabPicker(rerender);
+        }
+      }),
+    );
+    scope.querySelectorAll<HTMLElement>('[data-rushlab]').forEach((b) =>
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (handlers.onRushResearch && handlers.onRushResearch(b.dataset.rushlab!)) rerender();
+        else shake(b);
+      }),
+    );
+    const sb = scope.querySelector<HTMLElement>('#h-buyslot');
+    if (sb) sb.addEventListener('click', () => {
+      if (handlers.onBuyLabSlot && handlers.onBuyLabSlot()) rerender();
+      else shake(sb);
+    });
   }
 
   // ---------- in-game tab bar (3 icon subtabs: attack / defense / economic) ----------
@@ -839,8 +960,50 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   // Each rail icon opens a self-dismissing modal (Settings) or panel (Run Stats), so the unintrusive
   // rail can stay open without a big panel hogging the screen.
   const sidemenu = $('#h-sidemenu');
-  $('#h-menu-btn').addEventListener('click', () => sidemenu.classList.toggle('open'));
+
+  // ---- in-game CARDS / LABS management modals (opened from the side rail) ----
+  // They reuse the Workshop card/lab panes, so changing cards or steering research mid-run behaves
+  // exactly like the menu — and takes effect live (computeStats re-reads meta every frame).
+  const cardsModal = $('#h-cardsmodal'),
+    cardsModalInner = $('#h-cardsmodal-inner'),
+    labsModal = $('#h-labsmodal'),
+    labsModalInner = $('#h-labsmodal-inner'),
+    railLabs = $('#h-rail-labs');
+  const mgmtHead = (title: string, closeId: string): string =>
+    '<div class="mgmt-head"><h2>' + title + '</h2><button class="iconclose" id="' + closeId + '" title="Close">' + icon('close', 18) + '</button></div>';
+  function renderCardsModal(): void {
+    const meta = curMeta();
+    if (!meta) return;
+    lastMeta = meta; // shared card helpers (equipCard / openCardModal) read lastMeta
+    cardsModalInner.innerHTML = mgmtHead('Cards', 'h-cardsmodal-close') + '<div class="mgmt-body">' + cardsPaneHtml(meta) + '</div>';
+    $('#h-cardsmodal-close').addEventListener('click', () => cardsModal.classList.add('hide'));
+    wireCardsPane(cardsModalInner, renderCardsModal);
+  }
+  function renderLabsModal(): void {
+    const meta = curMeta();
+    if (!meta) return;
+    lastMeta = meta; // openLabPicker / labSlotsHtml read lastMeta
+    labsModalInner.innerHTML = mgmtHead('Labs', 'h-labsmodal-close') + '<div class="mgmt-body">' + labsPaneHtml(meta) + '</div>';
+    $('#h-labsmodal-close').addEventListener('click', () => labsModal.classList.add('hide'));
+    wireLabsPane(labsModalInner, renderLabsModal);
+  }
+  cardsModal.addEventListener('click', (e) => { if (e.target === cardsModal) cardsModal.classList.add('hide'); });
+  labsModal.addEventListener('click', (e) => { if (e.target === labsModal) labsModal.classList.add('hide'); });
+  // Labs gate at wave 30 — reflect that on the rail icon whenever the rail is opened.
+  function refreshRail(): void {
+    const meta = curMeta();
+    railLabs.classList.toggle('locked', !(meta && labsTabUnlocked(meta)));
+  }
+
+  $('#h-menu-btn').addEventListener('click', () => { refreshRail(); sidemenu.classList.toggle('open'); });
   $('#h-set').addEventListener('click', openSettings);
+  $('#h-rail-cards').addEventListener('click', () => { renderCardsModal(); cardsModal.classList.remove('hide'); });
+  railLabs.addEventListener('click', () => {
+    const meta = curMeta();
+    if (!meta || !labsTabUnlocked(meta)) { showUnlockTip(railLabs, 'Reach wave 30 to unlock Labs'); return; }
+    renderLabsModal();
+    labsModal.classList.remove('hide');
+  });
 
   // End-run X (side rail) → confirm modal → onExitRun (banks the run, shows the overview).
   const endmodal = $('#h-endmodal');
@@ -927,7 +1090,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   // Lab picker: lists the labs you can drop into an open slot. Maxed / already-running / locked labs
   // are disabled. Each row has Start (coins + time) and Info (expands an explanation).
   let labInfoOpen: string | null = null;
-  function openLabPicker(): void {
+  function openLabPicker(onChange: () => void): void {
     if (!lastMeta) return;
     const meta = lastMeta;
     let rows = '';
@@ -970,14 +1133,14 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       '<div class="labpick-list">' + rows + '</div>';
     $('#h-labpick-close').addEventListener('click', () => { labInfoOpen = null; updmodal.classList.add('hide'); });
     updmodalInner.querySelectorAll<HTMLElement>('[data-info]').forEach((b) =>
-      b.addEventListener('click', () => { labInfoOpen = labInfoOpen === b.dataset.info ? null : b.dataset.info!; openLabPicker(); }),
+      b.addEventListener('click', () => { labInfoOpen = labInfoOpen === b.dataset.info ? null : b.dataset.info!; openLabPicker(onChange); }),
     );
     updmodalInner.querySelectorAll<HTMLElement>('[data-startlab]').forEach((b) =>
       b.addEventListener('click', () => {
         if (handlers.onStartResearch && handlers.onStartResearch(b.dataset.startlab!)) {
           labInfoOpen = null;
           updmodal.classList.add('hide');
-          renderMenu();
+          onChange();
         } else shake(b);
       }),
     );
@@ -989,6 +1152,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   const closeRunModals = (): void => {
     setmodal.classList.add('hide');
     endmodal.classList.add('hide');
+    cardsModal.classList.add('hide');
+    labsModal.classList.add('hide');
     $('#h-stats').classList.add('hide');
   };
 
@@ -1355,43 +1520,9 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       html += '<div class="permlist">' + permRowsHtml(meta, tutoring) + '</div>';
       html += '</div>';
     } else if (menuTab === 'cards') {
-      const owned = meta.cards || [];
-      const bc = buyCardCost(meta);
-      // A draw is impossible only once every card type is owned AND maxed (the non-maxed pool is
-      // empty) — mirrors buyCard()'s own guard so the button greys out instead of shaking.
-      const allMaxed = Object.keys(CARDS).every((id) => {
-        const c = owned.find((x) => x.id === id);
-        return c && (c.stars || 0) >= MAX_STARS;
-      });
-      const slots = Math.max(1, meta.cardSlots || 1);
-      // One centered column so the chip, headers, active strip and grid all share a left edge.
-      html += '<div class="cardspane">';
-      // Top row: gem balance + slot count on the left, the Draw Card action sized to its content on the right.
-      html += '<div class="cards-top">' +
-        '<div class="coins-chip gem-chip">' + icon('gem', 15, 'gem') + ' <b>' + (meta.gems || 0) + '</b>' +
-        '<span class="slotchip">' + icon('cards', 13) + ' ' + activeCardIds(meta).length + '/' + slots + '</span></div>' +
-        '<button class="cardbtn draw' + ((meta.gems || 0) < bc || allMaxed ? ' cant' : '') + '" id="h-buycard"' + (allMaxed ? ' disabled' : '') + '>' +
-        '<span class="cb-ic">' + icon('cards', 24) + '</span>' +
-        '<span class="cb-tx"><span class="cb-t">Draw Card</span><span class="cb-s">' + (allMaxed ? 'All maxed!' : 'New card or +1 level') + '</span></span>' +
-        '<span class="cb-cost">' + bc + ' ' + icon('gem', 13, 'gem') + '</span></button>' +
-        '</div>';
-      // Active cards: only these affect a run. Tap a collection card to equip it into a free slot;
-      // tap an active card to unequip it. Hold any card for its details. The last tile buys a slot.
-      html += '<div class="cards-section-h">Active Cards <span class="ac-count">' + activeCardIds(meta).length + '/' + slots + '</span></div>';
-      html += activeCardsHtml(meta);
-      html += '<div class="cards-section-h">Collection</div>';
-      html += '<div class="cardgrid">' + cardGridHtml(meta) + '</div>';
-      html += '</div>';
+      html += cardsPaneHtml(meta);
     } else if (menuTab === 'labs') {
-      const used = (meta.research || []).length,
-        slots = meta.labSlots || 1;
-      html += '<div class="coins-chip">' + coinsIc(15) + ' <b>' + (meta.coins || 0) + '</b>' +
-        '<span class="slotchip">' + icon('gem', 13, 'gem') + ' ' + (meta.gems || 0) + '</span>' +
-        '<span class="slotchip">' + icon('flask', 13) + ' ' + used + '/' + slots + '</span></div>';
-      html += '<div class="labslots">' + labSlotsHtml(meta) + '</div>';
-      const sc = labSlotCost(meta),
-        canSlot = slots < MAX_SLOTS;
-      if (canSlot) html += '<button class="slotbtn' + ((meta.gems || 0) < sc ? ' cant' : '') + '" id="h-buyslot">+1 Slot · ' + sc + ' ' + icon('gem', 13, 'gem') + '</button>';
+      html += labsPaneHtml(meta);
     } else {
       html += '<div class="locked-tab">' + icon('lock', 46) + '<div class="lockmsg">Unlocks later</div></div>';
     }
@@ -1460,70 +1591,9 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         }),
       );
     } else if (menuTab === 'cards') {
-      const bb = $('#h-buycard');
-      if (bb) bb.addEventListener('click', () => {
-        const r = handlers.onBuyCard && handlers.onBuyCard();
-        if (r) {
-          renderMenu();
-          revealCard(r);
-        } else shake(bb);
-      });
-      // Every card tile (active strip + collection): tap acts, hold opens the info popup.
-      menuContent.querySelectorAll<HTMLElement>('.card[data-card]').forEach((el) => {
-        const id = el.dataset.card!;
-        const aslot = el.dataset.aslot; // present only on ACTIVE cards
-        bindCardPress(
-          el,
-          () => {
-            if (aslot !== undefined) {
-              // active card → unequip (free the slot)
-              if (handlers.onSetActiveCard && handlers.onSetActiveCard(parseInt(aslot, 10), null)) renderMenu();
-            } else {
-              // collection card → equip into the first free slot
-              const r = equipCard(id);
-              if (r === 'ok') renderMenu();
-              else if (r === 'full') shake(el); // no free slot — tap an active card to free one
-              // 'active' → already equipped, no-op
-            }
-          },
-          () => openCardModal(id),
-        );
-      });
-      // Buy-slot holder: a click purchases another active slot.
-      menuContent.querySelectorAll<HTMLElement>('[data-buyslot]').forEach((el) =>
-        el.addEventListener('click', () => {
-          if (handlers.onBuyCardSlot && handlers.onBuyCardSlot()) renderMenu();
-          else shake(el);
-        }),
-      );
+      wireCardsPane(menuContent, renderMenu);
     } else if (menuTab === 'labs') {
-      // Clicking an empty vial slot opens the lab picker modal.
-      menuContent.querySelectorAll<HTMLElement>('[data-pickslot]').forEach((el) =>
-        el.addEventListener('click', () => openLabPicker()),
-      );
-      // "Change" frees this slot (refunds the in-progress research) and opens the picker so you can
-      // start a different lab — you rarely want to just STOP, you want to switch what's researching.
-      menuContent.querySelectorAll<HTMLElement>('[data-changelab]').forEach((b) =>
-        b.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (handlers.onCancelResearch && handlers.onCancelResearch(b.dataset.changelab!)) {
-            renderMenu();
-            openLabPicker();
-          }
-        }),
-      );
-      menuContent.querySelectorAll<HTMLElement>('[data-rushlab]').forEach((b) =>
-        b.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (handlers.onRushResearch && handlers.onRushResearch(b.dataset.rushlab!)) renderMenu();
-          else shake(b);
-        }),
-      );
-      const sb = $('#h-buyslot');
-      if (sb) sb.addEventListener('click', () => {
-        if (handlers.onBuyLabSlot && handlers.onBuyLabSlot()) renderMenu();
-        else shake(sb);
-      });
+      wireLabsPane(menuContent, renderMenu);
     }
     // tutorial spotlight
     let spotTarget: HTMLElement | null = null,
