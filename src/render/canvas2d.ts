@@ -244,8 +244,9 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
         esx = tx(ep.x),
         esy = ty(ep.y);
       const er = e.r * scale;
-      // Floor the body a touch so the wet detail stays legible once tokens get tiny.
-      const bodyR = Math.max(er, 4);
+      // Floor the body a touch so the wet detail stays legible once tokens get tiny (the floor
+      // tracks the 1.5× "bigger enemies" bump so even far-zoomed foes read 50% larger than before).
+      const bodyR = Math.max(er, 6);
       drawShadow(ctx, esx, esy, bodyR);
       drawEnemy(ctx, e.type, esx, esy, bodyR, col, animClock, e.hitFlash, e.facing);
       const prev = seen.get(e.id) || 0;

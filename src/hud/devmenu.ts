@@ -35,7 +35,9 @@ export function createDevMenu(cfg: { handlers?: HudHandlers; hudHost?: HudHost }
         { dev: 'gold', label: 'Max Gold' },
         { dev: 'gems', label: 'Max Gems' },
         { dev: 'vials', label: 'Max Vials' },
-        { dev: 'labs', label: 'Unlock Labs' },
+        { dev: 'finishlabs', label: 'Finish All Labs' },
+        { dev: 'maxskills', label: 'Max All Skills' },
+        { dev: 'maxcards', label: 'Max All Cards' },
       ],
     },
     {
