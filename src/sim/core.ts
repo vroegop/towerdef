@@ -124,7 +124,8 @@ export class Sim {
     if (w.queue) w.queue.length = 0;
     const waveStepCoins = Math.ceil(w.n / Math.max(1, WAVE.coinStep));
     const coins = Math.round(n * waveStepCoins * (st.coinsPerKill || 1) * 1.1);
-    const gold = Math.round(n * (st.goldFind || 1) * (st.cashMult || 1) * (st.enemyBalance || 1) * 1.1);
+    // Gold mirrors the coin basis (same linear wave-step) so a skipped wave's gold tracks its coins.
+    const gold = Math.round(n * waveStepCoins * (st.goldFind || 1) * (st.cashMult || 1) * (st.enemyBalance || 1) * 1.1);
     if (coins > 0) s.econ.bonusCoins += coins;
     if (gold > 0) {
       s.econ.gold += gold;
@@ -367,7 +368,7 @@ export class Sim {
     const es = this.s.enemies;
     const n = es.length;
     if (n < 2) return;
-    const CELL = 12; // ≥ largest enemy diameter, so an overlapping pair is always within 1 cell
+    const CELL = 40; // ≥ largest enemy diameter (boss r 19.8), so an overlapping pair is always within 1 cell
     const cellX = new Int32Array(n),
       cellY = new Int32Array(n);
     const grid = new Map<number, number[]>();
@@ -452,17 +453,22 @@ export class Sim {
       if (e.hp <= 0) {
         s.econ.kills++;
         const decay = (e.agedWaves || 0) >= COIN_DECAY_WAVES ? COIN_DECAY_FACTOR : 1; // anti-kite
-        // Gold reward scales with the enemy's strength (waveStr); Enemy Balance card adds a cash/kill ×mult.
-        const ebMult = this.stats.enemyBalance || 1;
-        const g = Math.round(this.stats.goldFind * e.strMult * (this.stats.cashMult || 1) * ebMult * decay);
-        s.econ.gold += g;
-        s.econ.goldEarned += g;
-        // Coins per kill use the enemy's per-type coinValue (melee 1, fast/ranged 2, tank/splitter 4,
-        // boss 5), scaled by the wave coin-step: 1× for waves 1–10, 2× for 11–20, etc.
+        // Per-kill reward BASIS, shared by coins AND gold so the two currencies scale together: the
+        // enemy's per-type coinValue (melee 1, fast/ranged 2, tank/splitter 4, boss 5), scaled by the
+        // wave coin-step (1× for waves 1–10, 2× for 11–20, …) and the anti-kite decay.
         const waveStepCoins = Math.ceil(s.wave.n / Math.max(1, WAVE.coinStep));
         const type = TYPES[e.type];
+        const rewardBase = waveStepCoins * (type ? type.coinValue : 1) * decay;
+        // Gold = the shared (LINEAR) basis × the gold-only multipliers. It deliberately no longer scales
+        // with the enemy's EXPONENTIAL wave-strength (e.strMult) — that exponent made late-wave gold
+        // explode past coins. The gold-only bonuses (Gold/Kill via goldFind, Gold Bonus, Enemy Balance,
+        // and the Gold card folded into goldFind) are what let gold still outpace coins.
+        const ebMult = this.stats.enemyBalance || 1;
+        const g = Math.round(rewardBase * this.stats.goldFind * (this.stats.cashMult || 1) * ebMult);
+        s.econ.gold += g;
+        s.econ.goldEarned += g;
         const coinMult = this.stats.coinsPerKill || 1; // Coins/Kill upgrade is a global ×multiplier
-        let killCoins = Math.round(waveStepCoins * (type ? type.coinValue : 1) * decay * coinMult);
+        let killCoins = Math.round(rewardBase * coinMult);
         // Critical Coin card: a chance per kill to drop bonus coins = base coins × crit damage mult.
         if (this.stats.criticalCoin > 0 && this.rng.next() < this.stats.criticalCoin) {
           killCoins += Math.round(killCoins * (this.stats.critMult || 1));

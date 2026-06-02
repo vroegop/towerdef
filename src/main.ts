@@ -201,13 +201,13 @@ const handlers: HudHandlers = {
       localStorage.clear();
       location.reload();
     } else if (kind === 'coins') {
-      meta.coins = 999999;
+      meta.coins = 1e12; // 1t — no hard cap on the currency; this is just the dev top-up amount
       saveMeta();
       hud.refreshMenu(meta);
     } else if (kind === 'gold') {
-      if (sim) sim.s.econ.gold = 999999;
+      if (sim) sim.s.econ.gold = 1e12; // 1t
     } else if (kind === 'gems') {
-      meta.gems = 999999;
+      meta.gems = 1e6; // 1m
       saveMeta();
       hud.refreshMenu(meta);
     } else if (kind === 'vials') {

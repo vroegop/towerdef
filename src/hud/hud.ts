@@ -339,7 +339,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     const stage = $('#h-reveal-stage');
     stage.innerHTML =
       '<div class="reveal-banner">' + banner + '</div>' +
-      '<div class="revealcard tier-' + tierOf(after) + '" style="--tint:' + def.tint + '">' + cardInner + '</div>' +
+      '<div class="revealcard tier-' + tierOf(after) + '" data-card="' + r.id + '" style="--tint:' + def.tint + '">' + cardInner + '</div>' +
       '<div class="reveal-hint">Tap to continue</div>';
     $('#h-reveal').classList.remove('hide');
 
@@ -387,7 +387,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     }
     const info = CARD_INFO[id] || '';
     $('#h-cardmodal-inner').innerHTML =
-      '<div class="cmhead" style="--tint:' + def.tint + '">' +
+      '<div class="cmhead" data-card="' + id + '" style="--tint:' + def.tint + '">' +
       '<div class="cm-medal">' + icon(def.art, 30) + '</div>' +
       '<div class="cm-title"><b>' + def.name + '</b><span class="cm-rarity ' + def.rarity + '">' + def.rarity + '</span>' +
       (info ? '<span>' + info + '</span>' : '') + '</div>' +
@@ -461,7 +461,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     let html = '<div class="cardspane">';
     // Top row: gem balance + slot count on the left, the Draw Card action sized to its content on the right.
     html += '<div class="cards-top">' +
-      '<div class="coins-chip gem-chip">' + icon('gem', 15, 'gem') + ' <b>' + (meta.gems || 0) + '</b>' +
+      '<div class="coins-chip gem-chip">' + icon('gem', 15, 'gem') + ' <b>' + abbr(meta.gems || 0) + '</b>' +
       '<span class="slotchip">' + icon('cards', 13) + ' ' + activeCardIds(meta).length + '/' + slots + '</span></div>' +
       '<button class="cardbtn draw' + ((meta.gems || 0) < bc || allMaxed ? ' cant' : '') + '" id="h-buycard"' + (allMaxed ? ' disabled' : '') + '>' +
       '<span class="cb-ic">' + icon('cards', 24) + '</span>' +
@@ -520,8 +520,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   function labsPaneHtml(meta: Meta): string {
     const used = (meta.research || []).length,
       slots = meta.labSlots || 1;
-    let html = '<div class="coins-chip">' + coinsIc(15) + ' <b>' + (meta.coins || 0) + '</b>' +
-      '<span class="slotchip">' + icon('gem', 13, 'gem') + ' ' + (meta.gems || 0) + '</span>' +
+    let html = '<div class="coins-chip">' + coinsIc(15) + ' <b>' + abbr(meta.coins || 0) + '</b>' +
+      '<span class="slotchip">' + icon('gem', 13, 'gem') + ' ' + abbr(meta.gems || 0) + '</span>' +
       '<span class="slotchip">' + icon('flask', 13) + ' ' + used + '/' + slots + '</span></div>';
     html += '<div class="labslots">' + labSlotsHtml(meta) + '</div>';
     const sc = labSlotCost(meta),
@@ -1504,8 +1504,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     menuContent.className = 'menu-content tab-' + menuTab + (tutoring && menuTab === 'hero' ? ' tut-block' : '');
     let html = '';
     if (menuTab === 'hero') {
-      const curChips = CURRENCIES.map((c) => '<span class="chip">' + icon(c.icon, 13, c.cls) + ' <b>' + (meta[c.key] || 0) + '</b></span>').join('');
-      html += '<div class="chips">' + curChips + '<span class="chip">' + icon('best', 13) + ' <b>wave ' + (meta.bestWave || 0) + '</b></span></div>';
+      const curChips = CURRENCIES.map((c) => '<span class="chip">' + icon(c.icon, 13, c.cls) + ' <b>' + abbr(meta[c.key] || 0) + '</b></span>').join('');
+      html += '<div class="chips">' + curChips + '</div>';
       // The check-in is surfaced by the floating #h-checkin-float button (menu + in-game), shown only
       // when a reward is claimable — so there's no inline button or idle countdown here anymore.
       html += '<div class="avatar-frame"><canvas id="h-avatar" width="200" height="200"></canvas></div>';
@@ -1516,14 +1516,15 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       html += '<div class="tiersel">' +
         '<button class="tierstep' + (tier > 1 ? '' : ' invisible') + '" id="h-tier-down"' + (tier > 1 ? '' : ' disabled') + '>' + icon('back', 18) + '</button>' +
         '<span class="tierlabel"><span class="tl-tier">' + icon('tier', 14) + ' Tier ' + tier + '</span>' +
-        '<span class="tl-coin">' + coinsIc(12) + ' <b>x' + coinMult(tier).toFixed(1) + '</b></span></span>' +
+        '<span class="tl-coin">' + coinsIc(12) + ' <b>x' + coinMult(tier).toFixed(1) + '</b></span>' +
+        '<span class="tl-max">Max. ' + ((meta.tierBest && meta.tierBest[tier]) || 0) + '</span></span>' +
         '<button class="tierstep' + (canUp ? '' : ' locked') + '" id="h-tier-up">' + icon('fwd', 18) + '</button>' +
         '</div>';
       html += '<button class="startsq" id="h-start">' + icon('play', 35, 'green') + '</button>';
     } else if (menuTab === 'upgrades') {
       // shared centered column so the coins chip, subtabs and list all share one left edge
       html += '<div class="cardspane">';
-      html += '<div class="coins-chip">' + coinsIc(15) + ' <b>' + (meta.coins || 0) + '</b></div>';
+      html += '<div class="coins-chip">' + coinsIc(15) + ' <b>' + abbr(meta.coins || 0) + '</b></div>';
       html += '<div class="subtabs" id="h-uptabs">';
       for (const t of TAB_DEFS) {
         html += '<button class="subtab' + (t.id === menuUpTab ? ' on' : '') + '" data-uptab="' + t.id + '" title="' + t.id + '">' + icon(t.icon, 22) + '</button>';

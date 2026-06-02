@@ -57,9 +57,10 @@ function pathBlob(ctx: Ctx, x: number, y: number, r: number, lobes: number, wob:
   ctx.closePath();
 }
 
-// Fill the CURRENT path as translucent wet gel lit from the upper-left, then ink the rim.
-// On a hit (flash > 0) the body blooms white. Works for ring paths too (nonzero winding).
-function gelFill(ctx: Ctx, x: number, y: number, r: number, color: string, flash: number, coreA: number, rimA: number): void {
+// Fill the CURRENT path as translucent wet gel lit from the upper-left, then (optionally) ink the rim.
+// On a hit (flash > 0) the body blooms white. Works for ring paths too (nonzero winding). Pass
+// rim=false to skip the inked outline for a softer, borderless body.
+function gelFill(ctx: Ctx, x: number, y: number, r: number, color: string, flash: number, coreA: number, rimA: number, rim = true): void {
   ctx.save();
   if (flash > 0) {
     ctx.shadowColor = '#ffffff';
@@ -77,6 +78,7 @@ function gelFill(ctx: Ctx, x: number, y: number, r: number, color: string, flash
     ctx.fill();
   }
   ctx.restore();
+  if (!rim) return;
   ctx.lineWidth = Math.max(1, r * 0.07);
   ctx.strokeStyle = flash > 0 ? 'rgba(255,255,255,0.9)' : rgba(mix(color, 0.4, INK), 0.5);
   ctx.stroke();
@@ -96,11 +98,12 @@ function sheen(ctx: Ctx, x: number, y: number, r: number): void {
   ctx.restore();
 }
 
-// melee — Marble: a near-perfect glass sphere with an inner caustic ring.
+// melee — Marble: a near-perfect glass sphere with an inner caustic ring. Borderless (no inked rim)
+// for a smoother basic-enemy read.
 function marble(ctx: Ctx, x: number, y: number, r: number, color: string, flash: number): void {
   ctx.beginPath();
   ctx.arc(x, y, r, 0, TAU);
-  gelFill(ctx, x, y, r, color, flash, 0.72, 0.2);
+  gelFill(ctx, x, y, r, color, flash, 0.72, 0.2, false);
   if (flash <= 0) {
     ctx.lineWidth = Math.max(1, r * 0.08);
     ctx.strokeStyle = rgba(mix(color, 0.7), 0.5);

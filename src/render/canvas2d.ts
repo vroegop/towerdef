@@ -39,14 +39,6 @@ function drawHealthBar(ctx: Ctx, cx: number, topY: number, w: number, h: number,
   }
 }
 
-// Soft contact shadow under a token — the main cue that sells "3D body on a flat map".
-function drawShadow(ctx: Ctx, x: number, y: number, r: number): void {
-  ctx.fillStyle = 'rgba(40,28,10,0.28)';
-  ctx.beginPath();
-  ctx.ellipse(x, y + r * 0.55, r * 1.05, r * 0.45, 0, 0, Math.PI * 2);
-  ctx.fill();
-}
-
 export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<Settings>): Renderer {
   const ctx = canvas.getContext('2d') as Ctx;
   const cfg: Partial<Settings> = settings || {};
@@ -110,7 +102,7 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
       pts.push({ x: x1 + dx * t + px * j, y: y1 + dy * t + py * j });
     }
     pts.push({ x: x2, y: y2 });
-    bolts.push({ pts, life: 0.12, max: 0.12 });
+    bolts.push({ pts, life: 0.1, max: 0.1 });
   }
 
   function capture(s: State): Map<number, Pos> {
@@ -171,26 +163,33 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     ctx.clearRect(0, 0, W, H);
     const hsx = tx(hp.x),
       hsy = ty(hp.y);
-    // Dark void beyond the map edges.
+    // Dark void beyond the map edges (fully overdrawn by the parchment below; kept as a backstop).
     ctx.fillStyle = '#0b0d0a';
     ctx.fillRect(0, 0, W, H);
-    // Parchment battle-map: the arena rect (world 0..w, 0..h) painted as worn parchment with a
-    // warm glow under the hero, a faint grid, and an inked border. Everything is clipped to the
-    // arena so the surrounding void stays dark.
+    // Parchment battle-map: the arena rect (world 0..w, 0..h) painted as worn parchment with a warm
+    // glow under the hero, a faint grid, and an inked border. The arena scales with range, so at very
+    // high range/zoom it can shrink below the viewport — to avoid exposing the dark void, the parchment
+    // is painted over AT LEAST the whole viewport (the union of the arena rect and the screen). The grid
+    // + inked border still mark the actual arena bounds.
     const aL = tx(0),
       aT = ty(0),
       aW = s.arena.w * scale,
       aH = s.arena.h * scale;
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(aL, aT, aW, aH);
-    ctx.clip();
-    const fg = ctx.createRadialGradient(hsx, hsy, 0, hsx, hsy, Math.max(aW, aH) * 0.75);
+    const pL = Math.min(aL, 0),
+      pT = Math.min(aT, 0),
+      pR = Math.max(aL + aW, W),
+      pB = Math.max(aT + aH, H);
+    const fg = ctx.createRadialGradient(hsx, hsy, 0, hsx, hsy, Math.max(pR - pL, pB - pT) * 0.75);
     fg.addColorStop(0, '#ecdcb6');
     fg.addColorStop(0.55, '#dcc596');
     fg.addColorStop(1, '#b89a62');
     ctx.fillStyle = fg;
-    ctx.fillRect(aL, aT, aW, aH);
+    ctx.fillRect(pL, pT, pR - pL, pB - pT);
+    // Grid + inked border are clipped to the actual arena rect.
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(aL, aT, aW, aH);
+    ctx.clip();
     const GRID = 48; // world units between grid lines
     ctx.strokeStyle = 'rgba(90,60,25,.16)';
     ctx.lineWidth = 1;
@@ -244,10 +243,8 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
         esx = tx(ep.x),
         esy = ty(ep.y);
       const er = e.r * scale;
-      // Floor the body a touch so the wet detail stays legible once tokens get tiny (the floor
-      // tracks the 1.5× "bigger enemies" bump so even far-zoomed foes read 50% larger than before).
+      // Floor the body a touch so the wet detail stays legible once tokens get tiny when far-zoomed.
       const bodyR = Math.max(er, 6);
-      drawShadow(ctx, esx, esy, bodyR);
       drawEnemy(ctx, e.type, esx, esy, bodyR, col, animClock, e.hitFlash, e.facing);
       const prev = seen.get(e.id) || 0;
       if (e.hitFlash > 0 && prev <= 0) {
@@ -307,6 +304,11 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
         if (f.seq <= lastFxSeq) continue;
         const fx = tx(f.x),
           fy = ty(f.y);
+        // Lightning bolt on every kill event, so a foe that dies INSTANTLY from the strike still flashes
+        // a bolt (the hit-flash path below never sees it — it's already gone from s.enemies this frame).
+        // Kill events carry the enemy's death position; non-kill events (interest/wave-skip) sit on the
+        // hero, so their bolt is zero-length and invisible.
+        if (s.atkMode === 'lightning' && (f.gold || f.coin)) spawnBolt(hsx, hsy, fx, fy);
         if (cfg.goldOnKill && f.gold) spawnFloat(fx, fy, '+' + f.gold, '#ffd24a', 12);
         if (cfg.coinOnKill && f.coin) spawnFloat(fx, fy - 12, '+' + f.coin, '#ff2e4e', 13);
       }
