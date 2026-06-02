@@ -1003,6 +1003,27 @@ export function computeStats(state: State): Stats {
   return out;
 }
 
+// Map an UPGRADE id to the Stats key its displayed number corresponds to (identity for most; a few
+// upgrades feed a differently-named sim stat). Used by effectiveUpgradeValue below.
+const UP2STAT: Record<string, string> = {
+  attackSpeed: 'fireRate', health: 'maxHp', range: 'rangeM', critDamage: 'critMult',
+  cashBonus: 'cashMult', goldPerKill: 'goldFind',
+};
+// The EFFECTIVE value of an upgrade at a hypothetical `level`: base curve × labs × active cards ×
+// cosmetics — exactly what the sim runs on. We get perfect parity (no formula duplication / drift) by
+// driving the real computeStats on a throwaway state with just this one upgrade overridden to `level`
+// (every other upgrade, plus the card loadout / labs / cosmetics, stays at the player's real values).
+export function effectiveUpgradeValue(meta: Meta, id: string, level: number): number {
+  const up = UP_BY_ID[id];
+  if (!up) return 0;
+  const perm = (meta && meta.perm && meta.perm[id]) || 0;
+  // run.levels stacks on top of perm in boughtOf, so a delta of (level - perm) lands boughtOf on `level`.
+  const pseudo = { meta, run: { levels: { [id]: level - perm } } } as unknown as State;
+  const st = computeStats(pseudo) as unknown as Record<string, number>;
+  const v = st[UP2STAT[id] || id];
+  return typeof v === 'number' ? v : up.value(level);
+}
+
 // ---- run upgrades (gold; price driven by run levels only) ----
 export function runUpgradeCost(state: State, id: string): number {
   const up = UP_BY_ID[id];

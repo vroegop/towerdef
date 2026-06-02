@@ -10,14 +10,14 @@ import {
   isUnlocked, SKILL_GROUPS, isGroupUnlocked, nextUnlockGroup, skillGroup,
   upgradeCap, tipOf, CARDS, CARD_INFO, MAX_STARS, CARD_ORDER, CARD_SLOTS, starSlot, buyCardCost, MILESTONES, milestoneReward,
   tierClaimableCount, TAB_DEFS, FIRST_PERM_COST, cardSlotCost, MAX_CARD_SLOTS, activeCardIds,
-  availableBulkTiers, runBulkPlan, permBulkPlan, computeStats,
+  availableBulkTiers, runBulkPlan, permBulkPlan, computeStats, effectiveUpgradeValue,
 } from '../sim/skills';
 import {
   LABS, LAB_BY_ID, labLevel, labUnlocked, labsTabUnlocked, labCoinCost, labTimeSec, labAtMax, researchOf, researchRemaining,
   researchProgress, freeSlots, rushVialCost, labSlotCost, MAX_SLOTS, checkInPending, CHECKIN_VIALS, CHECKIN_GEMS,
   availableSpeeds, gameSpeed, speedAtLevel,
 } from '../sim/labs';
-import { cosmeticsOf, isCosmeticUnlocked, selectedCosmeticId, buffText, upgradeBuffMult, cosmeticById } from '../sim/cosmetics';
+import { cosmeticsOf, isCosmeticUnlocked, selectedCosmeticId, buffText, cosmeticById } from '../sim/cosmetics';
 import { drawTowerSkin } from '../render/towers';
 
 // The HUD is a single themeable core: identical structure + wiring for every theme, restyled
@@ -175,9 +175,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     return String(n);
   };
   const sumPerm = (meta: Meta): number => Object.values((meta && meta.perm) || {}).reduce((a, b) => a + b, 0);
-  // An upgrade's DISPLAYED value WITH any always-on cosmetic buff for that stat folded in, so the
-  // menu shows the real total (e.g. Attack Speed ×1.10). upgradeBuffMult is 1 for unbuffed stats.
-  const buffedVal = (meta: Meta, up: UpgradeDef, level: number): number => up.value(level) * upgradeBuffMult(meta, up.id);
+  // An upgrade's DISPLAYED value as the EFFECTIVE number the sim runs on: base curve × labs × active
+  // cards × cosmetics (so a Damage row reflects every multiplier, not just the raw per-level number).
+  // Parity is guaranteed — effectiveUpgradeValue drives the real computeStats; no formula duplication.
+  const buffedVal = (meta: Meta, up: UpgradeDef, level: number): number => effectiveUpgradeValue(meta, up.id, level);
   // "⏸" for the 0x (pause) step, else "0.5x" / "1x" / "2.5x" — dropping the trailing ".0" on whole multipliers.
   const fmtSpeed = (v: number): string => (v === 0 ? '⏸' : (Number.isInteger(v) ? String(v) : v.toFixed(1)) + 'x');
 
