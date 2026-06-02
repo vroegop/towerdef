@@ -324,7 +324,7 @@ export interface Hud {
   showMenu(meta: Meta, opts: MenuOpts): void;
   refreshMenu(meta: Meta): void;
   hideMenu(): void;
-  showOverview(meta: Meta, earn: EarnSummary): void;
+  showOverview(meta: Meta, earn: EarnSummary, opts?: { offline?: boolean }): void;
   hideOverview(): void;
   showHint(html: string): void;
   hideHint(): void;
