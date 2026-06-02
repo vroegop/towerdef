@@ -929,6 +929,7 @@ export function computeStats(state: State): Stats {
   out.rangedDamage *= cm('rangedDamage');
   out.fireRate *= cm('fireRate');
   out.maxHp *= cm('maxHp');
+  out.critChance *= cm('critChance');
   out.critMult *= cm('critMult');
   out.bounceChance *= cm('bounceChance');
   out.goldFind *= cm('goldFind');

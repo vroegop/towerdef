@@ -840,15 +840,37 @@
 /* ---- tower picker (cosmetics modal) + clickable menu avatar ---- */
 .hud .avatar-frame.clickable { cursor: pointer; transition: filter .12s; }
 .hud .avatar-frame.clickable:hover { filter: brightness(1.06); }
-.hud .twgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 6px; }
-.hud .twtile { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 8px;
-  border: 1px solid rgba(120,90,40,.45); border-radius: 8px; background: rgba(255,255,255,.16);
-  color: inherit; font: inherit; cursor: pointer; text-align: center; }
-.hud .twtile:hover:not(.locked):not(.sel) { border-color: #9a6a1a; }
-.hud .twtile.sel { border-color: #9a6a1a; box-shadow: 0 0 0 2px rgba(154,106,26,.4); }
-.hud .twtile.locked { cursor: default; }
-.hud .twthumb { width: 88px; height: 88px; }
-.hud .twname { font-weight: 700; font-size: 13px; }
-.hud .twbuff { font-size: 12px; color: #4a7a2a; font-weight: 700; }
-.hud .twtile.locked .twbuff { opacity: .5; }
-.hud .twfoot { font-size: 11px; opacity: .7; }
+/* a little more breathing room in the shared modal so it isn't cramped */
+.hud #h-modal-inner { padding: 22px 22px 24px; }
+.hud #h-modal-inner h2 { margin: 0 0 4px; }
+.hud #h-modal-inner .msnote { margin: 0 0 16px; }
+
+.hud .twgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); gap: 14px; }
+/* each tower is a gilded medallion, not a plain card */
+.hud .twtile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 7px;
+  padding: 16px 12px 14px; border-radius: 12px; color: inherit; font: inherit; text-align: center; cursor: pointer;
+  background: radial-gradient(circle at 50% 24%, rgba(255,244,214,.55), rgba(214,198,164,.16) 72%);
+  border: 1px solid rgba(154,106,26,.45);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.28), 0 4px 12px rgba(40,28,10,.28);
+  transition: transform .12s, border-color .12s, box-shadow .12s; }
+.hud .twtile:hover { transform: translateY(-2px); border-color: #9a6a1a; }
+.hud .twtile.sel { border-color: #9a6a1a;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.35), 0 0 0 2px rgba(154,106,26,.55), 0 6px 16px rgba(40,28,10,.34); }
+.hud .twtile.buyable { cursor: default; }
+.hud .twmedal { position: relative; width: 104px; height: 104px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 40%, rgba(255,238,194,.85), rgba(196,166,108,.32) 70%);
+  box-shadow: inset 0 0 0 2px #b08a4a, inset 0 0 16px rgba(154,106,26,.45), 0 2px 8px rgba(40,28,10,.3); }
+.hud .twmedal::after { content: ''; position: absolute; inset: -3px; border-radius: 50%; border: 1px solid rgba(255,255,255,.22); }
+.hud .twthumb { width: 96px; height: 96px; position: relative; }
+.hud .twname { font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 13px; }
+.hud .twbuff { font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 11.5px; color: #6a4a12;
+  padding: 2px 11px; border-radius: 999px; border: 1px solid #b08a4a;
+  background: linear-gradient(180deg, #f1da8c, #d8b157); box-shadow: inset 0 1px 0 rgba(255,255,255,.5); }
+.hud .twfoot { font-size: 11px; opacity: .72; }
+.hud .twfoot.eq { color: #5e7a3a; opacity: 1; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; }
+.hud .twbuy { font: inherit; font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 12px; cursor: pointer;
+  color: #221033; padding: 4px 12px; border-radius: 999px; border: 1px solid #5a3fae;
+  background: linear-gradient(180deg, #cdb8ff, #9a7cff); box-shadow: 0 2px 0 #5a3fae;
+  display: inline-flex; align-items: center; gap: 4px; }
+.hud .twbuy:hover { filter: brightness(1.05); }

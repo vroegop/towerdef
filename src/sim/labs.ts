@@ -289,6 +289,7 @@ export function migrateMeta(meta: Meta): Meta {
   if (meta.cardSlots == null) meta.cardSlots = 1;
   if (!Array.isArray(meta.activeCards)) meta.activeCards = [];
   if (meta.cosmetics == null || typeof meta.cosmetics !== 'object') meta.cosmetics = {};
+  if (meta.cosmeticsOwned == null || typeof meta.cosmeticsOwned !== 'object') meta.cosmeticsOwned = {};
   if (meta.gameSpeed == null) meta.gameSpeed = 1; // default battle speed (0.5x/1x are always available)
   meta.ver = META_VER;
   return meta;

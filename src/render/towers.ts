@@ -143,21 +143,77 @@ function stoneKeep(ctx: Ctx, cx: number, cy: number, R: number, t: number): void
     ctx.lineTo(cx + Math.cos(a) * R * 0.3, cy + Math.sin(a) * R * 0.3);
     ctx.stroke();
   }
-  // crimson pennant on a pole, gently waving (warm flag — no magic glow)
-  const wav = Math.sin(t * 2) * R * 0.05;
-  ctx.strokeStyle = '#3a2a18';
-  ctx.lineWidth = Math.max(1.5, R * 0.05);
+  // a small glowing blue sphere set in the keep's heart (gently pulsing)
+  const orbR = R * 0.19 * (0.94 + 0.06 * Math.sin(t * 3));
+  ctx.save();
+  ctx.shadowColor = '#4aa8ff';
+  ctx.shadowBlur = R * 0.45;
+  const og = ctx.createRadialGradient(cx - orbR * 0.35, cy - orbR * 0.38, orbR * 0.1, cx, cy, orbR);
+  og.addColorStop(0, '#dff0ff');
+  og.addColorStop(0.5, '#4aa8ff');
+  og.addColorStop(1, '#1c5fa8');
+  ctx.fillStyle = og;
+  disc(ctx, cx, cy, orbR);
+  ctx.restore();
+  ctx.fillStyle = 'rgba(255,255,255,0.65)';
   ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(cx, cy - R * 0.34);
-  ctx.stroke();
-  ctx.fillStyle = '#9a2a1a';
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - R * 0.34);
-  ctx.lineTo(cx + R * 0.26 + wav, cy - R * 0.28);
-  ctx.lineTo(cx, cy - R * 0.22);
-  ctx.closePath();
+  ctx.ellipse(cx - orbR * 0.3, cy - orbR * 0.38, orbR * 0.3, orbR * 0.16, -0.5, 0, TAU);
   ctx.fill();
+}
+
+// prism — Prismatic Orb: a white sun-orb with three chromatic bubbles orbiting in pseudo-3D.
+// Gem-bought; grants +crit chance.
+function prismaticOrb(ctx: Ctx, cx: number, cy: number, R: number, t: number): void {
+  const cols = ['#ff5db0', '#37d7ff', '#b07cff'];
+  const baseR = R * 0.2;
+  interface Bub { x: number; y: number; r: number; front: boolean; col: string }
+  const bubbles: Bub[] = [];
+  for (let i = 0; i < 3; i++) {
+    const a = t * 1.3 + (i / 3) * TAU;
+    const depth = Math.sin(a) * 0.5 + 0.5; // 0 (back) → 1 (front)
+    bubbles.push({
+      x: cx + Math.cos(a) * R * 0.82,
+      y: cy + Math.sin(a) * R * 0.34, // squashed orbit → perspective
+      r: baseR * (0.7 + 0.3 * depth),
+      front: Math.sin(a) >= 0,
+      col: cols[i],
+    });
+  }
+  const drawBubble = (b: Bub): void => {
+    ctx.save();
+    ctx.globalAlpha = b.front ? 1 : 0.6;
+    ctx.shadowColor = b.col;
+    ctx.shadowBlur = b.r * 2;
+    const g = ctx.createRadialGradient(b.x - b.r * 0.3, b.y - b.r * 0.3, b.r * 0.1, b.x, b.y, b.r);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(0.5, b.col);
+    g.addColorStop(1, b.col);
+    ctx.fillStyle = g;
+    disc(ctx, b.x, b.y, b.r);
+    ctx.globalAlpha = b.front ? 1 : 0.6;
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath();
+    ctx.arc(b.x - b.r * 0.3, b.y - b.r * 0.3, b.r * 0.24, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+  };
+  for (const b of bubbles) if (!b.front) drawBubble(b); // behind the orb
+  // central white sun-orb
+  ctx.save();
+  ctx.shadowColor = '#ffffff';
+  ctx.shadowBlur = R * 0.8 * (0.8 + 0.2 * Math.sin(t * 3));
+  const g = ctx.createRadialGradient(cx - R * 0.22, cy - R * 0.26, R * 0.05, cx, cy, R * 0.62);
+  g.addColorStop(0, '#ffffff');
+  g.addColorStop(0.65, '#eef3ff');
+  g.addColorStop(1, '#c4d2e8');
+  ctx.fillStyle = g;
+  disc(ctx, cx, cy, R * 0.6);
+  ctx.restore();
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.beginPath();
+  ctx.ellipse(cx - R * 0.2, cy - R * 0.24, R * 0.18, R * 0.1, -0.5, 0, TAU);
+  ctx.fill();
+  for (const b of bubbles) if (b.front) drawBubble(b); // in front of the orb
 }
 
 // spire — Wizard's Spire: a tiled cone tapering to a spinning rune-star finial (violet).
@@ -708,6 +764,7 @@ function elementalNexus(ctx: Ctx, cx: number, cy: number, R: number, t: number):
 // ---- registry --------------------------------------------------------------------------------
 export const TOWER_DRAW: Record<string, TowerDraw> = {
   keep: stoneKeep,
+  prism: prismaticOrb,
   spire: wizardSpire,
   obelisk: arcaneObelisk,
   heartwood,

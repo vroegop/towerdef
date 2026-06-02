@@ -61,6 +61,7 @@ export interface Meta {
   // selected cosmetic id per category (tower / hud / background). Unlock + passive buffs are derived
   // live from src/sim/cosmetics.ts; only the chosen id is persisted here.
   cosmetics?: Record<string, string>;
+  cosmeticsOwned?: Record<string, boolean>; // gem-bought cosmetics (tier-gated ones derive from progress)
   gameSpeed?: number; // player-chosen battle speed (0.5/1 free; higher tiers unlocked by the Game Speed lab)
   ver: number;
 }
@@ -306,6 +307,7 @@ export interface HudHandlers {
   onClaimAllMilestones?: () => boolean;
   onSetTier?: (t: number) => boolean;
   onSelectCosmetic?: (kind: string, id: string) => boolean;
+  onBuyCosmetic?: (id: string) => boolean;
   onBuyCard?: () => CardDrawResult | null;
   onBuyCardSlot?: () => boolean;
   onSetActiveCard?: (slot: number, id: string | null) => boolean;

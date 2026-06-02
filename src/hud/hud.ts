@@ -17,7 +17,7 @@ import {
   researchProgress, freeSlots, rushVialCost, labSlotCost, MAX_SLOTS, checkInPending, CHECKIN_VIALS, CHECKIN_GEMS,
   availableSpeeds, gameSpeed, speedAtLevel,
 } from '../sim/labs';
-import { cosmeticsOf, isCosmeticUnlocked, selectedCosmeticId, buffText, upgradeBuffMult, TOWER_UNLOCK_WAVE } from '../sim/cosmetics';
+import { cosmeticsOf, isCosmeticUnlocked, selectedCosmeticId, buffText, upgradeBuffMult } from '../sim/cosmetics';
 import { drawTowerSkin } from '../render/towers';
 
 // The HUD is a single themeable core: identical structure + wiring for every theme, restyled
@@ -1235,44 +1235,56 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   // Selecting one is purely cosmetic — the buff already applies the moment a tower is UNLOCKED.
   function renderTowerPicker(): void {
     const meta = lastMeta!;
-    const towers = cosmeticsOf('tower');
     const selId = selectedCosmeticId(meta, 'tower');
-    const unlock = TOWER_UNLOCK_WAVE.toLocaleString();
+    // Show only what the player can actually use or buy: unlocked towers + any gem-purchasable one.
+    // Tier-locked towers stay hidden until earned.
+    const towers = cosmeticsOf('tower').filter((c) => isCosmeticUnlocked(meta, c.id) || (c.cost || 0) > 0);
     let tiles = '';
     for (const c of towers) {
       const unlocked = isCosmeticUnlocked(meta, c.id),
-        sel = c.id === selId;
-      const foot = sel ? 'Equipped' : unlocked ? 'Tap to equip' : 'Reach wave ' + unlock + ' · Tier ' + c.tier;
+        sel = c.id === selId,
+        buyable = !unlocked && (c.cost || 0) > 0;
+      const buff = buffText(c.buff);
+      const foot = sel
+        ? '<span class="twfoot eq">' + icon('check', 13) + ' Equipped</span>'
+        : unlocked
+          ? '<span class="twfoot">Tap to equip</span>'
+          : buyable
+            ? '<button class="twbuy" data-buytw="' + c.id + '">Buy · ' + c.cost + ' ' + icon('gem', 12, 'gem') + '</button>'
+            : '';
       tiles +=
-        '<button class="twtile' + (sel ? ' sel' : '') + (unlocked ? '' : ' locked') + '" data-tw="' + c.id + '"' +
-        (unlocked ? '' : ' disabled') + '>' +
-        '<canvas class="twthumb" width="88" height="88" data-twc="' + c.id + '"></canvas>' +
+        '<div class="twtile' + (sel ? ' sel' : '') + (buyable ? ' buyable' : '') + '"' +
+        (unlocked ? ' data-tw="' + c.id + '" role="button" tabindex="0"' : '') + '>' +
+        '<div class="twmedal"><canvas class="twthumb" width="96" height="96" data-twc="' + c.id + '"></canvas></div>' +
         '<span class="twname">' + c.name + '</span>' +
-        '<span class="twbuff">' + buffText(c.buff) + '</span>' +
-        '<span class="twfoot">' + foot + '</span>' +
-        '</button>';
+        (buff ? '<span class="twbuff">' + buff + '</span>' : '') +
+        foot +
+        '</div>';
     }
     modalInner.innerHTML =
       '<button class="close" id="h-tw-close" title="Close">' + icon('close', 18) + '</button>' +
       '<h2>Towers</h2>' +
-      '<p class="msnote">Reach wave ' + unlock + ' in a tier to unlock that tier’s tower. Every unlocked tower grants a permanent, always-on bonus — even when it isn’t the one you’re using.</p>' +
+      '<p class="msnote">All bonuses are always applied.</p>' +
       '<div class="twgrid">' + tiles + '</div>';
     modalInner.querySelectorAll<HTMLCanvasElement>('canvas[data-twc]').forEach((cv) => {
-      const ctx = cv.getContext('2d')!,
-        id = cv.dataset.twc!;
-      drawTowerSkin(ctx, id, cv.width / 2, cv.height / 2, Math.min(cv.width, cv.height) * 0.34, 0.7);
-      if (!isCosmeticUnlocked(meta, id)) {
-        ctx.fillStyle = 'rgba(20,14,6,0.55)';
-        ctx.fillRect(0, 0, cv.width, cv.height);
-      }
+      const ctx = cv.getContext('2d')!;
+      drawTowerSkin(ctx, cv.dataset.twc!, cv.width / 2, cv.height / 2, Math.min(cv.width, cv.height) * 0.36, 0.7);
     });
     $('#h-tw-close').addEventListener('click', () => modal.classList.add('hide'));
+    const refresh = (): void => {
+      renderTowerPicker(); // refresh equipped / owned state
+      renderMenu(); // update the hero-tab avatar
+    };
     modalInner.querySelectorAll<HTMLElement>('[data-tw]').forEach((b) =>
       b.addEventListener('click', () => {
-        if (handlers.onSelectCosmetic && handlers.onSelectCosmetic('tower', b.dataset.tw!)) {
-          renderTowerPicker(); // refresh the equipped highlight
-          renderMenu(); // update the hero-tab avatar
-        }
+        if (handlers.onSelectCosmetic && handlers.onSelectCosmetic('tower', b.dataset.tw!)) refresh();
+      }),
+    );
+    modalInner.querySelectorAll<HTMLElement>('[data-buytw]').forEach((b) =>
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (handlers.onBuyCosmetic && handlers.onBuyCosmetic(b.dataset.buytw!)) refresh();
+        else shake(b);
       }),
     );
   }

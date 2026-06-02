@@ -38,6 +38,7 @@ export interface Cosmetic {
   name: string;
   desc: string; // short flavour line for the picker
   tier: number | null; // tier whose TOWER_UNLOCK_WAVE milestone unlocks it; null = always available
+  cost?: number; // if set, BOUGHT with gems (ownership stored in meta.cosmeticsOwned) instead of tier-gated
   buff: CosmeticBuff | null; // null = no buff (the basic items)
 }
 
@@ -48,15 +49,16 @@ export const BUFF_LABEL: Record<string, string> = {
   fireRate: 'attack speed',
   maxHp: 'health',
   labSpeed: 'lab speed',
+  critChance: 'critical hit',
   critMult: 'crit damage',
   goldFind: 'gold per kill',
   gemMult: 'gems',
   bounceChance: 'bounce chance',
   range: 'range',
 };
-// "+10% damage" / "+100% gems" — used by the tower picker.
+// "+10% damage" / "+100% gems" — used by the tower picker. Empty string when there's no buff.
 export function buffText(buff: CosmeticBuff | null): string {
-  if (!buff || !buff.amount) return 'No bonus';
+  if (!buff || !buff.amount) return '';
   return '+' + Math.round(buff.amount * 100) + '% ' + (BUFF_LABEL[buff.stat] || buff.stat);
 }
 
@@ -65,6 +67,7 @@ export function buffText(buff: CosmeticBuff | null): string {
 // design spec; it is pure data, so reordering which skin sits on which tier is a one-line edit.
 const TOWERS: Cosmetic[] = [
   { id: 'keep', kind: 'tower', name: 'Stone Keep', desc: 'A stout round castle tower. Your starting keep.', tier: null, buff: null },
+  { id: 'prism', kind: 'tower', name: 'Prismatic Orb', desc: 'A sunlit orb wreathed in chromatic bubbles.', tier: null, cost: 50, buff: { stat: 'critChance', amount: 0.1 } },
   { id: 'sanctum', kind: 'tower', name: "Cleric's Sanctum", desc: 'A marble rotunda blessed with fortune.', tier: 1, buff: { stat: 'coinMult', amount: 0.1 } },
   { id: 'forge', kind: 'tower', name: 'Dwarven Forge', desc: 'A roaring furnace that tempers every shot.', tier: 2, buff: { stat: 'rangedDamage', amount: 0.1 } },
   { id: 'watchtower', kind: 'tower', name: "Ranger's Watchtower", desc: 'A scout post loosing arrows in a blur.', tier: 3, buff: { stat: 'fireRate', amount: 0.1 } },
@@ -90,17 +93,32 @@ const BY_ID: Record<string, Cosmetic> = {};
 for (const c of COSMETICS) BY_ID[c.id] = c;
 export const cosmeticById = (id: string): Cosmetic | undefined => BY_ID[id];
 export const cosmeticsOf = (kind: CosmeticKind): Cosmetic[] => COSMETICS.filter((c) => c.kind === kind);
-// The always-available basic item for a category (the selection a fresh save falls back to).
+// The always-available basic item for a category (the selection a fresh save falls back to):
+// the free one (no tier gate AND no gem cost).
 export const defaultCosmetic = (kind: CosmeticKind): Cosmetic =>
-  cosmeticsOf(kind).find((c) => c.tier == null) || cosmeticsOf(kind)[0];
+  cosmeticsOf(kind).find((c) => c.tier == null && !c.cost) || cosmeticsOf(kind)[0];
 
-// ---- unlock state (derived; nothing stored) --------------------------------------------------
+// ---- unlock state ----------------------------------------------------------------------------
+// Tier-gated cosmetics derive purely from progress (nothing stored). Gem-bought cosmetics record
+// ownership in meta.cosmeticsOwned. Free basics are always owned.
 export function isCosmeticUnlocked(meta: Meta, id: string): boolean {
   const c = BY_ID[id];
   if (!c) return false;
-  if (c.tier == null) return true; // basic items are always owned
+  if (c.cost && c.cost > 0) return !!(meta && meta.cosmeticsOwned && meta.cosmeticsOwned[id]);
+  if (c.tier == null) return true; // free basic items are always owned
   const best = (meta && meta.tierBest && meta.tierBest[c.tier]) || 0;
   return best >= TOWER_UNLOCK_WAVE;
+}
+// Buy a gem-priced cosmetic. No-op (false) if it has no price, is already owned, or you can't afford it.
+export function buyCosmetic(meta: Meta, id: string): boolean {
+  const c = BY_ID[id];
+  if (!c || !c.cost) return false;
+  if (isCosmeticUnlocked(meta, id)) return false;
+  if ((meta.gems || 0) < c.cost) return false;
+  meta.gems -= c.cost;
+  meta.cosmeticsOwned = meta.cosmeticsOwned || {};
+  meta.cosmeticsOwned[id] = true;
+  return true;
 }
 
 // ---- selection (the only cosmetic state we persist: one chosen id per category) ---------------
@@ -139,6 +157,7 @@ const UPGRADE_BUFF_STAT: Record<string, string> = {
   rangedDamage: 'rangedDamage',
   attackSpeed: 'fireRate',
   health: 'maxHp',
+  critChance: 'critChance',
   critDamage: 'critMult',
   range: 'range',
   bounceChance: 'bounceChance',
