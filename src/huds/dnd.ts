@@ -114,24 +114,63 @@ const CSS = `
 .hud.theme-dnd .chip b { color: var(--ink); }
 .hud.theme-dnd .coins-chip b { color: var(--crimson); }
 
-/* hero "character sheet": the currency + max-wave chips become carved hexagonal ability-score stones.
-   The rim colour is the chip background; an inset hexagonal ::before paints the parchment face, so the
-   3px gap reads as an engraved border (clip-path can't take a border directly). */
-.hud.theme-dnd .chips { gap: 6px; }
+/* hero "character sheet": the currency chips are carved GEMSTONE stones set in a brass mount. Each
+   currency gets its own gem colour (a tinted, glossy cabochon face + a matching engraved icon) so the
+   trio reads as three distinct jewels rather than three identical brass tiles. The mount is a metallic
+   bevel (lit top-left → shaded base); a 3px inset hex ::before is the gem face; a clipped ::after sends
+   an occasional gleam across the polish. nth-child tracks the fixed CURRENCIES order: coins, gems, vials. */
+.hud.theme-dnd .chips { gap: 8px; }
 .hud.theme-dnd .chip {
   position: relative; width: 76px; height: 84px; padding: 0; border: 0; border-radius: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-  background: #7a5a2a; color: var(--ink-dim); text-align: center;
+  color: var(--ink-dim); text-align: center;
+  background: linear-gradient(150deg, #c19748 0%, #7a5a2a 46%, #4d3516 100%);
   clip-path: polygon(50% 1%, 95% 25%, 95% 75%, 50% 99%, 5% 75%, 5% 25%);
   filter: drop-shadow(0 3px 4px rgba(0,0,0,.4));
 }
+/* gem face: a parchment cabochon by default — a soft top gloss over a centre-lit dome that darkens to
+   the rim, giving a polished curve. Per-currency tints below recolour the dome. */
 .hud.theme-dnd .chip::before {
   content: ''; position: absolute; inset: 3px; z-index: 0;
   clip-path: polygon(50% 1%, 95% 25%, 95% 75%, 50% 99%, 5% 75%, 5% 25%);
-  background: radial-gradient(circle at 50% 32%, var(--parch-lt), #ddcaa2 78%);
+  background:
+    radial-gradient(ellipse 58% 36% at 50% 19%, rgba(255,255,255,.6), rgba(255,255,255,0) 72%),
+    radial-gradient(circle at 50% 44%, var(--parch-lt), #cbb88f 88%);
 }
+.hud.theme-dnd .chip:nth-child(1)::before { background:
+  radial-gradient(ellipse 58% 36% at 50% 19%, rgba(255,255,255,.62), rgba(255,255,255,0) 72%),
+  radial-gradient(circle at 50% 46%, #f7e8b4, #c79a3e 92%); }
+.hud.theme-dnd .chip:nth-child(2)::before { background:
+  radial-gradient(ellipse 58% 36% at 50% 19%, rgba(255,255,255,.62), rgba(255,255,255,0) 72%),
+  radial-gradient(circle at 50% 46%, #d3e4f7, #5b86b8 92%); }
+.hud.theme-dnd .chip:nth-child(3)::before { background:
+  radial-gradient(ellipse 58% 36% at 50% 19%, rgba(255,255,255,.62), rgba(255,255,255,0) 72%),
+  radial-gradient(circle at 50% 46%, #c9ede1, #3f9a82 92%); }
+.hud.theme-dnd .chip:nth-child(1) .ic { color: #6e4a12; }
+.hud.theme-dnd .chip:nth-child(2) .ic { color: #1f3f6a; }
+.hud.theme-dnd .chip:nth-child(3) .ic { color: #14564a; }
 .hud.theme-dnd .chip .ic { position: relative; z-index: 1; color: var(--accent); }
 .hud.theme-dnd .chip b { position: relative; z-index: 1; margin: 0; font-family: 'Cinzel', serif; font-size: 14px; line-height: 1.05; color: var(--ink); }
+/* a thin gleam sweeps across the polished face now and then; the three are staggered so they twinkle
+   in turn rather than in unison. */
+.hud.theme-dnd .chip::after {
+  content: ''; position: absolute; z-index: 2; top: -40%; left: -40%; width: 34%; height: 200%;
+  pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent);
+  transform: translateX(-30%) rotate(12deg);
+  animation: dnd-chip-gleam 7s ease-in-out infinite;
+}
+.hud.theme-dnd .chip:nth-child(2)::after { animation-delay: 2.3s; }
+.hud.theme-dnd .chip:nth-child(3)::after { animation-delay: 4.6s; }
+@keyframes dnd-chip-gleam {
+  0%   { transform: translateX(-30%) rotate(12deg); opacity: 0; }
+  4%   { opacity: .8; }
+  13%  { transform: translateX(380%) rotate(12deg); opacity: 0; }
+  100% { transform: translateX(380%) rotate(12deg); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud.theme-dnd .chip::after { animation: none; opacity: 0; }
+}
 
 /* in-run Tower-style HUD (currency strip, wave banner, You/Foe stat lines) in parchment + ink. */
 .hud.theme-dnd .cur { color: var(--ink); }
