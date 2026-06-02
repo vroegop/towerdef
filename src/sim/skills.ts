@@ -7,7 +7,8 @@
    The effective number of levels a stat has is perm + run (capped at the upgrade's max).
    Tabs: attack / defense / economic (icons, not words). */
 import type { BulkQty, CardDef, CardSpec, CardDrawResult, Curve, Meta, State, Stats, TabDef, UpgradeCurve, UpgradeDef, UpgradeSpec } from '../types';
-import { labCapBonus, labFlatAdds, labScaleMults } from './labs';
+import { labCapBonus, labFlatAdds, labScaleMults, labTierCoinMult } from './labs';
+import { coinMult } from './waves';
 import { cosmeticBuffMult, towerForTier, TOWER_UNLOCK_WAVE } from './cosmetics';
 import {
   RAPID_COST, BOUNCECHANCE_COST, BOUNCETARGETS_COST, BOUNCERANGE_COST, SUPERCRIT_COST,
@@ -1022,6 +1023,15 @@ export function effectiveUpgradeValue(meta: Meta, id: string, level: number): nu
   const st = computeStats(pseudo) as unknown as Record<string, number>;
   const v = st[UP2STAT[id] || id];
   return typeof v === 'number' ? v : up.value(level);
+}
+
+// The FULL coin multiplier the player effectively earns: tier baseline × Tier Coin lab × the Coins
+// card × the passive coin cosmetic buff. This is the multiplier coinsForRun applies to (maxWave +
+// per-kill/per-wave coins), so per-kill coins ARE multiplied by tier/lab/card/cosmetic — multiplying
+// the banked total is distributive over the per-kill sum. Single source of truth for HUD readouts.
+export function effectiveCoinMult(meta: Meta, tier: number): number {
+  const card = computeStats({ meta, run: { levels: {} } } as unknown as State).cardCoinMult || 1;
+  return coinMult(tier) * labTierCoinMult(meta) * card * cosmeticBuffMult(meta, 'coinMult');
 }
 
 // ---- run upgrades (gold; price driven by run levels only) ----

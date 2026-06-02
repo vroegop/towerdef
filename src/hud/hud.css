@@ -394,7 +394,9 @@
   font: 600 12px system-ui; padding: 5px 9px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .hud .labactions .changelab:hover { border-color: #4aa8ff; color: #d8deea; }
 /* ---- Lab picker modal ---- */
-.hud .labpick-list { display: flex; flex-direction: column; gap: 9px; padding: 10px 14px 14px; }
+.hud .labpick-list { display: flex; flex-direction: column; gap: 9px; padding: 10px 14px 14px;
+  /* scroll within the capped modal; min-height:0 lets a flex child actually shrink + scroll */
+  overflow-y: auto; -webkit-overflow-scrolling: touch; min-height: 0; flex: 1; }
 .hud .labpick-row { background: #11151f; border: 1px solid #262c3d; border-radius: 8px; padding: 10px 12px; }
 .hud .labpick-head { display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .hud .labpick-head:hover .labpick-title b { color: #fff; }
@@ -863,7 +865,9 @@
   background: rgba(6,8,14,.6); pointer-events: auto; }
 .hud .updmodal.hide { display: none; }
 .hud .updmodal-inner { margin-top: 64px; width: min(440px, 92vw); background: #11151f; border: 1px solid #2a3550;
-  border-radius: 8px; overflow: hidden; }
+  border-radius: 8px; overflow: hidden; display: flex; flex-direction: column;
+  /* cap to the viewport (dynamic vh for mobile chrome) so a long lab list scrolls instead of clipping */
+  max-height: calc(100dvh - 64px - 16px); }
 .hud .upd-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px 10px; border-bottom: 1px solid #1f2740; }
 .hud .upd-icon { flex: 0 0 auto; width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
   background: rgba(255,255,255,.06); color: #8b93a7; }

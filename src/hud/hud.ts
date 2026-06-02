@@ -10,7 +10,7 @@ import {
   isUnlocked, SKILL_GROUPS, isGroupUnlocked, nextUnlockGroup, skillGroup,
   upgradeCap, tipOf, CARDS, CARD_INFO, MAX_STARS, CARD_ORDER, CARD_SLOTS, starSlot, buyCardCost, MILESTONES, milestoneReward,
   tierClaimableCount, TAB_DEFS, FIRST_PERM_COST, cardSlotCost, MAX_CARD_SLOTS, activeCardIds,
-  availableBulkTiers, runBulkPlan, permBulkPlan, computeStats, effectiveUpgradeValue,
+  availableBulkTiers, runBulkPlan, permBulkPlan, computeStats, effectiveUpgradeValue, effectiveCoinMult,
 } from '../sim/skills';
 import {
   LABS, LAB_BY_ID, labLevel, labUnlocked, labsTabUnlocked, labCoinCost, labTimeSec, labAtMax, researchOf, researchRemaining,
@@ -179,6 +179,9 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   // cards × cosmetics (so a Damage row reflects every multiplier, not just the raw per-level number).
   // Parity is guaranteed — effectiveUpgradeValue drives the real computeStats; no formula duplication.
   const buffedVal = (meta: Meta, up: UpgradeDef, level: number): number => effectiveUpgradeValue(meta, up.id, level);
+  // The player's full coin multiplier (tier × Tier Coin lab × Coins card × coin cosmetic), rounded to
+  // 2dp so lab/card fractions show. `pre` is the leading glyph ('x' or '×') matching each call site.
+  const coinMultText = (meta: Meta, tier: number, pre = 'x'): string => pre + Math.round(effectiveCoinMult(meta, tier) * 100) / 100;
   // "⏸" for the 0x (pause) step, else "0.5x" / "1x" / "2.5x" — dropping the trailing ".0" on whole multipliers.
   const fmtSpeed = (v: number): string => (v === 0 ? '⏸' : (Number.isInteger(v) ? String(v) : v.toFixed(1)) + 'x');
 
@@ -722,7 +725,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     const st = computeStats(s);
     uel.dmg.textContent = abbr(Math.round(st.rangedDamage));
     uel.regen.textContent = abbr(Math.round(st.regen)) + '/s';
-    uel.coinmult.textContent = 'x' + coinMult(tier).toFixed(1);
+    uel.coinmult.textContent = coinMultText(s.meta, tier);
     const eff = Math.max(1, s.wave.n) * tierDifficulty(tier);
     const fstr = waveStr(eff);
     uel.fhp.textContent = abbr(Math.max(1, Math.round(TYPES.melee.hp * fstr)));
@@ -816,7 +819,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       '<div class="statsbody">' +
       strow('Tier', String(tier)) +
       strow('Difficulty', '×' + tierDifficulty(tier)) +
-      strow('Coin multiplier', '×' + coinMult(tier).toFixed(1)) +
+      strow('Coin multiplier', coinMultText(m, tier, '×')) +
       strow('Damage', abbr(Math.round(st.rangedDamage))) +
       strow('Attack speed', st.fireRate.toFixed(2) + '/s') +
       strow('Max HP', abbr(Math.round(st.maxHp))) +
@@ -1721,7 +1724,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       row('Kills', fmt(e.kills || 0)) +
       row('Wave reached', fmt(e.wave || 0)) +
       row('Foes per wave', fmt(waveCount((e.wave || 1) * tierDifficulty(tier)))) +
-      row('Coin multiplier', 'x' + coinMult(tier).toFixed(1)) +
+      row('Coin multiplier', coinMultText(meta, tier)) +
       row('Total coins', fmt(meta.coins || 0)) +
       '</div>' +
       // offline overview is dismissed by tapping the backdrop, so it skips the back button entirely.
