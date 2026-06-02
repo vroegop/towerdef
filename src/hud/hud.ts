@@ -1072,7 +1072,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         (!maxed ? '<div class="upd-row"><span>Next level</span><b>' + u.fmt(buffedVal(lastMeta, u, bought + 1)) + '</b></div>' : '') +
         (!maxed ? '<div class="upd-row"><span>At max (' + cap + ')</span><b>' + u.fmt(buffedVal(lastMeta, u, cap)) + '</b></div>' : '') +
       '</div>' +
-      '<button class="upd-buy' + (maxed ? ' maxed' : '') + (afford && !maxed ? '' : ' cant') + '" id="h-upd-buy"' + (maxed ? ' disabled' : '') + '>' +
+      '<button class="upd-buy' + (maxed ? ' maxed' : '') + (afford && !maxed ? '' : ' cant') + '" id="h-upd-buy"' + (maxed || !afford ? ' disabled' : '') + '>' +
         (maxed ? 'Maxed out' : cost + ' ' + coinsIc(14) + ' — Buy') +
       '</button>';
     $('#h-upd-close').addEventListener('click', () => updmodal.classList.add('hide'));
