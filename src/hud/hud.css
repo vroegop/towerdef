@@ -459,12 +459,15 @@
 .hud .msrail::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; transform: translateX(-50%); background: #232a3d; }
 .hud .msrow:first-child .msrail::before { top: 50%; }
 .hud .msrow:last-child .msrail::before { bottom: 50%; }
-.hud .msrow.reached .msrail::before { background: linear-gradient(180deg, #ffd24a, #f5a623); }
+.hud .msrow.reached .msrail::before { background: linear-gradient(180deg, #ffd24a, #ffe9a8 50%, #f5a623);
+  background-size: 100% 300%; animation: ms-spine-flow 4s linear infinite; }
 .hud .msdot { position: relative; z-index: 1; width: 34px; height: 38px; display: flex; align-items: center; justify-content: center;
   clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
   background: #2a3142; color: #8b93a7; font-size: 10px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .hud .msrow.reached .msdot { background: linear-gradient(180deg, #ffe08a, #f5a623); color: #3a2606; }
-.hud .msrow.can .msdot { background: linear-gradient(180deg, #5fe39a, #2bb673); color: #06210f; box-shadow: 0 0 0 3px rgba(61,220,132,.25); }
+/* claimable node glows GREEN. Note: an outset box-shadow would be eaten by the hexagon clip-path, so
+   the glow is a drop-shadow FILTER instead — it hugs the hexagon silhouette and actually renders. */
+.hud .msrow.can .msdot { background: linear-gradient(180deg, #5fe39a, #2bb673); color: #06210f; filter: drop-shadow(0 0 4px rgba(61,220,132,.55)); }
 .hud .mscard { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px;
   border-bottom: 1px solid #1f2740; padding: 8px 2px; }
 .hud .msrow:last-child .mscard { border-bottom: 0; }
@@ -496,7 +499,7 @@
 .hud .msrow.reached .msdot { animation: ms-reached-in .5s ease-out both; }
 .hud .msrow.can .msdot { animation: ms-can-pulse 1.5s ease-in-out infinite; }
 @keyframes ms-reached-in { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-@keyframes ms-can-pulse { 0%,100% { box-shadow: 0 0 0 3px rgba(61,220,132,.25); } 50% { box-shadow: 0 0 0 6px rgba(61,220,132,.12); } }
+@keyframes ms-can-pulse { 0%,100% { filter: drop-shadow(0 0 3px rgba(61,220,132,.45)); } 50% { filter: drop-shadow(0 0 8px rgba(61,220,132,.8)); } }
 .hud .mn-claim { animation: ms-claim-breathe 2s ease-in-out infinite; }
 @keyframes ms-claim-breathe { 0%,100% { box-shadow: 0 0 0 0 rgba(61,220,132,0); } 50% { box-shadow: 0 0 10px 0 rgba(61,220,132,.35); } }
 /* tower-skin reward rung: a live medallion of the skin + an unlocked/locked status */
@@ -513,6 +516,58 @@
 .hud .msrow.tower.locked .mn-twc, .hud .msrow.tower.locked .mn-tw-tx b { filter: grayscale(.7); opacity: .45; }
 @keyframes ms-tower-glow { 0%,100% { filter: drop-shadow(0 0 5px rgba(255,210,74,.4)); } 50% { filter: drop-shadow(0 0 11px rgba(255,210,74,.75)); } }
 .hud .msrow.tower .msdot { background: linear-gradient(180deg, #e6c45a, #b07e1a); color: #2a1a06; }
+
+/* ---- HUD visual polish: faceted hexagons, light-catching claim buttons, a flowing spine ----
+   The hexagon nodes read as flat tiles; a couple of clipped pseudo-elements turn them into cut,
+   polished stones. clip-path on .msdot clips its pseudos too, so both stay inside the hex outline. */
+/* facet bevel: a top-left highlight fading to a bottom-right shade gives every node depth. z-index:-1
+   keeps it under the wave-number label so the text stays crisp. */
+.hud .msdot::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(155deg, rgba(255,255,255,.30), rgba(255,255,255,0) 42%, rgba(0,0,0,.20)); }
+/* glint: a thin diagonal sheen sweeps across the EARNED (reached / claimable) nodes now and then, as
+   if the stone catches the light. ~0.55s of travel out of a 6s loop → an occasional twinkle, not a strobe. */
+.hud .msrow.reached .msdot::after, .hud .msrow.can .msdot::after { content: ''; position: absolute;
+  top: -60%; left: -30%; width: 34%; height: 220%; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.78), transparent);
+  animation: ms-hex-glint 6s ease-in-out infinite; }
+@keyframes ms-hex-glint {
+  0%   { transform: translateX(-60%) rotate(9deg); opacity: 0; }
+  5%   { opacity: .85; }
+  15%  { transform: translateX(440%) rotate(9deg); opacity: 0; }
+  100% { transform: translateX(440%) rotate(9deg); opacity: 0; } }
+/* stagger the glint down the spine so the light rolls from node to node instead of flashing in unison */
+.hud .msrow:nth-child(3n) .msdot::after   { animation-delay: 1.3s; }
+.hud .msrow:nth-child(3n+1) .msdot::after { animation-delay: 2.7s; }
+.hud .msrow:nth-child(3n+2) .msdot::after { animation-delay: .5s; }
+/* gilded shimmer flowing down the reached spine (paired with .msrail::before background-size above) */
+@keyframes ms-spine-flow { 0% { background-position: 0 0; } 100% { background-position: 0 -300%; } }
+/* the "you are here" pin gets a soft radar ping (circle, so a box-shadow ring renders fine here) */
+.hud .msnow .mspin { animation: ms-pin-ping 2.4s ease-in-out infinite; }
+@keyframes ms-pin-ping {
+  0%,100% { box-shadow: 0 0 0 3px rgba(74,168,255,.25); }
+  50%     { box-shadow: 0 0 0 6px rgba(74,168,255,.10), 0 0 12px rgba(74,168,255,.45); } }
+
+/* claim buttons (milestone + floating check-in) catch the light: a sheen sweeps across the button —
+   and over the gem/vial icon inside it — every few seconds. overflow:hidden masks the sheen to the
+   button; the breathe/pulse box-shadows live outside the border box so they're unaffected. */
+.hud .mn-claim, .hud .checkin-float { position: relative; overflow: hidden; }
+.hud .mn-claim::after, .hud .checkin-float::after { content: ''; position: absolute; top: -50%; left: 0;
+  width: 35%; height: 200%; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+  transform: translateX(-260%) skewX(-18deg); animation: hud-claim-flare 4.5s ease-in-out infinite; }
+/* desync the float button so the two never flare in lockstep */
+.hud .checkin-float::after { animation-duration: 5.5s; animation-delay: 1.6s; }
+@keyframes hud-claim-flare {
+  0%   { transform: translateX(-260%) skewX(-18deg); }
+  10%  { transform: translateX(360%) skewX(-18deg); }
+  100% { transform: translateX(360%) skewX(-18deg); } }
+
+/* respect reduced-motion: keep the static facets/bevels, drop the moving sweeps and pulses */
+@media (prefers-reduced-motion: reduce) {
+  .hud .msdot::after, .hud .mn-claim::after, .hud .checkin-float::after { animation: none; opacity: 0; }
+  .hud .msrow.reached .msrail::before { animation: none; }
+  .hud .msrow.can .msdot, .hud .msnow .mspin { animation: none; }
+}
 
 /* ---- spotlight tutorial (flashlight) ---- */
 .hud .tut-dim { position: fixed; border-radius: 4px; pointer-events: none; z-index: 60;
