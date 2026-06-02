@@ -17,6 +17,25 @@ export function pickType(rng: Rng, n: number): string {
   return rng.next() < 0.55 ? 'melee' : 'ranged';
 }
 
+// Per-type spawn probabilities at wave n — mirrors pickType's branch cuts, for the HUD enemy panel.
+// On every 10th wave a fraction of spawns roll as bosses; the rest split by the same r-cuts.
+export function spawnChances(n: number): Record<string, number> {
+  const boss = n % 10 === 0 ? 0.2 : 0;
+  const rest = 1 - boss;
+  const fast = n >= 8 ? 0.10 : 0; // r in [0, .10)
+  const tank = n >= 12 ? 0.08 : 0; // r in [.10, .18)
+  const splitter = n >= 16 ? 0.07 : 0; // r in [.18, .25)
+  const base = Math.max(0, 1 - fast - tank - splitter); // the rest fall through to melee/ranged (55/45)
+  return {
+    boss,
+    fast: rest * fast,
+    tank: rest * tank,
+    splitter: rest * splitter,
+    melee: rest * base * 0.55,
+    ranged: rest * base * 0.45,
+  };
+}
+
 const ihp = (base: number, mult: number): number => Math.max(1, Math.round(base * mult));
 
 export function makeEnemy(id: number, type: string, waveN: number, rng: Rng, arena: Arena, cx = arena.w / 2, cy = arena.h / 2): Enemy {

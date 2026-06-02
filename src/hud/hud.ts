@@ -2,8 +2,9 @@
    (5 bottom tabs), a spotlight tutorial, a milestones modal, and a settings modal.
    Handlers: onBuyRun, onBuyPerm, onClaimMilestone, onStartRun, onDev, onFF. */
 import type { BulkQty, CardDef, CardDrawResult, CardInstance, Hud as HudInstance, HudFactory, HudHandlers, MenuOpts, Meta, Settings, State, ThemeDef, EarnSummary, UpgradeDef } from '../types';
-import { WAVE, waveCount, tierDifficulty, coinMult, coinsForRun, waveStr, MAX_TIER, TIER_UNLOCK_WAVE, tierUnlocked } from '../sim/waves';
+import { WAVE, waveCount, tierDifficulty, coinMult, coinsForRun, waveStr, waveSpeed, MAX_TIER, TIER_UNLOCK_WAVE, tierUnlocked } from '../sim/waves';
 import { TYPES } from '../sim/registries';
+import { spawnChances } from '../sim/enemies';
 import {
   UPGRADES, UP_BY_ID, upgradesIn, boughtOf, permBought, runUpgradeCost, runAtMax, permCost, permAtMax,
   isUnlocked, SKILL_GROUPS, isGroupUnlocked, nextUnlockGroup, skillGroup,
@@ -92,25 +93,6 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     '  </div>' +
     '  <button class="iconbtn menutoggle" id="h-menu-btn" title="Menu">' + icon('menu', 22) + '</button>' +
     '</div>' +
-    // Wave banner (Tier · Wave + foes left) and the You-vs-Foe stat lines.
-    '<div class="wavebanner" id="h-wavebanner">' +
-    '  <div class="wb-title"><span class="wb-tier">Tier <b id="h-tier">1</b></span>' +
-    '<span class="wb-dot">·</span><span class="wb-wave">Wave <b id="h-wave">1</b></span></div>' +
-    '  <div class="wb-sub"><b id="h-foes">0</b> foes</div>' +
-    '</div>' +
-    '<div class="statline" id="h-statline">' +
-    '  <div class="sl us">' +
-    '    <span class="sl-h">You</span>' +
-    '    <span class="sl-hp"><span class="slbar"><i class="slbarfill" id="h-hpfill"></i></span><b id="h-hp">1</b></span>' +
-    '    <span class="sl-row">' + icon('bow', 11) + '<b id="h-dmg">0</b></span>' +
-    '    <span class="sl-row">' + icon('rate', 11) + '<b id="h-spd">0</b></span>' +
-    '  </div>' +
-    '  <div class="sl foe">' +
-    '    <span class="sl-h">Foe</span>' +
-    '    <span class="sl-row">' + icon('heart', 11) + '<b id="h-fhp">0</b></span>' +
-    '    <span class="sl-row">' + icon('bow', 11) + '<b id="h-fdmg">0</b></span>' +
-    '  </div>' +
-    '</div>' +
     // Persistent side menu: a narrow, one-icon-wide rail that opens from the menu toggle and stays
     // open (game interactions never auto-dismiss it). It is only as tall as its content, so it stays
     // unintrusive — each icon opens a self-dismissing modal instead of a big always-on panel.
@@ -120,10 +102,31 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     '  <button class="sideitem" id="h-chart" title="Run Stats">' + icon('chart', 20) + '</button>' +
     '  <button class="sideitem danger" id="h-rail-exit" title="End run">' + icon('close', 20) + '</button>' +
     '</aside>' +
-    '<div class="wavebar" id="h-wavebar" title="Next wave"><i id="h-wavefill"></i></div>' +
     '<div class="statswrap hide" id="h-stats"><div class="statscard" id="h-statscard"></div></div>' +
     '<div class="ghint hide" id="h-ghint"></div>' +
-    '<div class="tabbar" id="h-tabbar"><div id="h-tabcontent"></div><div class="tabs" id="h-tabs"></div></div>' +
+    // Tab dock: two stat panels (our stats | enemy stats) sit as the dock's top row, above the
+    // upgrade list and tabs — each is a button that opens a details modal.
+    '<div class="tabbar" id="h-tabbar">' +
+    '  <div class="statline" id="h-statline">' +
+    '    <button class="sl us" id="h-sl-us" title="Your stats">' +
+    '      <span class="sl-grid">' +
+    '        <span class="sl-row">' + icon('bow', 12) + '<b id="h-dmg">0</b></span>' +
+    '        <span class="sl-row">' + icon('regen', 12) + '<b id="h-regen">0</b></span>' +
+    '        <span class="sl-row">' + icon('coinstar', 12) + '<b id="h-coinmult">x1.0</b></span>' +
+    '      </span>' +
+    '      <span class="sl-bar"><i class="slbarfill" id="h-hpfill"></i><b id="h-hp">1</b></span>' +
+    '    </button>' +
+    '    <button class="sl foe" id="h-sl-foe" title="Enemy stats">' +
+    '      <span class="sl-grid">' +
+    '        <span class="sl-wave">Wave <b id="h-wave">1</b></span>' +
+    '        <span class="sl-row">' + icon('bow', 12) + '<b id="h-fdmg">0</b></span>' +
+    '        <span class="sl-row">' + icon('heart', 12) + '<b id="h-fhp">0</b></span>' +
+    '      </span>' +
+    '      <span class="sl-bar wave"><i class="slbarfill" id="h-wavefill"></i></span>' +
+    '    </button>' +
+    '  </div>' +
+    '  <div id="h-tabcontent"></div><div class="tabs" id="h-tabs"></div>' +
+    '</div>' +
     '<div class="menu" id="h-menu">' +
     '  <div class="menu-content" id="h-menu-content"></div>' +
     '  <div class="menutabs" id="h-menu-tabs"></div>' +
@@ -551,26 +554,25 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     lastS = s;
     if (!uel)
       uel = {
-        wave: $('#h-wave'), tier: $('#h-tier'), foes: $('#h-foes'), hp: $('#h-hp'), gold: $('#h-gold'),
+        wave: $('#h-wave'), hp: $('#h-hp'), gold: $('#h-gold'),
         coins: $('#h-coins'), gems: $('#h-gems'), vials: $('#h-vials'),
-        dmg: $('#h-dmg'), spd: $('#h-spd'), fhp: $('#h-fhp'), fdmg: $('#h-fdmg'),
-        hpfill: $('#h-hpfill'), statline: $('#h-statline'),
-        wavebar: $('#h-wavebar'), wavefill: $('#h-wavefill'), tabbar: $('#h-tabbar'), stats: $('#h-stats'),
+        dmg: $('#h-dmg'), regen: $('#h-regen'), coinmult: $('#h-coinmult'), fhp: $('#h-fhp'), fdmg: $('#h-fdmg'),
+        hpfill: $('#h-hpfill'), wavefill: $('#h-wavefill'), statline: $('#h-statline'),
+        tabbar: $('#h-tabbar'), stats: $('#h-stats'),
       };
     const tier = s.meta.tier || 1;
     uel.wave.textContent = String(s.wave.n);
-    uel.tier.textContent = String(tier);
-    uel.foes.textContent = String(s.enemies.length + Math.max(0, s.wave.toSpawn));
     // currency strip: in-run gold + banked meta currencies.
     uel.gold.textContent = abbr(s.econ.gold);
     uel.coins.textContent = abbr(s.meta.coins || 0);
     uel.gems.textContent = abbr(s.meta.gems || 0);
     uel.vials.textContent = abbr(s.meta.vials || 0);
-    // You vs Foe stat lines: our live damage/fire-rate from computeStats, the baseline foe's HP/dmg
+    // our live stats (damage / regen / coin multiplier) from computeStats; the baseline foe's HP/dmg
     // from the wave-strength curve at this (tier-scaled) wave.
     const st = computeStats(s);
     uel.dmg.textContent = abbr(Math.round(st.rangedDamage));
-    uel.spd.textContent = st.fireRate.toFixed(2) + '/s';
+    uel.regen.textContent = abbr(Math.round(st.regen)) + '/s';
+    uel.coinmult.textContent = 'x' + coinMult(tier).toFixed(1);
     const eff = Math.max(1, s.wave.n) * tierDifficulty(tier);
     const fstr = waveStr(eff);
     uel.fhp.textContent = abbr(Math.max(1, Math.round(TYPES.melee.hp * fstr)));
@@ -580,12 +582,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     const hpf = s.hero.hpMax > 0 ? Math.max(0, Math.min(1, s.hero.hp / s.hero.hpMax)) : 0;
     uel.hpfill.style.width = hpf * 100 + '%';
     uel.statline.classList.toggle('low', hpf > 0 && hpf <= 0.3);
-    const wbar = uel.wavebar;
-    if (s.firstRun) wbar.style.display = 'none';
-    else {
-      const effInt = WAVE.interval;
-      wbar.style.display = '';
-      uel.wavefill.style.height = Math.max(0, Math.min(1, s.wave.clock / effInt)) * 100 + '%';
+    // enemy panel's wave-cooldown bar: fills toward the next wave (respects Accelerator).
+    if (!s.firstRun) {
+      const effInt = WAVE.interval * (1 - (st.waveAccel || 0));
+      uel.wavefill.style.width = Math.max(0, Math.min(1, s.wave.clock / Math.max(0.001, effInt))) * 100 + '%';
     }
     if (!taughtTabs && !s.firstRun && !tabOpen) {
       let min = Infinity;
@@ -638,39 +638,88 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   function setMeta(m: Meta): void {
     boundMeta = m;
   }
+  // Which stats modal is open (so the per-frame refresh updates the right live values).
+  let statsView: 'player' | 'enemy' | null = null;
+  const strow = (l: string, v: string, id?: string): string =>
+    '<div class="strow"><span>' + l + '</span><b' + (id ? ' id="st-' + id + '"' : '') + '>' + v + '</b></div>';
+  // Live values that tick while a modal is open (re-render would drop handlers, so we patch by id).
   function refreshStats(s: State): void {
-    const m = boundMeta || ({} as Meta),
-      tier = m.tier || 1;
-    const coinsRun = s.firstRun ? FIRST_PERM_COST : coinsForRun(s, tier);
-    const set = (id: string, v: string): void => {
-      const e = $('#st-' + id);
-      if (e) e.textContent = v;
-    };
-    set('kills', fmt(s.econ.kills));
-    set('foes', fmt(waveCount(s.wave.n * (s.difficultyMult || 1))));
-    set('mult', 'x' + coinMult(tier).toFixed(1));
-    set('coins', fmt(m.coins || 0));
-    set('run', fmt(coinsRun));
+    const set = (id: string, v: string): void => { const e = $('#st-' + id); if (e) e.textContent = v; };
+    if (statsView === 'player') {
+      set('kills', fmt(s.econ.kills));
+      set('coins', fmt((boundMeta || s.meta).coins || 0));
+      set('run', fmt(s.firstRun ? FIRST_PERM_COST : coinsForRun(s, s.meta.tier || 1)));
+    } else if (statsView === 'enemy') {
+      set('active', String(s.enemies.length));
+    }
   }
-  function openStats(): void {
+  // Tapping our stat panel: tier / difficulty / coin multiplier + our live combat stats + coins.
+  function openPlayerStats(): void {
+    const s = lastS;
+    if (!s) return;
+    const m = boundMeta || s.meta,
+      tier = m.tier || 1,
+      st = computeStats(s);
+    statsView = 'player';
     $('#h-statscard').innerHTML =
-      '<div class="statshead"><h2>Run Stats</h2><button class="iconclose" id="h-stats-close" title="Close">' + icon('close', 18) + '</button></div>' +
+      '<div class="statshead"><h2>Your Stats</h2><button class="iconclose" id="h-stats-close" title="Close">' + icon('close', 18) + '</button></div>' +
       '<div class="statsbody">' +
-      '<div class="strow"><span>Kills</span><b id="st-kills">0</b></div>' +
-      '<div class="strow"><span>Foes per wave</span><b id="st-foes">0</b></div>' +
-      '<div class="strow"><span>Coin multiplier</span><b id="st-mult">x1</b></div>' +
-      '<div class="strow"><span>Total coins</span><b id="st-coins">0</b></div>' +
-      '<div class="strow"><span>Coins this run (so far)</span><b id="st-run">0</b></div>' +
-      '</div>'; // Run Stats is purely informational now; ending a run lives in the side-rail End-run X.
+      strow('Tier', String(tier)) +
+      strow('Difficulty', '×' + tierDifficulty(tier)) +
+      strow('Coin multiplier', '×' + coinMult(tier).toFixed(1)) +
+      strow('Damage', abbr(Math.round(st.rangedDamage))) +
+      strow('Attack speed', st.fireRate.toFixed(2) + '/s') +
+      strow('Max HP', abbr(Math.round(st.maxHp))) +
+      strow('HP regen', abbr(Math.round(st.regen)) + '/s') +
+      strow('Kills', fmt(s.econ.kills), 'kills') +
+      strow('Total coins', fmt(m.coins || 0), 'coins') +
+      strow('Coins this run', fmt(coinsForRun(s, tier)), 'run') +
+      '</div>';
     $('#h-stats-close').addEventListener('click', () => $('#h-stats').classList.add('hide'));
-    if (lastS) refreshStats(lastS);
     $('#h-stats').classList.remove('hide');
   }
-  $('#h-chart').addEventListener('click', () => {
+  // Tapping the enemy panel: wave timing + a per-type spec table (spawn %, HP, ATK, speed, mass).
+  const ENEMY_LABELS: Record<string, string> = { melee: 'Grunt', ranged: 'Archer', fast: 'Runner', tank: 'Tank', splitter: 'Splitter', boss: 'Boss' };
+  function openEnemyStats(): void {
+    const s = lastS;
+    if (!s) return;
+    const tier = s.meta.tier || 1,
+      eff = Math.max(1, s.wave.n) * tierDifficulty(tier),
+      str = waveStr(eff),
+      spd = waveSpeed(eff),
+      ch = spawnChances(s.wave.n),
+      st = computeStats(s);
+    const waveTime = (WAVE.interval * (1 - (st.waveAccel || 0))).toFixed(1) + 's';
+    const spawnRate = (waveCount(s.wave.n) / WAVE.spawnWindow).toFixed(1) + '/s';
+    let rows = '';
+    for (const t of ['melee', 'ranged', 'fast', 'tank', 'splitter', 'boss']) {
+      const d = TYPES[t];
+      if (!d) continue;
+      rows += '<tr><td>' + ENEMY_LABELS[t] + '</td><td>' + Math.round((ch[t] || 0) * 100) + '%</td><td>' +
+        abbr(Math.max(1, Math.round(d.hp * str))) + '</td><td>' + abbr(Math.max(1, Math.round(d.dmg * str))) +
+        '</td><td>' + Math.round(d.speed * spd) + '</td><td>' + d.mass + '</td></tr>';
+    }
+    statsView = 'enemy';
+    $('#h-statscard').innerHTML =
+      '<div class="statshead"><h2>Enemies · Wave ' + s.wave.n + '</h2><button class="iconclose" id="h-stats-close" title="Close">' + icon('close', 18) + '</button></div>' +
+      '<div class="statsbody">' +
+      strow('Wave time', waveTime) +
+      strow('Active enemies', String(s.enemies.length), 'active') +
+      strow('Spawn rate', spawnRate) +
+      '<table class="enemytbl"><thead><tr><th>Type</th><th>Spawn</th><th>HP</th><th>ATK</th><th>Spd</th><th>Mass</th></tr></thead><tbody>' +
+      rows + '</tbody></table>' +
+      '</div>';
+    $('#h-stats-close').addEventListener('click', () => $('#h-stats').classList.add('hide'));
+    $('#h-stats').classList.remove('hide');
+  }
+  function toggleStats(open: () => void): void {
     const sw = $('#h-stats');
-    if (sw.classList.contains('hide')) openStats();
+    if (sw.classList.contains('hide')) open();
     else sw.classList.add('hide');
-  });
+  }
+  $('#h-chart').addEventListener('click', () => toggleStats(openPlayerStats));
+  $('#h-sl-us').addEventListener('click', () => toggleStats(openPlayerStats));
+  $('#h-sl-foe').addEventListener('click', () => toggleStats(openEnemyStats));
   $('#h-stats').addEventListener('click', (e) => {
     if ((e.target as HTMLElement).id === 'h-stats') $('#h-stats').classList.add('hide');
   });
