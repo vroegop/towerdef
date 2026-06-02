@@ -391,8 +391,6 @@ const CSS = `
 .hud.theme-dnd .mn-info .mn-kind { color: var(--ink-dim); }
 .hud.theme-dnd .mn-tw-tx b { color: var(--gold-ink); }
 .hud.theme-dnd .mn-tw-tx span { color: var(--ink-dim); }
-.hud.theme-dnd .msrow.tower.unlocked .mn-tw-status { color: #4a6b2a; }
-.hud.theme-dnd .msrow.tower.locked .mn-tw-status { color: var(--ink-dim); }
 .hud.theme-dnd .msrow.tower .msdot { background: linear-gradient(180deg, #e2bd66, var(--gold-ink)); color: #2a1a08; }
 .hud.theme-dnd .ghint { background: var(--parch-lt); border: 1px solid var(--accent); color: var(--ink); }
 .hud.theme-dnd .lk-tip, .hud.theme-dnd .tut-thought { background: #c9b285; color: var(--ink); border: 1px solid #7a5a2a; }
