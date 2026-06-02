@@ -1693,8 +1693,9 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     $('#h-stats').classList.add('hide');
   }
 
-  // 1s tick: keep the floating check-in button current (menu AND in-game), advance research bars on
-  // the Lab tab, and refresh the Hero tab.
+  // 1s tick: keep the floating check-in button current (menu AND in-game) and advance research bars on
+  // the Lab tab. The Hero tab holds nothing time-driven (the avatar animates on its own rAF loop), so we
+  // do NOT re-render it here — doing so rebuilt the DOM every second, flashing the UI and resetting hover.
   setInterval(() => {
     refreshCheckinFloat();
     if (!menuEl.classList.contains('show') || !lastMeta) return;
@@ -1702,8 +1703,6 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       const had = (lastMeta.research || []).length;
       if (handlers.onReconcileLabs) handlers.onReconcileLabs();
       if (had) renderMenu();
-    } else if (menuTab === 'hero') {
-      renderMenu();
     }
   }, 1000);
 

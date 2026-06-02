@@ -163,53 +163,36 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     ctx.clearRect(0, 0, W, H);
     const hsx = tx(hp.x),
       hsy = ty(hp.y);
-    // Dark void beyond the map edges (fully overdrawn by the parchment below; kept as a backstop).
-    ctx.fillStyle = '#0b0d0a';
-    ctx.fillRect(0, 0, W, H);
-    // Parchment battle-map: the arena rect (world 0..w, 0..h) painted as worn parchment with a warm
-    // glow under the hero, a faint grid, and an inked border. The arena scales with range, so at very
-    // high range/zoom it can shrink below the viewport — to avoid exposing the dark void, the parchment
-    // is painted over AT LEAST the whole viewport (the union of the arena rect and the screen). The grid
-    // + inked border still mark the actual arena bounds.
-    const aL = tx(0),
-      aT = ty(0),
-      aW = s.arena.w * scale,
-      aH = s.arena.h * scale;
-    const pL = Math.min(aL, 0),
-      pT = Math.min(aT, 0),
-      pR = Math.max(aL + aW, W),
-      pB = Math.max(aT + aH, H);
-    const fg = ctx.createRadialGradient(hsx, hsy, 0, hsx, hsy, Math.max(pR - pL, pB - pT) * 0.75);
+    // Endless battle-map: the arena has NO edges. It's a continuous parchment surface and the camera is
+    // locked on the tower — the sim's arena box only decides where foes spawn, never the visuals, so a
+    // big range never reveals a border or a too-small map. Paint a tower-centred parchment glow across
+    // the whole viewport, then a world-anchored grid that tiles to the screen edges. No clip, no border.
+    const fg = ctx.createRadialGradient(hsx, hsy, 0, hsx, hsy, Math.hypot(W, H) * 0.75);
     fg.addColorStop(0, '#ecdcb6');
     fg.addColorStop(0.55, '#dcc596');
     fg.addColorStop(1, '#b89a62');
     ctx.fillStyle = fg;
-    ctx.fillRect(pL, pT, pR - pL, pB - pT);
-    // Grid + inked border are clipped to the actual arena rect.
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(aL, aT, aW, aH);
-    ctx.clip();
-    const GRID = 48; // world units between grid lines
+    ctx.fillRect(0, 0, W, H);
+    // World-anchored grid covering the viewport; spacing doubles as needed so cells never collapse into
+    // a dense mesh when the camera is zoomed far out at very high range.
+    let gstep = 48; // world units between grid lines
+    while (gstep * scale < 8) gstep *= 2;
     ctx.strokeStyle = 'rgba(90,60,25,.16)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    for (let gx = 0; gx <= s.arena.w + 0.5; gx += GRID) {
+    const wx1 = (W - ox) / scale;
+    for (let gx = Math.floor(-ox / scale / gstep) * gstep; gx <= wx1; gx += gstep) {
       const X = tx(gx);
-      ctx.moveTo(X, aT);
-      ctx.lineTo(X, aT + aH);
+      ctx.moveTo(X, 0);
+      ctx.lineTo(X, H);
     }
-    for (let gy = 0; gy <= s.arena.h + 0.5; gy += GRID) {
+    const wy1 = (H - oy) / scale;
+    for (let gy = Math.floor(-oy / scale / gstep) * gstep; gy <= wy1; gy += gstep) {
       const Y = ty(gy);
-      ctx.moveTo(aL, Y);
-      ctx.lineTo(aL + aW, Y);
+      ctx.moveTo(0, Y);
+      ctx.lineTo(W, Y);
     }
     ctx.stroke();
-    // Inked inner border / map vignette.
-    ctx.strokeStyle = 'rgba(60,40,15,.55)';
-    ctx.lineWidth = 6;
-    ctx.strokeRect(aL + 3, aT + 3, aW - 6, aH - 6);
-    ctx.restore();
 
     // Slime trails — a quick-fading smear of colour behind each moving enemy, drawn UNDER the
     // bodies. Per-id screen-space history; each dab fades out over TRAIL_LIFE seconds (frozen on pause).
