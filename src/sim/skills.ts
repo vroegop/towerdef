@@ -13,6 +13,7 @@ import {
   RAPID_COST, BOUNCECHANCE_COST, BOUNCETARGETS_COST, BOUNCERANGE_COST, SUPERCRIT_COST,
   SUPERCRITMULT_COST, REND_COST, DEFPCT_COST, THORNS_COST, KBCHANCE_COST, KBFORCE_COST, KBFORCE_VALUE,
   LIFESTEAL_COST, LIFESTEAL_VALUE, CASHBONUS_COST, COINS_COST, FREEUP_COST, INTEREST_COST,
+  GOLD_COST,
 } from './tables';
 
 // Turn a balance Curve (data) into a number. Single evaluator for upgrades AND cards, so a
@@ -343,9 +344,19 @@ const UPGRADE_SPECS: UpgradeSpec[] = [
     tip: 'Earns a percentage of banked gold as a bonus each wave.',
     max: 99, gated: true, curve: { kind: 'linear', base: 0, per: 0.0006 }, fmt: (v) => (v * 100).toFixed(1) + '%/wave',
     gold: tcurve(INTEREST_COST), coin: tcurve(INTEREST_COST) },
-  { id: 'freeUp', tab: 'economic', icon: 'coins', label: 'Free Ups.',
-    name: 'Free Upgrades',
-    tip: (up) => 'Chance each in-run upgrade costs no gold. Max: ' + up.fmt(up.value(up.max)) + '.',
+  { id: 'freeUpAttack', tab: 'economic', icon: 'coins', label: 'Free Atk',
+    name: 'Free Attack Upgrade',
+    tip: (up) => 'Chance each ATTACK upgrade costs no gold. Max: ' + up.fmt(up.value(up.max)) + '.',
+    max: 99, gated: true, curve: { kind: 'linear', base: 0, per: 0.005, cap: 0.495 }, fmt: pctFmt,
+    gold: tcurve(FREEUP_COST), coin: tcurve(FREEUP_COST) },
+  { id: 'freeUpDefense', tab: 'economic', icon: 'coins', label: 'Free Def',
+    name: 'Free Defense Upgrade',
+    tip: (up) => 'Chance each DEFENSE upgrade costs no gold. Max: ' + up.fmt(up.value(up.max)) + '.',
+    max: 99, gated: true, curve: { kind: 'linear', base: 0, per: 0.005, cap: 0.495 }, fmt: pctFmt,
+    gold: tcurve(FREEUP_COST), coin: tcurve(FREEUP_COST) },
+  { id: 'freeUpUtility', tab: 'economic', icon: 'coins', label: 'Free Util',
+    name: 'Free Utility Upgrade',
+    tip: (up) => 'Chance each UTILITY upgrade costs no gold. Max: ' + up.fmt(up.value(up.max)) + '.',
     max: 99, gated: true, curve: { kind: 'linear', base: 0, per: 0.005, cap: 0.495 }, fmt: pctFmt,
     gold: tcurve(FREEUP_COST), coin: tcurve(FREEUP_COST) },
   { id: 'coinsPerWave', tab: 'economic', icon: 'coinstar', label: 'Coins/Wave',
@@ -370,11 +381,23 @@ export const UPGRADES: UpgradeDef[] = UPGRADE_SPECS.map((spec) => {
   const def = { ...spec } as UpgradeDef;
   def.value = (b: number) => evalCurve(def.curve, b);
   const coinCurve = def.coin;
-  def.gold = {
-    base: Math.max(1, Math.round(coinCurve.cost(0) * GOLD_FACTOR)),
-    grow: 0,
-    cost: (n: number) => Math.max(1, Math.round(coinCurve.cost(n) * GOLD_FACTOR)),
-  };
+  const goldTable = GOLD_COST[spec.id];
+  if (goldTable) {
+    // Explicit authored gold curve (sampled). Overrides the coin×GOLD_FACTOR default.
+    def.gold = {
+      base: goldTable[0][1],
+      grow: 0,
+      points: goldTable,
+      cost(n: number) { return Math.max(1, Math.round(interpTable(this.points!, n))); },
+    };
+  } else {
+    // Default: in-run gold tracks the permanent coin curve, a flat fraction cheaper.
+    def.gold = {
+      base: Math.max(1, Math.round(coinCurve.cost(0) * GOLD_FACTOR)),
+      grow: 0,
+      cost: (n: number) => Math.max(1, Math.round(coinCurve.cost(n) * GOLD_FACTOR)),
+    };
+  }
   return def;
 });
 export const UP_BY_ID: Record<string, UpgradeDef> = {};
@@ -412,7 +435,7 @@ export const UNLOCK_COST_OVERRIDE: Record<string, number> = {
   // utility
   cashBonus: 40, goldPerWave: 40,
   coinsPerKill: 100, coinsPerWave: 100,
-  freeUp: 800, interest: 5000,
+  freeUpAttack: 800, freeUpDefense: 800, freeUpUtility: 800, interest: 5000,
 };
 // Coin cost to unlock a skill: 0 for starters, the override if listed, else ≈10× its first-level price.
 export function skillUnlockCost(id: string): number {
@@ -444,7 +467,7 @@ const RAW_GROUPS: { id: string; label: string; skills: string[] }[] = [
   { id: 'gold', label: 'Gold Bonus', skills: ['cashBonus', 'goldPerWave'] },
   { id: 'goldkill', label: 'Gold / Kill', skills: ['goldPerKill'] },
   { id: 'coins', label: 'Coins', skills: ['coinsPerKill', 'coinsPerWave'] },
-  { id: 'freeup', label: 'Free Upgrades', skills: ['freeUp'] },
+  { id: 'freeup', label: 'Free Upgrades', skills: ['freeUpAttack', 'freeUpDefense', 'freeUpUtility'] },
   { id: 'interest', label: 'Interest', skills: ['interest'] },
 ];
 // cost = the (shared) per-skill unlock price of the group's members; tab from the first member.
@@ -986,8 +1009,12 @@ export function buyRunUpgrade(state: State, id: string, rng?: { next(): number }
   if (runAtMax(state, id)) return false;
   const n = state.run.levels[id] || 0,
     cost = up.gold.cost(n);
-  // Free-upgrade chance = the workshop upgrade + any active Free Upgrades card (additive).
-  let freeChance = UP_BY_ID.freeUp.value(boughtOf(state, 'freeUp'));
+  // Free-upgrade chance = the per-tab Free Upgrade skill + any active Free Upgrades card (additive).
+  const FREE_BY_TAB: Record<string, string> = {
+    attack: 'freeUpAttack', defense: 'freeUpDefense', economic: 'freeUpUtility',
+  };
+  const freeId = FREE_BY_TAB[up.tab];
+  let freeChance = freeId ? UP_BY_ID[freeId].value(boughtOf(state, freeId)) : 0;
   for (const c of activeCardIds(state.meta || ({} as State['meta']))) {
     const def = CARDS[c];
     if (def && def.effects.some((e) => e.stat === 'freeUp')) {

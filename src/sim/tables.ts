@@ -208,3 +208,66 @@ const INTEREST_LIST = [
   217.39e3, 223.02e3, 228.74e3, 234.54e3, 240.43e3, 246.41e3, 252.47e3,
 ];
 export const INTEREST_COST = shift(INTEREST_LIST);
+
+/* ============================================================================
+   EXPLICIT IN-RUN GOLD COSTS (per upgrade id).
+   These OVERRIDE the default coin×GOLD_FACTOR gold derivation in skills.ts.
+   Authored from balance data: most are sampled every 10 levels (G10) — value at
+   levels 1, 10, 20, 30, …; a few are per-level (G1) — value at levels 1, 2, 3, …
+   An optional tail [level, cost] lets the curve ramp to a far-off price and then
+   hold (interpTable clamps above the last point), capturing notes like
+   "from here, N more upgrades cost X". Coin (permanent) costs are untouched.
+   ========================================================================== */
+// every-10 sampled: vals[0]→L1, vals[i]→L(i·10). Optional tail point appended.
+const G10 = (vals: number[], tail?: [number, number]): [number, number][] => {
+  const pts: [number, number][] = vals.map((v, i) => [i === 0 ? 1 : i * 10, v]);
+  if (tail) pts.push(tail);
+  return pts;
+};
+// per-level sampled: vals[i]→L(i+1). cost(n) reads OUR-level n (0-indexed).
+const G1 = (vals: number[]): [number, number][] => vals.map((v, i) => [i, v]);
+
+export const GOLD_COST: Record<string, [number, number][]> = {
+  // ---- ATTACK ----
+  attackSpeed: G10([5, 10760, 18050, 27410, 38920, 52630, 68590, 67900]),
+  rangedDamage: G10(
+    [10, 252, 1080, 2800, 5470, 9140, 13870, 19670, 26580, 34630, 43830, 54200],
+    [372, 9e6], // ~262 more levels ramp to ≈9M, then hold
+  ),
+  dmgPerMeter: G10(
+    [20, 513, 1930, 4630, 8730, 14290, 21380, 30050, 40000, 52000, 66000, 122000, 220000, 400000, 700000, 1220000],
+    [182, 9e6], // ~32 more levels ramp to ≈9M, then hold
+  ),
+  range: G10([10, 419, 1900, 4750, 9100, 15030, 22630, 32000, 38000]),
+  critChance: G10([4, 250, 1430, 3890, 7800, 13270, 20360, 29160, 35230]),
+  critDamage: G10([10, 288, 1250, 3150, 6100, 10130, 15310, 21650, 29190, 38000, 58000, 89000, 160000, 290000, 511000, 900000]),
+  superCrit: [[1, 120], [10, 117000], [100, 9e6]],
+  superCritMult: [[1, 80], [10, 16720], [20, 580000], [120, 5e6]],
+  rendChance: [[1, 280], [10, 200000], [299, 18e6]],
+  rendMult: [[1, 200], [10, 75000], [299, 4.39e6]],
+  msChance: G10([10, 619, 3470, 10000, 19000, 32000, 50000, 70000, 96000, 125000, 140000]),
+  msTargets: G1([125, 350, 800, 2000, 8000, 20000, 40000]),
+  rapidChance: G10([20, 1340, 6700, 18000, 35000, 58320, 89400, 128000, 175000], [85, 270000]),
+  rapidDuration: G10([20, 1110, 6000, 16000, 33000, 56000], [99, 900000]),
+  bounceChance: G10([20, 935, 6000, 18000, 36000, 65000, 101000, 150000, 200000, 128000]),
+  bounceTargets: G1([250, 700, 1500, 4000, 12500, 50000, 140000]),
+  bounceRange: G10([20, 1160, 6600, 18500, 39000, 120000, 420000]), // L31 listed "1850" → 18500 (typo fix)
+  // ---- DEFENSE ----
+  health: G10([10, 280, 1150, 2830, 5380, 8840, 13230, 18500, 24900, 32230], [440, 13.5e6]),
+  regen: G10([5, 230, 1100, 2800, 5330, 8790, 13180, 18530, 24860, 32180], [450, 13.5e6]),
+  knockbackChance: G10([10, 450, 2200, 5600, 10500, 17500, 27000, 37000, 49000]),
+  knockbackForce: G10([10, 450, 2200, 5600, 10600]),
+  armor: G10([3, 210, 1080, 2800, 5300, 8770, 13160, 18500, 25000, 32000, 40000], [450, 13.5e6]),
+  defPct: G10([5, 350, 1660, 4000, 8000, 12500, 19000, 26000, 35000, 45000, 50000]),
+  thorns: G10([10, 400, 2000, 5000, 9400, 15500, 23500, 33000, 44000, 58000, 65000]),
+  lifesteal: G10([10, 400, 1900, 5000, 9400, 15500, 24000, 33000, 45000]),
+  // ---- ECONOMIC / UTILITY ----
+  cashBonus: G10([10, 340, 1700, 4500, 9000, 15000, 23000, 32500, 44000, 58000, 72000, 90000, 110000, 130000, 150000, 160000]),
+  goldPerWave: G10([16, 400, 1800, 4600, 9000, 15000, 23000, 32500, 44000, 58000, 72000, 90000, 110000, 130000, 150000, 160000]),
+  coinsPerKill: G10([10, 300, 1350, 3500, 6700, 11000, 17000, 24000, 32000, 42000, 53000, 65000, 97000, 115000, 90000]),
+  coinsPerWave: G10([12, 525, 2800, 7590, 15000, 25000, 38000, 55000, 74000, 95000, 121000, 150000, 180000, 217000, 250000, 266000]),
+  interest: G10([15, 827, 5000, 14000, 28000, 50000, 75000, 105000, 142000, 186000, 210000]),
+  freeUpAttack: G10([8, 567, 3200, 9000, 17000, 28000, 43000, 60000, 83000, 108000, 121000]),
+  freeUpDefense: G10([8, 567, 3200, 9000, 17000, 28000, 43000, 60000, 83000, 108000, 121000]),
+  freeUpUtility: G10([16, 668, 3450, 9160, 18000, 30000, 46000, 65000, 88000, 115000, 130000]),
+};
