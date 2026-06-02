@@ -322,12 +322,6 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
         ctx.stroke();
         ctx.restore();
       }
-      const frac = h.hpMax > 0 ? h.hp / h.hpMax : 0;
-      ctx.strokeStyle = frac > 0.3 ? '#3ddc84' : '#ff5d6c';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(hsx, hsy, (h.r + 6) * scale, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac);
-      ctx.stroke();
     } else if (heroWasAlive) {
       spawnShatter(hsx, hsy, '#4aa8ff', 24);
     }
