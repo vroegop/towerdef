@@ -89,6 +89,38 @@ describe('sim determinism', () => {
   });
 });
 
+describe('enemy collision (_separate)', () => {
+  function sep(sim: Sim): void {
+    (sim as unknown as { _separate(): void })._separate();
+  }
+  it('pushes an overlapping pair apart until they just touch', () => {
+    const sim = new Sim(createState(1, freshMeta(), true));
+    const rng = makeRng(1);
+    const a = makeEnemy(1, 'melee', 1, rng, sim.s.arena, 0, 0);
+    const b = makeEnemy(2, 'melee', 1, rng, sim.s.arena, 0, 0);
+    a.x = 100; a.y = 100; // far from the hero so the hero-clamp doesn't interfere
+    b.x = 101; b.y = 100; // overlapping (gap 1 << r+r = 4.4)
+    sim.s.enemies = [a, b];
+    sep(sim);
+    const gap = Math.hypot(b.x - a.x, b.y - a.y);
+    expect(gap).toBeGreaterThanOrEqual(a.r + b.r - 1e-6); // no longer overlapping
+    expect(gap).toBeLessThan(a.r + b.r + 1e-6); // and not over-separated
+  });
+  it('a knocked-back enemy stays put and shoves the other (blocks the crowd)', () => {
+    const sim = new Sim(createState(1, freshMeta(), true));
+    const rng = makeRng(2);
+    const locked = makeEnemy(1, 'melee', 1, rng, sim.s.arena, 0, 0);
+    const pushed = makeEnemy(2, 'melee', 1, rng, sim.s.arena, 0, 0);
+    locked.x = 200; locked.y = 200; locked.kb = 0.2; // mid-knockback → immovable
+    pushed.x = 202; pushed.y = 200; pushed.kb = 0;
+    sim.s.enemies = [locked, pushed];
+    sep(sim);
+    expect(locked.x).toBe(200); // did not budge
+    expect(pushed.x).toBeGreaterThan(202); // got shoved fully
+    expect(Math.hypot(pushed.x - locked.x, pushed.y - locked.y)).toBeGreaterThanOrEqual(locked.r + pushed.r - 1e-6);
+  });
+});
+
 describe('wave curves', () => {
   it('wave 1 is exactly the baseline (×1 strength)', () => {
     expect(waveStr(1)).toBeCloseTo(1, 10);

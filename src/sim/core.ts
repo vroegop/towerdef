@@ -61,6 +61,7 @@ export class Sim {
     this._waves(dt);
     this._hero(dt);
     this._enemies(dt);
+    this._separate();
     tickProjectiles(s, dt, this.stats, this.rng);
     this._cleanup();
   }
@@ -350,6 +351,87 @@ export class Sim {
     }
   }
 
+  // Enemy-vs-enemy collision. After movement, push overlapping bodies apart so the horde can't
+  // stack on one point and a knocked-back enemy physically shoves the crowd. Deterministic: a
+  // uniform spatial grid keyed by integer cell (built in array order), pairs resolved once from
+  // the lower index (Gauss–Seidel) — O(n) typical, so offline catch-up stays fast.
+  private _separate(): void {
+    const es = this.s.enemies;
+    const n = es.length;
+    if (n < 2) return;
+    const CELL = 12; // ≥ largest enemy diameter, so an overlapping pair is always within 1 cell
+    const cellX = new Int32Array(n),
+      cellY = new Int32Array(n);
+    const grid = new Map<number, number[]>();
+    const keyOf = (cx: number, cy: number): number => (cx & 0xffff) * 0x10000 + (cy & 0xffff);
+    for (let i = 0; i < n; i++) {
+      const cx = Math.floor(es[i].x / CELL),
+        cy = Math.floor(es[i].y / CELL);
+      cellX[i] = cx;
+      cellY[i] = cy;
+      const k = keyOf(cx, cy);
+      let b = grid.get(k);
+      if (!b) grid.set(k, (b = []));
+      b.push(i);
+    }
+    for (let i = 0; i < n; i++) {
+      const a = es[i];
+      for (let gx = cellX[i] - 1; gx <= cellX[i] + 1; gx++) {
+        for (let gy = cellY[i] - 1; gy <= cellY[i] + 1; gy++) {
+          const bucket = grid.get(keyOf(gx, gy));
+          if (!bucket) continue;
+          for (let bi = 0; bi < bucket.length; bi++) {
+            const j = bucket[bi];
+            if (j <= i) continue; // resolve each unordered pair exactly once
+            const e2 = es[j];
+            let dx = e2.x - a.x,
+              dy = e2.y - a.y;
+            const min = a.r + e2.r;
+            const d2 = dx * dx + dy * dy;
+            if (d2 >= min * min) continue;
+            let d = Math.sqrt(d2);
+            if (d < 1e-4) {
+              // exactly coincident → deterministic nudge so the resolve has a direction
+              dx = ((i + j) & 1) === 0 ? 1 : -1;
+              dy = 0;
+              d = 1;
+            }
+            const overlap = min - d,
+              nx = dx / d,
+              ny = dy / d;
+            // A knocked-back / bouncing enemy (kb>0) is treated as immovable, so it plows through
+            // and shoves the others instead of being absorbed by the crowd.
+            const aLock = a.kb > 0,
+              bLock = e2.kb > 0;
+            let wa = 0.5,
+              wb = 0.5;
+            if (aLock && !bLock) (wa = 0), (wb = 1);
+            else if (bLock && !aLock) (wa = 1), (wb = 0);
+            else if (aLock && bLock) (wa = 0), (wb = 0);
+            a.x -= nx * overlap * wa;
+            a.y -= ny * overlap * wa;
+            e2.x += nx * overlap * wb;
+            e2.y += ny * overlap * wb;
+          }
+        }
+      }
+    }
+    // Don't let the shoving push a body inside the hero avatar.
+    const h = this.s.hero;
+    for (let i = 0; i < n; i++) {
+      const e = es[i];
+      const dx = e.x - h.x,
+        dy = e.y - h.y,
+        min = h.r + e.r;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < min * min) {
+        const d = Math.sqrt(d2) || 1;
+        e.x = h.x + (dx / d) * min;
+        e.y = h.y + (dy / d) * min;
+      }
+    }
+  }
+
   private _xpNeed(): number {
     return Math.round(20 * Math.pow(this.s.econ.level, 1.5));
   }
@@ -393,7 +475,7 @@ export class Sim {
             c.hpMax = Math.max(1, Math.round(e.hpMax * 0.5));
             c.hp = c.hpMax;
             c.dmg = Math.max(1, Math.round(e.dmg * 0.5));
-            c.r = Math.max(6, Math.round(e.r * 0.8));
+            c.r = Math.max(1.2, e.r * 0.8); // children a bit smaller than the parent (no integer floor: bodies are tiny now)
             c.mass = e.mass;
             c.agedWaves = e.agedWaves;
             c.splits = e.splits - 1; // one fewer generation than the parent

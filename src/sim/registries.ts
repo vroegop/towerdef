@@ -13,11 +13,13 @@ import type { EnemyTypeDef } from '../types';
 //   boss  = 0.3× speed, 20× hp,  coin 5   (~14 ≈ 46×0.3, hp 20 = 1×20); spawns ~every 10 waves
 //   split = 2× hp,               coin 4   (halves 4 generations on death — see core._cleanup)
 //   melee = baseline,            coin 1
+// Radii are 0.2× their original values (enemies made 80% smaller). This shrinks the body for
+// rendering AND for sim collision, hero-contact distance, and the bullet hit window (e.r + bullet.r).
 export const TYPES: Record<string, EnemyTypeDef> = {
-  melee: { shape: 'square', behavior: 'stick', color: '#ff6b6b', hp: 1, dmg: 1, speed: 46, range: 0, r: 11, mass: 1, coinValue: 1 },
-  ranged: { shape: 'triangle', behavior: 'bounce', color: '#4aa8ff', hp: 1, dmg: 1, speed: 34, range: 150, r: 11, mass: 1, coinValue: 2 },
-  boss: { shape: 'hexagon', behavior: 'stick', color: '#e64cff', hp: 20, dmg: 3, speed: 14, range: 0, r: 22, mass: 1, coinValue: 5 },
-  fast: { shape: 'diamond', behavior: 'stick', color: '#37d7ff', hp: 1, dmg: 0.6, speed: 92, range: 0, r: 9, mass: 1, coinValue: 2 }, // swarm → attack speed / multishot
-  tank: { shape: 'square', behavior: 'stick', color: '#9aa7b3', hp: 5, dmg: 1.6, speed: 23, range: 0, r: 17, mass: 1, coinValue: 4 }, // wall → raw damage / amp
-  splitter: { shape: 'pentagon', behavior: 'stick', color: '#ff5db0', hp: 2, dmg: 1, speed: 40, range: 0, r: 13, mass: 1, splits: 4, coinValue: 4 }, // → AoE
+  melee: { shape: 'square', behavior: 'stick', color: '#ff6b6b', hp: 1, dmg: 1, speed: 46, range: 0, r: 2.2, mass: 1, coinValue: 1 },
+  ranged: { shape: 'triangle', behavior: 'bounce', color: '#4aa8ff', hp: 1, dmg: 1, speed: 34, range: 150, r: 2.2, mass: 1, coinValue: 2 },
+  boss: { shape: 'hexagon', behavior: 'stick', color: '#e64cff', hp: 20, dmg: 3, speed: 14, range: 0, r: 4.4, mass: 1, coinValue: 5 },
+  fast: { shape: 'diamond', behavior: 'stick', color: '#37d7ff', hp: 1, dmg: 0.6, speed: 92, range: 0, r: 1.8, mass: 1, coinValue: 2 }, // swarm → attack speed / multishot
+  tank: { shape: 'square', behavior: 'stick', color: '#9aa7b3', hp: 5, dmg: 1.6, speed: 23, range: 0, r: 3.4, mass: 1, coinValue: 4 }, // wall → raw damage / amp
+  splitter: { shape: 'pentagon', behavior: 'stick', color: '#ff5db0', hp: 2, dmg: 1, speed: 40, range: 0, r: 2.6, mass: 1, splits: 4, coinValue: 4 }, // → AoE
 };
