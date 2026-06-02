@@ -1401,27 +1401,21 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       tier = meta.tier || 1,
       cl = meta.claimedMilestones || {},
       best = (meta.tierBest && meta.tierBest[tier]) || 0;
-    const short = (w: number): string => (w >= 1000 ? w / 1000 + 'K' : '' + w);
-    const reachedCount = MILESTONES.filter((w) => best >= w).length;
+    const short = (w: number): string => (w >= 1000 ? w / 1000 + 'k' : '' + w);
     const claimable = tierClaimableCount(meta, tier);
     // A reward as a chip (currency) or a tower-skin medallion (wave 1000).
     const rewardHtml = (r: ReturnType<typeof milestoneReward>): string => {
       if (r.tower) {
         const t = cosmeticById(r.tower);
         return '<span class="mn-tower"><canvas class="mn-twc" width="60" height="60" data-twc="' + r.tower + '"></canvas>' +
-          '<span class="mn-tw-tx"><b>' + (t ? t.name : 'Tower Skin') + '</b><span>tower skin</span></span></span>';
+          '<span class="mn-tw-tx"><b>' + (t ? t.name : 'Tower Skin') + '</b></span></span>';
       }
       if (r.gems) return '<span class="rw">+' + r.gems.toLocaleString() + ' ' + icon('gem', 13, 'gem') + '</span>';
       if (r.vials) return '<span class="rw">+' + r.vials.toLocaleString() + ' ' + icon('vial', 13, 'vial') + '</span>';
       return '<span class="rw">+' + r.coins.toLocaleString() + ' ' + coinsIc(13) + '</span>';
     };
-    const marker =
-      '<div class="msrow msnow"><div class="msrail"><span class="mspin">' + icon('best', 14) + '</span></div>' +
-      '<div class="mscard"><div class="mn-info"><b>You are here</b>' +
-      '<span class="mn-reward">furthest wave ' + best.toLocaleString() + '</span></div></div></div>';
     let rows = '';
-    if (reachedCount === 0) rows += marker;
-    MILESTONES.forEach((w, i) => {
+    MILESTONES.forEach((w) => {
       const reward = milestoneReward(w, tier),
         isTower = !!reward.tower,
         claimed = !!cl[tier + ':' + w],
@@ -1432,7 +1426,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       let cta: string;
       if (isTower) {
         cta = rewardHtml(reward) +
-          '<span class="mn-tw-status">' + (reached ? icon('check', 13) + ' Unlocked' : icon('lock', 13) + ' Wave ' + short(w)) + '</span>';
+          '<span class="mn-tw-status">' + (reached ? icon('check', 13) + ' Unlocked' : icon('lock', 13) + ' Locked') + '</span>';
       } else if (claimed) {
         cta = '<span class="mn-done">' + icon('check', 15) + ' Claimed</span>';
       } else if (can) {
@@ -1442,9 +1436,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       }
       rows += '<div class="' + cls + '">' +
         '<div class="msrail"><span class="msdot">' + (isTower ? icon('best', 15) : short(w)) + '</span></div>' +
-        '<div class="mscard"><div class="mn-info"><b>Wave ' + w.toLocaleString() + '</b>' +
-        (isTower ? '<span class="mn-kind">tower skin unlock</span>' : '') + '</div>' + cta + '</div></div>';
-      if (i === reachedCount - 1) rows += marker;
+        '<div class="mscard"><div class="mn-info"><b>Wave ' + short(w) + '</b></div>' + cta + '</div></div>';
     });
     modalInner.innerHTML =
       '<button class="close" id="h-ms-close" title="Close">' + icon('close', 18) + '</button>' +
@@ -1562,7 +1554,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       const msSub = tClaim > 0
         ? tClaim + ' reward' + (tClaim > 1 ? 's' : '') + ' to claim'
         : nextMs
-          ? 'Next at wave ' + nextMs.toLocaleString()
+          ? 'Next at wave ' + (nextMs >= 1000 ? nextMs / 1000 + 'k' : nextMs)
           : 'All milestones reached';
       html += '<div class="ms-section' + (tClaim > 0 ? ' has-claim' : '') + '" id="h-ms" role="button" tabindex="0" title="Milestones">' +
         '<span class="ms-sec-ic">' + icon('best', 20) + '</span>' +
