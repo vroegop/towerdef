@@ -8,6 +8,7 @@
    Tabs: attack / defense / economic (icons, not words). */
 import type { BulkQty, CardDef, CardSpec, CardDrawResult, Curve, Meta, State, Stats, TabDef, UpgradeCurve, UpgradeDef, UpgradeSpec } from '../types';
 import { labCapBonus, labScaleMults } from './labs';
+import { cosmeticBuffMult } from './cosmetics';
 import {
   RAPID_COST, BOUNCECHANCE_COST, BOUNCETARGETS_COST, BOUNCERANGE_COST, SUPERCRIT_COST,
   SUPERCRITMULT_COST, REND_COST, DEFPCT_COST, THORNS_COST, KBCHANCE_COST, KBFORCE_COST, KBFORCE_VALUE,
@@ -772,11 +773,12 @@ export function claimableRewards(meta: Meta): MilestoneReward {
   const best = meta.bestWave || 0,
     cl = meta.claimedMilestones || {};
   const out: MilestoneReward = { coins: 0, gems: 0 };
+  const gemMult = cosmeticBuffMult(meta, 'gemMult');
   for (const w of MILESTONES) {
     if (best >= w && !cl[w]) {
       const r = milestoneReward(w, meta.tier || 1);
       out.coins += r.coins;
-      out.gems += r.gems;
+      out.gems += Math.round(r.gems * gemMult);
     }
   }
   return out;
@@ -786,6 +788,7 @@ export function claimMilestone(meta: Meta, wave: number): MilestoneReward {
   meta.claimedMilestones = meta.claimedMilestones || {};
   if (best >= wave && !meta.claimedMilestones[wave]) {
     const r = milestoneReward(wave, meta.tier || 1);
+    r.gems = Math.round(r.gems * cosmeticBuffMult(meta, 'gemMult')); // ×gem cosmetic buff
     meta.coins = (meta.coins || 0) + r.coins;
     meta.gems = (meta.gems || 0) + r.gems;
     meta.claimedMilestones[wave] = true;
@@ -918,6 +921,20 @@ export function computeStats(state: State): Stats {
   if (pass.cardCoinMult) out.coinsPerKill = (out.coinsPerKill || 1) * pass.cardCoinMult;
   // Free Upgrades card adds to the effective free-upgrade chance.
   if (pass.cardFreeUp) out.cardFreeUp = pass.cardFreeUp;
+  // ---- passive COSMETIC buffs (unlocked tower/hud/background skins) ----
+  // Always-on, multiplicative, and composed on TOP of cards + labs (matching their "multiply the
+  // total so far" rule). Economy/wall-clock cosmetic buffs (coins / gems / lab speed) live in
+  // waves.ts / labs.ts; here we apply only the ones that land on a sim stat.
+  const cm = (key: string): number => cosmeticBuffMult(state.meta, key);
+  out.rangedDamage *= cm('rangedDamage');
+  out.fireRate *= cm('fireRate');
+  out.maxHp *= cm('maxHp');
+  out.critMult *= cm('critMult');
+  out.bounceChance *= cm('bounceChance');
+  out.goldFind *= cm('goldFind');
+  const rmul = cm('range');
+  out.range *= rmul;
+  out.rangeM *= rmul;
   return out;
 }
 

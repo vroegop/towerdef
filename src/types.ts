@@ -58,6 +58,9 @@ export interface Meta {
   labSlots: number;
   vials: number;
   lastCheckIn: number;
+  // selected cosmetic id per category (tower / hud / background). Unlock + passive buffs are derived
+  // live from src/sim/cosmetics.ts; only the chosen id is persisted here.
+  cosmetics?: Record<string, string>;
   ver: number;
 }
 
@@ -301,6 +304,7 @@ export interface HudHandlers {
   onClaimMilestone?: (wave: number) => boolean;
   onClaimAllMilestones?: () => boolean;
   onSetTier?: (t: number) => boolean;
+  onSelectCosmetic?: (kind: string, id: string) => boolean;
   onBuyCard?: () => CardDrawResult | null;
   onBuyCardSlot?: () => boolean;
   onSetActiveCard?: (slot: number, id: string | null) => boolean;

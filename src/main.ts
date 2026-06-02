@@ -9,6 +9,7 @@ import { createState } from './sim/state';
 import { migrateMeta, reconcileResearch, claimCheckIn, startResearch, cancelResearch, rushResearch, buyLabSlot, gameSpeed, LABS, MAX_SLOTS } from './sim/labs';
 import { buyRunUpgradeBulk, buyPermBulk, unlockGroup, claimMilestone, claimAllMilestones, buyCard, buyCardSlot, setActiveCard, FIRST_PERM_COST } from './sim/skills';
 import { MAX_TIER, tierUnlocked, coinsForRun } from './sim/waves';
+import { selectCosmetic, type CosmeticKind } from './sim/cosmetics';
 import { makeEnemy } from './sim/enemies';
 import { BULLET_SPEED, BULLET_R } from './sim/projectiles';
 import { Canvas2DRenderer } from './render/canvas2d';
@@ -67,6 +68,7 @@ function loadMeta(): Meta {
     labSlots: m.labSlots || 1,
     vials: m.vials || 0,
     lastCheckIn: m.lastCheckIn || Date.now(),
+    cosmetics: m.cosmetics && typeof m.cosmetics === 'object' ? m.cosmetics : {},
     ver: m.ver || 0,
   };
   return migrateMeta(meta);
@@ -125,6 +127,11 @@ const handlers: HudHandlers = {
     t = t | 0;
     if (t < 1 || t > MAX_TIER || !tierUnlocked(meta, t)) return false;
     meta.tier = t;
+    saveMeta();
+    return true;
+  },
+  onSelectCosmetic: (kind, id) => {
+    if (!selectCosmetic(meta, kind as CosmeticKind, id)) return false;
     saveMeta();
     return true;
   },

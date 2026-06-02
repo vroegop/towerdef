@@ -16,6 +16,8 @@ import {
   LABS, LAB_BY_ID, labLevel, labUnlocked, labsTabUnlocked, labCoinCost, labTimeSec, labAtMax, researchOf, researchRemaining,
   researchProgress, freeSlots, rushVialCost, labSlotCost, MAX_SLOTS, checkInPending, CHECKIN_VIALS, CHECKIN_GEMS,
 } from '../sim/labs';
+import { cosmeticsOf, isCosmeticUnlocked, selectedCosmeticId, buffText, upgradeBuffMult, TOWER_UNLOCK_WAVE } from '../sim/cosmetics';
+import { drawTowerSkin } from '../render/towers';
 
 // The HUD is a single themeable core: identical structure + wiring for every theme, restyled
 // by a scoping class (`theme.cls`) + an injected override stylesheet (`theme.css`).
@@ -164,6 +166,9 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     return String(n);
   };
   const sumPerm = (meta: Meta): number => Object.values((meta && meta.perm) || {}).reduce((a, b) => a + b, 0);
+  // An upgrade's DISPLAYED value WITH any always-on cosmetic buff for that stat folded in, so the
+  // menu shows the real total (e.g. Attack Speed ×1.10). upgradeBuffMult is 1 for unbuffed stats.
+  const buffedVal = (meta: Meta, up: UpgradeDef, level: number): number => up.value(level) * upgradeBuffMult(meta, up.id);
 
   // gradient used to fill chromatic (max-tier) stars
   root.insertAdjacentHTML(
@@ -600,7 +605,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         const r = rowEls[u.id];
         if (!r) continue;
         const bought = boughtOf(s, u.id);
-        r.cur.textContent = u.fmt(u.value(bought));
+        r.cur.textContent = u.fmt(buffedVal(s.meta, u, bought));
         // LOCKED skills: disabled, lock glyph, not buyable in-run (unlock is Workshop-only).
         if (!isUnlocked(s.meta, u.id)) {
           r.lv.innerHTML = icon('lock', 13);
@@ -624,7 +629,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
           const plan = runBulkPlan(s, u.id, qty);
           // show the price you'd actually pay: the full batch for a fixed qty, the affordable prefix for Max.
           const shown = qty === 'max' ? plan.cost : plan.full;
-          r.nxt.textContent = u.fmt(u.value(Math.min(u.max, bought + Math.max(1, plan.count))));
+          r.nxt.textContent = u.fmt(buffedVal(s.meta, u, Math.min(u.max, bought + Math.max(1, plan.count))));
           r.cost.textContent = fmt(shown) + ' g';
           r.btn.classList.toggle('cant', !plan.canBuy);
         }
@@ -844,9 +849,9 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       '</div>' +
       (u.tip ? '<div class="upd-tip">' + tipOf(u) + '</div>' : '') +
       '<div class="upd-stats">' +
-        '<div class="upd-row"><span>Current</span><b>' + u.fmt(u.value(bought)) + '</b></div>' +
-        (!maxed ? '<div class="upd-row"><span>Next level</span><b>' + u.fmt(u.value(bought + 1)) + '</b></div>' : '') +
-        (!maxed ? '<div class="upd-row"><span>At max (' + cap + ')</span><b>' + u.fmt(u.value(cap)) + '</b></div>' : '') +
+        '<div class="upd-row"><span>Current</span><b>' + u.fmt(buffedVal(lastMeta, u, bought)) + '</b></div>' +
+        (!maxed ? '<div class="upd-row"><span>Next level</span><b>' + u.fmt(buffedVal(lastMeta, u, bought + 1)) + '</b></div>' : '') +
+        (!maxed ? '<div class="upd-row"><span>At max (' + cap + ')</span><b>' + u.fmt(buffedVal(lastMeta, u, cap)) + '</b></div>' : '') +
       '</div>' +
       '<button class="upd-buy' + (maxed ? ' maxed' : '') + (afford && !maxed ? '' : ' cant') + '" id="h-upd-buy"' + (maxed ? ' disabled' : '') + '>' +
         (maxed ? 'Maxed out' : cost + ' ' + coinsIc(14) + ' — Buy') +
@@ -980,32 +985,24 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     menuTabsEl.appendChild(b);
   });
 
+  // The menu "character sheet" tower: draws the player's selected tower skin, animated via a
+  // self-cancelling rAF loop (stops as soon as the canvas leaves the DOM on a re-render / tab swap).
   function drawAvatar(canvas: HTMLCanvasElement, meta: Meta): void {
     const ctx = canvas.getContext('2d')!,
       W = canvas.width,
       H = canvas.height,
       cx = W / 2,
-      cy = H / 2;
-    ctx.clearRect(0, 0, W, H);
-    const total = sumPerm(meta);
-    for (let i = 0; i < Math.min(total, 6); i++) {
-      ctx.strokeStyle = 'rgba(74,168,255,' + (0.35 - i * 0.04) + ')';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 46 + i * 7, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    ctx.fillStyle = 'rgba(74,168,255,.18)';
-    ctx.strokeStyle = '#4aa8ff';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 38, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = '#4aa8ff';
-    ctx.beginPath();
-    ctx.arc(cx, cy, 12, 0, Math.PI * 2);
-    ctx.fill();
+      cy = H / 2,
+      R = Math.min(W, H) * 0.34;
+    const id = selectedCosmeticId(meta, 'tower');
+    const start = performance.now();
+    const frame = (): void => {
+      if (!canvas.isConnected) return; // canvas was replaced → let this loop die
+      ctx.clearRect(0, 0, W, H);
+      drawTowerSkin(ctx, id, cx, cy, R, (performance.now() - start) / 1000);
+      requestAnimationFrame(frame);
+    };
+    frame();
   }
 
   function setSpotlight(show: boolean, targetEl?: HTMLElement | null, text?: string): void {
@@ -1072,7 +1069,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       for (const sid of g.skills) {
         const up = UP_BY_ID[sid];
         const bought = permBought(meta, up.id);
-        const cur = up.fmt(up.value(bought));
+        const cur = up.fmt(buffedVal(meta, up, bought));
         const maxed = permAtMax(meta, up.id);
         const qty = bulkSelOf(permBulkSel, meta, up.id);
         const plan = permBulkPlan(meta, up.id, qty);
@@ -1204,6 +1201,52 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     );
   }
 
+  // The tower picker: every tower skin with its always-on buff, locked until its tier milestone.
+  // Selecting one is purely cosmetic — the buff already applies the moment a tower is UNLOCKED.
+  function renderTowerPicker(): void {
+    const meta = lastMeta!;
+    const towers = cosmeticsOf('tower');
+    const selId = selectedCosmeticId(meta, 'tower');
+    const unlock = TOWER_UNLOCK_WAVE.toLocaleString();
+    let tiles = '';
+    for (const c of towers) {
+      const unlocked = isCosmeticUnlocked(meta, c.id),
+        sel = c.id === selId;
+      const foot = sel ? 'Equipped' : unlocked ? 'Tap to equip' : 'Reach wave ' + unlock + ' · Tier ' + c.tier;
+      tiles +=
+        '<button class="twtile' + (sel ? ' sel' : '') + (unlocked ? '' : ' locked') + '" data-tw="' + c.id + '"' +
+        (unlocked ? '' : ' disabled') + '>' +
+        '<canvas class="twthumb" width="88" height="88" data-twc="' + c.id + '"></canvas>' +
+        '<span class="twname">' + c.name + '</span>' +
+        '<span class="twbuff">' + buffText(c.buff) + '</span>' +
+        '<span class="twfoot">' + foot + '</span>' +
+        '</button>';
+    }
+    modalInner.innerHTML =
+      '<button class="close" id="h-tw-close" title="Close">' + icon('close', 18) + '</button>' +
+      '<h2>Towers</h2>' +
+      '<p class="msnote">Reach wave ' + unlock + ' in a tier to unlock that tier’s tower. Every unlocked tower grants a permanent, always-on bonus — even when it isn’t the one you’re using.</p>' +
+      '<div class="twgrid">' + tiles + '</div>';
+    modalInner.querySelectorAll<HTMLCanvasElement>('canvas[data-twc]').forEach((cv) => {
+      const ctx = cv.getContext('2d')!,
+        id = cv.dataset.twc!;
+      drawTowerSkin(ctx, id, cv.width / 2, cv.height / 2, Math.min(cv.width, cv.height) * 0.34, 0.7);
+      if (!isCosmeticUnlocked(meta, id)) {
+        ctx.fillStyle = 'rgba(20,14,6,0.55)';
+        ctx.fillRect(0, 0, cv.width, cv.height);
+      }
+    });
+    $('#h-tw-close').addEventListener('click', () => modal.classList.add('hide'));
+    modalInner.querySelectorAll<HTMLElement>('[data-tw]').forEach((b) =>
+      b.addEventListener('click', () => {
+        if (handlers.onSelectCosmetic && handlers.onSelectCosmetic('tower', b.dataset.tw!)) {
+          renderTowerPicker(); // refresh the equipped highlight
+          renderMenu(); // update the hero-tab avatar
+        }
+      }),
+    );
+  }
+
   function renderMenu(): void {
     const meta = lastMeta!,
       tutoring = sumPerm(meta) === 0;
@@ -1293,6 +1336,16 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
 
     if (menuTab === 'hero') {
       drawAvatar($<HTMLCanvasElement>('#h-avatar'), meta);
+      const af = menuContent.querySelector<HTMLElement>('.avatar-frame');
+      if (af) {
+        af.classList.add('clickable');
+        af.title = 'Change tower';
+        af.addEventListener('click', () => {
+          renderTowerPicker();
+          modal.classList.remove('hide');
+          setSpotlight(false);
+        });
+      }
       $('#h-ms').addEventListener('click', () => {
         renderMilestones();
         modal.classList.remove('hide');

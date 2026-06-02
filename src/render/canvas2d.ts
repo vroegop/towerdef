@@ -5,6 +5,8 @@
    freezes the decorative clock so every effect holds still for inspection. */
 import type { Settings, State } from '../types';
 import { BASE_RANGE_M, PX_PER_METER } from '../sim/skills';
+import { selectedCosmeticId } from '../sim/cosmetics';
+import { drawTowerSkin } from './towers';
 
 const RANGE_PAD = 0.1; // fraction of range kept as padding outside the ring so bounced enemies stay visible
 const BOTTOM_MARGIN = 0.4; // bottom 40% of the screen is reserved (upgrade menus) — tower stays in the top 60%
@@ -102,59 +104,6 @@ function drawShadow(ctx: Ctx, x: number, y: number, r: number): void {
   ctx.beginPath();
   ctx.ellipse(x, y + r * 0.55, r * 1.05, r * 0.45, 0, 0, Math.PI * 2);
   ctx.fill();
-}
-
-// The hero, rendered as a top-down stone tower: shadow, stone ring, crenellations, and a pulsing
-// magic core in the accent colour (gold while Rapid Fire is up, else arcane blue).
-function drawTower(ctx: Ctx, x: number, y: number, r: number, accent: string, t: number): void {
-  ctx.fillStyle = 'rgba(30,20,8,0.4)';
-  ctx.beginPath();
-  ctx.ellipse(x, y + r * 0.45, r * 1.2, r * 0.55, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // stone body, lit from the top-left
-  const stone = ctx.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.15, x, y, r);
-  stone.addColorStop(0, '#928677');
-  stone.addColorStop(1, '#4a4339');
-  ctx.fillStyle = stone;
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fill();
-  // battlements around the rim
-  const merlons = 10;
-  ctx.fillStyle = '#5b5347';
-  for (let i = 0; i < merlons; i++) {
-    const a = (i / merlons) * Math.PI * 2;
-    ctx.save();
-    ctx.translate(x + Math.cos(a) * r, y + Math.sin(a) * r);
-    ctx.rotate(a);
-    ctx.fillRect(-r * 0.11, -r * 0.11, r * 0.22, r * 0.22);
-    ctx.restore();
-  }
-  // inner wall
-  ctx.lineWidth = Math.max(2, r * 0.1);
-  ctx.strokeStyle = 'rgba(38,26,10,0.65)';
-  ctx.beginPath();
-  ctx.arc(x, y, r * 0.7, 0, Math.PI * 2);
-  ctx.stroke();
-  // pulsing magic core
-  const pulse = 0.82 + 0.18 * Math.sin(t * 3);
-  ctx.shadowColor = accent;
-  ctx.shadowBlur = r * 0.9 * pulse;
-  const core = ctx.createRadialGradient(x - r * 0.12, y - r * 0.12, r * 0.04, x, y, r * 0.52);
-  core.addColorStop(0, '#ffffff');
-  core.addColorStop(0.45, accent);
-  core.addColorStop(1, accent);
-  ctx.fillStyle = core;
-  ctx.beginPath();
-  ctx.arc(x, y, r * 0.5 * pulse, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  // dark outer rim seats it on the parchment
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = 'rgba(38,26,10,0.85)';
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.stroke();
 }
 
 // A mote orbiting a melee enemy. Drawn twice per orbit: dim+small when behind the body, then
@@ -485,8 +434,21 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
       ctx.arc(hsx, hsy, range * scale, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
-      const heroCol = s.run && s.run.rapidT > 0 ? '#ffd24a' : '#4aa8ff';
-      drawTower(ctx, hsx, hsy, h.r * scale, heroCol, animClock);
+      // the hero IS the tower: draw the player's selected skin (shadow-free) at the arena centre.
+      drawTowerSkin(ctx, selectedCosmeticId(s.meta, 'tower'), hsx, hsy, h.r * scale, animClock);
+      // rapid-fire cue (replaces the old gold-core tint): a pulsing gold ring while Burst is up.
+      if (s.run && s.run.rapidT > 0) {
+        const pr = 0.85 + 0.15 * Math.sin(animClock * 8);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,210,74,' + (0.6 * pr).toFixed(2) + ')';
+        ctx.shadowColor = '#ffd24a';
+        ctx.shadowBlur = 12 * pr;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(hsx, hsy, h.r * scale * 1.14, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
       const frac = h.hpMax > 0 ? h.hp / h.hpMax : 0;
       ctx.strokeStyle = frac > 0.3 ? '#3ddc84' : '#ff5d6c';
       ctx.lineWidth = 3;

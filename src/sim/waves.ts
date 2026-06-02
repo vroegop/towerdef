@@ -3,6 +3,7 @@
    seconds. screenCap limits CONCURRENT enemies, so a bigger wave only adds pressure when
    the arena isn't already full. Strength/speed baselines rise with wave number. */
 import type { Meta, Rng, State } from '../types';
+import { cosmeticBuffMult } from './cosmetics';
 
 export const WAVE = {
   interval: 30, // seconds between wave starts
@@ -92,7 +93,7 @@ export function waveSpeed(n: number): number {
 
 // Game tiers (distinct from enemy TIERS strength classes): each tier doubles the
 // *effective* wave number, so tier 2 wave 4 plays like wave 8, tier 3 like wave 16, etc.
-export const MAX_TIER = 5;
+export const MAX_TIER = 10;
 export const TIER_UNLOCK_WAVE = 300; // reach this wave in a tier to unlock the next one
 export function tierDifficulty(tier: number): number {
   return Math.pow(2, (tier || 1) - 1);
@@ -105,7 +106,9 @@ export function coinMult(tier: number): number {
 // this out and the in-run stats panel previews it, so the preview can never drift from the reward.
 export function coinsForRun(state: State, tier: number): number {
   const e = state.econ;
-  return Math.max(1, Math.round(((state.wave.maxWave || 0) + (e.bonusCoins || 0)) * coinMult(tier)));
+  // ×coinMult(tier) for the tier baseline, then ×the passive cosmetic coin buff (e.g. Cleric's Sanctum).
+  const cos = cosmeticBuffMult(state.meta, 'coinMult');
+  return Math.max(1, Math.round(((state.wave.maxWave || 0) + (e.bonusCoins || 0)) * coinMult(tier) * cos));
 }
 // Tier 1 is always open; tier N>1 needs TIER_UNLOCK_WAVE reached in the tier below.
 export function tierUnlocked(meta: Meta, tier: number): boolean {

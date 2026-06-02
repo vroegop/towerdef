@@ -11,6 +11,7 @@
    halves always advance together. computeStats in skills.ts consumes the existing
    labScaleMults / labCapBonus hooks unchanged. */
 import type { LabCurve, LabDef, Meta, Research } from '../types';
+import { cosmeticBuffMult } from './cosmetics';
 
 // ---- exact per-level tables (OUR-level indexing: point [L-1, x] = price/time to reach level L) ----
 // `time` is wall-clock seconds; level 1 (point 0) is instant. `cost` is coins. Linear-interpolated.
@@ -96,7 +97,7 @@ export function researchRemaining(meta: Meta, id: string, nowMs: number): number
 export function researchProgress(meta: Meta, id: string, nowMs: number): number {
   const r = researchOf(meta, id);
   if (!r) return 0;
-  const total = LAB_BY_ID[id].time.at(lvl(meta, id)) * 1000;
+  const total = labTimeSec(meta, id) * 1000; // buffed duration, so progress matches the real timer
   return total > 0 ? Math.max(0, Math.min(1, 1 - (r.endsAt - nowMs) / total)) : 1;
 }
 export function labAtMax(meta: Meta, id: string): boolean {
@@ -107,11 +108,13 @@ export function labCoinCost(meta: Meta, id: string): number {
   const L = LAB_BY_ID[id];
   return L ? L.coin.at(lvl(meta, id)) : 0;
 }
-// wall-clock seconds for the next level (level 1 is instant → 0).
+// wall-clock seconds for the next level (level 1 is instant → 0). Divided by the passive lab-speed
+// cosmetic buff (e.g. Arcane Obelisk), so faster research flows through both the display and the timer.
 export function labTimeSec(meta: Meta, id: string): number {
   const L = LAB_BY_ID[id];
   if (!L) return 0;
-  return Math.max(0, Math.round(L.time.at(lvl(meta, id))));
+  const speed = cosmeticBuffMult(meta, 'labSpeed');
+  return Math.max(0, Math.round(L.time.at(lvl(meta, id)) / speed));
 }
 
 // ---- research lifecycle (wall-clock; meta-only; safe to advance from any delta) ----
@@ -214,7 +217,7 @@ export function claimCheckIn(meta: Meta, nowMs: number): { claims: number; vials
   const n = checkInPending(meta, nowMs);
   if (n <= 0) return null;
   const vials = n * CHECKIN_VIALS,
-    gems = n * CHECKIN_GEMS;
+    gems = Math.round(n * CHECKIN_GEMS * cosmeticBuffMult(meta, 'gemMult')); // ×gem cosmetic buff
   meta.vials = (meta.vials || 0) + vials;
   meta.gems = (meta.gems || 0) + gems;
   meta.lastCheckIn = nowMs;
@@ -243,6 +246,7 @@ export function migrateMeta(meta: Meta): Meta {
   if (meta.vials == null) meta.vials = 0;
   if (meta.cardSlots == null) meta.cardSlots = 1;
   if (!Array.isArray(meta.activeCards)) meta.activeCards = [];
+  if (meta.cosmetics == null || typeof meta.cosmetics !== 'object') meta.cosmetics = {};
   meta.ver = META_VER;
   return meta;
 }
