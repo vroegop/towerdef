@@ -7,6 +7,7 @@ import type { Settings, State } from '../types';
 import { BASE_RANGE_M, PX_PER_METER } from '../sim/skills';
 
 const RANGE_PAD = 0.1; // fraction of range kept as padding outside the ring so bounced enemies stay visible
+const BOTTOM_MARGIN = 0.4; // bottom 40% of the screen is reserved (upgrade menus) — tower stays in the top 60%
 
 type Ctx = CanvasRenderingContext2D;
 interface Spark { x: number; y: number; vx: number; vy: number; life: number; color: string }
@@ -95,6 +96,130 @@ function drawHealthBar(ctx: Ctx, cx: number, topY: number, w: number, h: number,
   }
 }
 
+// Soft contact shadow under a token — the main cue that sells "3D body on a flat map".
+function drawShadow(ctx: Ctx, x: number, y: number, r: number): void {
+  ctx.fillStyle = 'rgba(40,28,10,0.28)';
+  ctx.beginPath();
+  ctx.ellipse(x, y + r * 0.55, r * 1.05, r * 0.45, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// The hero, rendered as a top-down stone tower: shadow, stone ring, crenellations, and a pulsing
+// magic core in the accent colour (gold while Rapid Fire is up, else arcane blue).
+function drawTower(ctx: Ctx, x: number, y: number, r: number, accent: string, t: number): void {
+  ctx.fillStyle = 'rgba(30,20,8,0.4)';
+  ctx.beginPath();
+  ctx.ellipse(x, y + r * 0.45, r * 1.2, r * 0.55, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // stone body, lit from the top-left
+  const stone = ctx.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.15, x, y, r);
+  stone.addColorStop(0, '#928677');
+  stone.addColorStop(1, '#4a4339');
+  ctx.fillStyle = stone;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  // battlements around the rim
+  const merlons = 10;
+  ctx.fillStyle = '#5b5347';
+  for (let i = 0; i < merlons; i++) {
+    const a = (i / merlons) * Math.PI * 2;
+    ctx.save();
+    ctx.translate(x + Math.cos(a) * r, y + Math.sin(a) * r);
+    ctx.rotate(a);
+    ctx.fillRect(-r * 0.11, -r * 0.11, r * 0.22, r * 0.22);
+    ctx.restore();
+  }
+  // inner wall
+  ctx.lineWidth = Math.max(2, r * 0.1);
+  ctx.strokeStyle = 'rgba(38,26,10,0.65)';
+  ctx.beginPath();
+  ctx.arc(x, y, r * 0.7, 0, Math.PI * 2);
+  ctx.stroke();
+  // pulsing magic core
+  const pulse = 0.82 + 0.18 * Math.sin(t * 3);
+  ctx.shadowColor = accent;
+  ctx.shadowBlur = r * 0.9 * pulse;
+  const core = ctx.createRadialGradient(x - r * 0.12, y - r * 0.12, r * 0.04, x, y, r * 0.52);
+  core.addColorStop(0, '#ffffff');
+  core.addColorStop(0.45, accent);
+  core.addColorStop(1, accent);
+  ctx.fillStyle = core;
+  ctx.beginPath();
+  ctx.arc(x, y, r * 0.5 * pulse, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  // dark outer rim seats it on the parchment
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(38,26,10,0.85)';
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+// A mote orbiting a melee enemy. Drawn twice per orbit: dim+small when behind the body, then
+// bright+large when in front — reading as a particle circling a 3D object.
+function drawMote(ctx: Ctx, ox: number, oy: number, pr: number, color: string, front: boolean): void {
+  ctx.globalAlpha = front ? 1 : 0.45;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = front ? pr * 2.6 : pr;
+  const g = ctx.createRadialGradient(ox, oy, 0, ox, oy, pr);
+  g.addColorStop(0, '#ffffff');
+  g.addColorStop(1, color);
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(ox, oy, pr, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+}
+
+// Speed streaks trailing a triangle (ranged), so it reads as fast without actually moving faster.
+function drawWind(ctx: Ctx, x: number, y: number, r: number, facing: number, t: number, id: number): void {
+  const bx = Math.cos(facing + Math.PI),
+    by = Math.sin(facing + Math.PI); // trailing direction
+  const px = -by,
+    py = bx;
+  ctx.strokeStyle = 'rgba(190,225,255,0.5)';
+  ctx.lineWidth = Math.max(1, r * 0.14);
+  for (let i = 0; i < 3; i++) {
+    const off = (i - 1) * r * 0.5;
+    const phase = (t * 5 + i * 0.6 + (id % 13) * 0.27) % 1; // 0→1 sweep out, then repeat
+    const len = r * (1 + phase * 1.4);
+    const sx = x + px * off + bx * r * 0.6,
+      sy = y + py * off + by * r * 0.6;
+    ctx.globalAlpha = 0.6 * (1 - phase);
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + bx * len, sy + by * len);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// A small metal shield on the tank's leading edge, facing the tower it is marching on.
+function drawShield(ctx: Ctx, x: number, y: number, r: number, facing: number): void {
+  ctx.save();
+  ctx.translate(x + Math.cos(facing) * r * 1.05, y + Math.sin(facing) * r * 1.05);
+  ctx.rotate(facing + Math.PI / 2);
+  const grad = ctx.createLinearGradient(-r * 0.85, 0, r * 0.85, 0);
+  grad.addColorStop(0, '#6b7785');
+  grad.addColorStop(0.5, '#cdd6df');
+  grad.addColorStop(1, '#6b7785');
+  ctx.fillStyle = grad;
+  ctx.strokeStyle = 'rgba(38,26,10,0.85)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 0.85, r * 0.32, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#eef2f6';
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<Settings>): Renderer {
   const ctx = canvas.getContext('2d') as Ctx;
   const cfg: Partial<Settings> = settings || {};
@@ -112,6 +237,7 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
   let prevHp: number | null = null;
   let hurt = 0;
   let shakeT = 0;
+  let animClock = 0; // render-only clock for cosmetic effects (orbiting motes, wind, core pulse)
   let lastTs = performance.now();
   const HERO_ID = 0;
 
@@ -171,6 +297,7 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     const now = performance.now(),
       rdt = paused ? 0 : Math.min((now - lastTs) / 1000, 0.05);
     lastTs = now;
+    animClock += rdt;
     if (alpha == null) alpha = 1;
     const tickJump = s.tick - lastTick,
       resync = tickJump < 0 || tickJump > 90;
@@ -191,9 +318,12 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     const W = canvas.clientWidth,
       H = canvas.clientHeight;
     const range = (s.hero && s.hero.range) || BASE_RANGE_M * PX_PER_METER;
-    // Fit the range ring plus 10% padding into the smaller screen dimension on any aspect ratio.
-    // The extra range*RANGE_PAD on each side keeps bounced enemies visible outside the ring.
-    const scale = Math.min(W, H) / (2 * range * (1 + RANGE_PAD));
+    // The bottom 40% of the screen is reserved as margin (the upgrade menus live there), so the
+    // tower never sits down among them. We fit the range ring + 10% padding into the width AND the
+    // TOP 60% of the height, then centre the tower within that top band. Slight ring overlap into
+    // the bottom band is fine; the tower body stays up top.
+    const availH = H * (1 - BOTTOM_MARGIN);
+    const scale = Math.min(W, availH) / (2 * range * (1 + RANGE_PAD));
     const hp = ipos(HERO_ID, s.hero.x, s.hero.y);
     let shx = 0,
       shy = 0;
@@ -203,16 +333,10 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
       shy = (Math.random() - 0.5) * amp;
       shakeT = Math.max(0, shakeT - rdt);
     }
-    let ox = W / 2 - hp.x * scale + shx,
-      oy = H / 2 - hp.y * scale + shy;
-    // Clamp camera to arena edges only when the arena is larger than the screen on that axis.
-    // On extreme aspect ratios the arena may not fill the screen; centering on the hero is correct.
-    const aLeft = hp.x - s.arena.w / 2,
-      aTop = hp.y - s.arena.h / 2;
-    if (s.arena.w * scale > W)
-      ox = Math.min(-aLeft * scale, Math.max(W - (aLeft + s.arena.w) * scale, ox));
-    if (s.arena.h * scale > H)
-      oy = Math.min(-aTop * scale, Math.max(H - (aTop + s.arena.h) * scale, oy));
+    // Hero is a stationary tower at the arena centre, and the arena always exceeds the viewport, so
+    // no edge-clamping is needed — we just centre horizontally and within the top 60% vertically.
+    const ox = W / 2 - hp.x * scale + shx,
+      oy = availH / 2 - hp.y * scale + shy;
     const tx = (x: number): number => ox + x * scale,
       ty = (y: number): number => oy + y * scale;
 
@@ -266,7 +390,28 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
         esx = tx(ep.x),
         esy = ty(ep.y);
       const rot = e.shape === 'triangle' ? e.facing + Math.PI / 2 : 0;
-      drawShape(ctx, e.shape, esx, esy, e.r * scale, col, rot, e.hitFlash);
+      const er = e.r * scale;
+      // Effects use a floored radius so the flourishes stay readable on the now-tiny bodies.
+      const fxR = Math.max(er, 5);
+      drawShadow(ctx, esx, esy, er);
+      // Normal (melee) enemies get a mote orbiting in pseudo-3D: behind the body it's dim+small
+      // (drawn first, so the body occludes it), in front it's bright+large (drawn after).
+      let mote: { ox: number; oy: number; pr: number; front: boolean } | null = null;
+      if (e.type === 'melee') {
+        const a = animClock * 2.6 + (e.id % 97) * 0.65;
+        const depth = Math.sin(a); // <0 behind, ≥0 in front
+        mote = {
+          ox: esx + Math.cos(a) * fxR * 1.8,
+          oy: esy + Math.sin(a) * fxR * 0.75, // squashed ellipse → perspective
+          pr: fxR * 0.4 * (0.55 + 0.45 * (depth * 0.5 + 0.5)),
+          front: depth >= 0,
+        };
+        if (!mote.front) drawMote(ctx, mote.ox, mote.oy, mote.pr, col, false);
+      }
+      drawShape(ctx, e.shape, esx, esy, er, col, rot, e.hitFlash);
+      if (mote && mote.front) drawMote(ctx, mote.ox, mote.oy, mote.pr, col, true);
+      if (e.shape === 'triangle') drawWind(ctx, esx, esy, fxR, e.facing, animClock, e.id);
+      if (e.type === 'tank') drawShield(ctx, esx, esy, fxR, e.facing);
       const prev = seen.get(e.id) || 0;
       if (e.hitFlash > 0 && prev <= 0) {
         spawnSparks(esx, esy, col);
@@ -297,7 +442,7 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     for (const p of s.projectiles) {
       const pp = ipos(p.id, p.x, p.y);
       ctx.beginPath();
-      ctx.arc(tx(pp.x), ty(pp.y), Math.max(1.5, p.r * 0.5 * scale), 0, Math.PI * 2);
+      ctx.arc(tx(pp.x), ty(pp.y), Math.max(1, p.r * 0.32 * scale), 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -341,7 +486,7 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
       ctx.stroke();
       ctx.setLineDash([]);
       const heroCol = s.run && s.run.rapidT > 0 ? '#ffd24a' : '#4aa8ff';
-      drawShape(ctx, 'circle', hsx, hsy, h.r * scale, heroCol, 0, 0);
+      drawTower(ctx, hsx, hsy, h.r * scale, heroCol, animClock);
       const frac = h.hpMax > 0 ? h.hp / h.hpMax : 0;
       ctx.strokeStyle = frac > 0.3 ? '#3ddc84' : '#ff5d6c';
       ctx.lineWidth = 3;
