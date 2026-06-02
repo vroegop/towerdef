@@ -708,6 +708,39 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   }
   // Tapping the enemy panel: wave timing + a per-type spec table (spawn %, HP, ATK, speed, mass).
   const ENEMY_LABELS: Record<string, string> = { melee: 'Grunt', ranged: 'Archer', fast: 'Runner', tank: 'Tank', splitter: 'Splitter', boss: 'Boss' };
+  // A small colour-coded "jelly" glyph per enemy type — the silhouette mirrors the in-game body
+  // (melee=marble, fast=kite, ranged=prism, tank=halo, boss=frogspawn, splitter=trefoil) and the
+  // colour is read live from the registry, so a recolour flows through to this modal automatically.
+  function enemyIcon(type: string, size = 16): string {
+    const c = (TYPES[type] && TYPES[type].color) || '#ff6b6b';
+    const hl = '<circle cx="9" cy="9" r="2.3" fill="#fff" opacity=".6"/>';
+    let body: string;
+    switch (type) {
+      case 'fast': // kite / rhombus
+        body = '<path d="M12 2.5 20.5 12 12 21.5 3.5 12Z" fill="' + c + '"/>' + hl;
+        break;
+      case 'ranged': // prism / hexagon
+        body = '<path d="M12 2.4 20.8 7.2V16.8L12 21.6 3.2 16.8V7.2Z" fill="' + c + '"/>' + hl;
+        break;
+      case 'tank': // halo / ring (even-odd punches the hole)
+        body = '<path fill="' + c + '" fill-rule="evenodd" d="M3.5 12a8.5 8.5 0 1 1 17 0 8.5 8.5 0 1 1 -17 0Z M8.2 12a3.8 3.8 0 1 0 7.6 0 3.8 3.8 0 1 0 -7.6 0Z"/>' +
+          '<circle cx="8.4" cy="8.4" r="1.6" fill="#fff" opacity=".55"/>';
+        break;
+      case 'boss': // frogspawn / bubble cluster
+        body = '<circle cx="10" cy="13.5" r="6.2" fill="' + c + '"/><circle cx="16.4" cy="9" r="4.2" fill="' + c + '"/>' +
+          '<circle cx="17.4" cy="16.4" r="3.4" fill="' + c + '"/><circle cx="8" cy="11" r="1.7" fill="#fff" opacity=".6"/>';
+        break;
+      case 'splitter': // trefoil / clover
+        body = '<circle cx="12" cy="8" r="5.2" fill="' + c + '"/><circle cx="7.8" cy="15" r="5.2" fill="' + c + '"/>' +
+          '<circle cx="16.2" cy="15" r="5.2" fill="' + c + '"/><circle cx="10.2" cy="6.8" r="1.6" fill="#fff" opacity=".6"/>';
+        break;
+      case 'melee':
+      default: // marble / glass sphere
+        body = '<circle cx="12" cy="12" r="8.6" fill="' + c + '"/>' + hl;
+        break;
+    }
+    return '<svg class="eicon" width="' + size + '" height="' + size + '" viewBox="0 0 24 24">' + body + '</svg>';
+  }
   function openEnemyStats(): void {
     const s = lastS;
     if (!s) return;
@@ -723,7 +756,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     for (const t of ['melee', 'ranged', 'fast', 'tank', 'splitter', 'boss']) {
       const d = TYPES[t];
       if (!d) continue;
-      rows += '<tr><td>' + ENEMY_LABELS[t] + '</td><td>' + Math.round((ch[t] || 0) * 100) + '%</td><td>' +
+      rows += '<tr><td><span class="etype">' + enemyIcon(t) + ENEMY_LABELS[t] + '</span></td><td>' + Math.round((ch[t] || 0) * 100) + '%</td><td>' +
         abbr(Math.max(1, Math.round(d.hp * str))) + '</td><td>' + abbr(Math.max(1, Math.round(d.dmg * str))) +
         '</td><td>' + Math.round(d.speed * spd) + '</td><td>' + d.mass + '</td></tr>';
     }

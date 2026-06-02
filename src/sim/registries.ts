@@ -22,6 +22,6 @@ export const TYPES: Record<string, EnemyTypeDef> = {
   ranged: { shape: 'triangle', behavior: 'bounce', color: '#4aa8ff', hp: 1, dmg: 1, speed: 46, range: 150, r: 2.2, mass: 1, coinValue: 2 },
   boss: { shape: 'hexagon', behavior: 'stick', color: '#e64cff', hp: 20, dmg: 3, speed: 9.2, range: 0, r: 4.4, mass: 1, coinValue: 5 },
   fast: { shape: 'diamond', behavior: 'stick', color: '#37d7ff', hp: 1, dmg: 0.6, speed: 92, range: 0, r: 1.8, mass: 1, coinValue: 2 }, // swarm → attack speed / multishot
-  tank: { shape: 'square', behavior: 'stick', color: '#9aa7b3', hp: 5, dmg: 1.6, speed: 23, range: 0, r: 3.4, mass: 1, coinValue: 4 }, // wall → raw damage / amp
-  splitter: { shape: 'pentagon', behavior: 'stick', color: '#ff5db0', hp: 2, dmg: 1, speed: 40, range: 0, r: 2.6, mass: 1, splits: 4, coinValue: 4 }, // → AoE (not spawned by waves; kept for the split mechanic)
+  tank: { shape: 'square', behavior: 'stick', color: '#ffb3d1', hp: 5, dmg: 1.6, speed: 23, range: 0, r: 3.4, mass: 1, coinValue: 4 }, // wall → raw damage / amp
+  splitter: { shape: 'pentagon', behavior: 'stick', color: '#ff8a33', hp: 2, dmg: 1, speed: 40, range: 0, r: 2.6, mass: 1, splits: 4, coinValue: 4 }, // → AoE (not spawned by waves; kept for the split mechanic)
 };
