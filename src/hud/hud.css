@@ -26,6 +26,12 @@
 .hud .cur b { color: #d8deea; }
 .hud .cur.gold b { color: #ffd24a; min-width: 5ch; display: inline-block; }
 
+/* battle-speed toggle: an icon + value pill in the top bar, just left of the menu toggle */
+.hud .speedbtn { flex: 0 0 auto; gap: 4px; border-radius: 999px; padding: 3px 9px;
+  background: rgba(255,255,255,.07); font: 700 12px system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.hud .speedbtn:hover { background: rgba(255,255,255,.14); }
+.hud .speedbtn b { color: #d8deea; min-width: 2.6ch; text-align: center; }
+
 /* ---- two stat panels as the tab dock's top row (Tower-style): left = our stats, right = enemy +
    wave. Each is a button → opens a details modal. No text labels; icons + numbers only. ---- */
 .hud .statline { display: flex; gap: 8px; max-width: 640px; margin: 0 auto; padding: 6px 12px 0; }

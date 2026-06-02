@@ -58,6 +58,7 @@ export interface Meta {
   labSlots: number;
   vials: number;
   lastCheckIn: number;
+  gameSpeed?: number; // player-chosen battle speed (0.5/1 free; higher tiers unlocked by the Game Speed lab)
   ver: number;
 }
 
@@ -308,6 +309,7 @@ export interface HudHandlers {
   onCancelResearch?: (id: string) => boolean;
   onRushResearch?: (id: string) => boolean;
   onBuyLabSlot?: () => boolean;
+  onSetGameSpeed?: (speed: number) => number; // set the battle speed; returns the value now in effect
   onReconcileLabs?: () => string[] | void;
   onCheckIn?: () => unknown;
   onStartRun?: () => void;

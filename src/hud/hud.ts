@@ -15,6 +15,7 @@ import {
 import {
   LABS, LAB_BY_ID, labLevel, labUnlocked, labsTabUnlocked, labCoinCost, labTimeSec, labAtMax, researchOf, researchRemaining,
   researchProgress, freeSlots, rushVialCost, labSlotCost, MAX_SLOTS, checkInPending, CHECKIN_VIALS, CHECKIN_GEMS,
+  availableSpeeds, gameSpeed, speedAtLevel,
 } from '../sim/labs';
 
 // The HUD is a single themeable core: identical structure + wiring for every theme, restyled
@@ -91,6 +92,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     '    <span class="cur" title="Gems">' + icon('gem', 14, 'gem') + '<b id="h-gems">0</b></span>' +
     '    <span class="cur" title="Vials">' + icon('vial', 14, 'vial') + '<b id="h-vials">0</b></span>' +
     '  </div>' +
+    // Battle-speed toggle: cycles the selectable speeds (0.5x/1x always; faster tiers via the Game Speed lab).
+    '  <button class="iconbtn speedbtn" id="h-speed" title="Battle speed">' + icon('ffwd', 15) + '<b id="h-speedval">1x</b></button>' +
     '  <button class="iconbtn menutoggle" id="h-menu-btn" title="Menu">' + icon('menu', 22) + '</button>' +
     '</div>' +
     // Persistent side menu: a narrow, one-icon-wide rail that opens from the menu toggle and stays
@@ -164,6 +167,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     return String(n);
   };
   const sumPerm = (meta: Meta): number => Object.values((meta && meta.perm) || {}).reduce((a, b) => a + b, 0);
+  // "0.5x" / "1x" / "2.5x" — drop the trailing ".0" on whole multipliers.
+  const fmtSpeed = (v: number): string => (Number.isInteger(v) ? String(v) : v.toFixed(1)) + 'x';
 
   // gradient used to fill chromatic (max-tier) stars
   root.insertAdjacentHTML(
@@ -542,6 +547,23 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     checkinFloat.classList.remove('hide');
   }
 
+  // ---- battle-speed toggle (top bar): cycles through the currently-selectable speeds ----
+  const curMeta = (): Meta | null => boundMeta || lastMeta || (lastS ? lastS.meta : null);
+  function refreshSpeedBtn(): void {
+    const m = curMeta();
+    const el = $('#h-speedval');
+    if (m && el) el.textContent = fmtSpeed(gameSpeed(m));
+  }
+  $('#h-speed').addEventListener('click', () => {
+    const m = curMeta();
+    if (!m) return;
+    const speeds = availableSpeeds(m);
+    const i = speeds.indexOf(gameSpeed(m));
+    const next = speeds[(i + 1) % speeds.length]; // wrap past the top back to 0.5x
+    if (handlers.onSetGameSpeed) handlers.onSetGameSpeed(next);
+    refreshSpeedBtn();
+  });
+
   // top-bar elements are static chrome (built once); cache them instead of re-querying every frame
   let uel: Record<string, HTMLElement> | null = null;
   function shake(el: Element | null): void {
@@ -558,9 +580,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         coins: $('#h-coins'), gems: $('#h-gems'), vials: $('#h-vials'),
         dmg: $('#h-dmg'), regen: $('#h-regen'), coinmult: $('#h-coinmult'), fhp: $('#h-fhp'), fdmg: $('#h-fdmg'),
         hpfill: $('#h-hpfill'), wavefill: $('#h-wavefill'), statline: $('#h-statline'),
-        tabbar: $('#h-tabbar'), stats: $('#h-stats'),
+        tabbar: $('#h-tabbar'), stats: $('#h-stats'), speedval: $('#h-speedval'),
       };
     const tier = s.meta.tier || 1;
+    uel.speedval.textContent = fmtSpeed(gameSpeed(s.meta));
     uel.wave.textContent = String(s.wave.n);
     // currency strip: in-run gold + banked meta currencies.
     uel.gold.textContent = abbr(s.econ.gold);
@@ -892,9 +915,12 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
             (disabled ? ' disabled' : '') + '>' + startLabel + '</button>' +
         '</div>' +
         (labInfoOpen === L.id
-          ? '<div class="labpick-detail">' + labDesc(L, lv + 1) +
-            '<br>Current ×' + (1 + L.per * lv).toFixed(2) + ' → next ×' + (1 + L.per * (lv + 1)).toFixed(2) +
-            ' (max ×' + (1 + L.per * L.max).toFixed(2) + ' at lv ' + L.max + ').' +
+          ? '<div class="labpick-detail">' + labDesc(L, lv + 1) + '<br>' +
+            (L.target === 'gameSpeed'
+              ? 'Current max ' + fmtSpeed(speedAtLevel(lv)) + ' → next ' + fmtSpeed(speedAtLevel(lv + 1)) +
+                ' (max ' + fmtSpeed(speedAtLevel(L.max)) + ' at lv ' + L.max + ').'
+              : 'Current ×' + (1 + L.per * lv).toFixed(2) + ' → next ×' + (1 + L.per * (lv + 1)).toFixed(2) +
+                ' (max ×' + (1 + L.per * L.max).toFixed(2) + ' at lv ' + L.max + ').') +
             '<br>Instant-complete a running lab for 1 ' + icon('gem', 12, 'gem') + ' per minute left.</div>'
           : '') +
         '</div>';
@@ -1101,11 +1127,15 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     if (sec < 86400) return (sec / 3600).toFixed(1) + 'h';
     return (sec / 86400).toFixed(1) + 'd';
   }
-  const LAB_CAT_ICON: Record<string, string> = { attack: 'sword', defense: 'shield' };
-  // Human description of what a lab does, at its current/next level. Damage/Health scale a workshop
-  // stat AND raise its cap, so we surface the multiplier.
+  const LAB_CAT_ICON: Record<string, string> = { attack: 'sword', defense: 'shield', speed: 'ffwd' };
+  // Human description of what a lab does at the given (reached) level. Damage/Health scale a workshop
+  // stat AND raise its cap; the Game Speed lab instead unlocks a faster battle-speed tier.
   function labDesc(L: UpgradeDef | { per: number; target: string; max: number }, lv: number): string {
-    const stat = (L as { target: string }).target === 'maxHp' ? 'Health' : 'Damage';
+    const target = (L as { target: string }).target;
+    if (target === 'gameSpeed') {
+      return 'Unlocks ' + fmtSpeed(speedAtLevel(lv)) + ' battle speed. 0.5x and 1x are always available.';
+    }
+    const stat = target === 'maxHp' ? 'Health' : 'Damage';
     return 'Raises ' + stat + ' workshop value (×' + (1 + (L as { per: number }).per * lv).toFixed(2) + ' at lv ' + lv +
       ') and lifts its max cap.';
   }
