@@ -451,8 +451,7 @@
 .hud .modal .close { position: absolute; top: 12px; right: 14px; background: transparent; border: 0; color: #8b93a7;
   font: 700 20px system-ui; line-height: 1; cursor: pointer; padding: 2px 4px; }
 .hud .modal .close:hover { color: #fff; }
-/* ---- milestones: a hexagon trail down a spine — gold up to the furthest wave, dim beyond, with a
-   "you are here" pin sitting between the last reached node and the next ---- */
+/* ---- milestones: a hexagon trail down a spine — gold up to the furthest wave, dim beyond ---- */
 .hud .mspath { display: flex; flex-direction: column; overflow: auto; padding: 0 16px 16px; }
 .hud .msrow { display: flex; align-items: stretch; gap: 12px; min-height: 52px; }
 .hud .msrail { position: relative; flex: 0 0 44px; display: flex; align-items: center; justify-content: center; }
@@ -480,12 +479,6 @@
 .hud .mn-claim { background: rgba(61,220,132,.12); border: 1px solid #2bb673; border-radius: 6px; color: #3ddc84;
   font: 700 12px system-ui; padding: 6px 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .hud .mn-claim:hover { background: rgba(61,220,132,.22); }
-/* the "you are here" pin between reached and upcoming milestones */
-.hud .msnow .mspin { position: relative; z-index: 1; width: 28px; height: 28px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center; background: #4aa8ff; color: #06121f; box-shadow: 0 0 0 3px rgba(74,168,255,.25); }
-.hud .msnow .mscard { border-bottom: 0; }
-.hud .msnow .mn-info b { color: #5fd0ff; }
-.hud .msnow .mn-reward { color: #8b93a7; }
 /* ---- milestones: header band, reward chips, animated nodes, tower-skin medallion ---- */
 .hud .ms-head { margin: 16px 18px 6px; }
 .hud .ms-head h2 { margin: 0; }
@@ -541,11 +534,6 @@
 .hud .msrow:nth-child(3n+2) .msdot::after { animation-delay: .5s; }
 /* gilded shimmer flowing down the reached spine (paired with .msrail::before background-size above) */
 @keyframes ms-spine-flow { 0% { background-position: 0 0; } 100% { background-position: 0 -300%; } }
-/* the "you are here" pin gets a soft radar ping (circle, so a box-shadow ring renders fine here) */
-.hud .msnow .mspin { animation: ms-pin-ping 2.4s ease-in-out infinite; }
-@keyframes ms-pin-ping {
-  0%,100% { box-shadow: 0 0 0 3px rgba(74,168,255,.25); }
-  50%     { box-shadow: 0 0 0 6px rgba(74,168,255,.10), 0 0 12px rgba(74,168,255,.45); } }
 
 /* claim buttons (milestone + floating check-in) catch the light: a sheen sweeps across the button —
    and over the gem/vial icon inside it — every few seconds. overflow:hidden masks the sheen to the
@@ -566,7 +554,7 @@
 @media (prefers-reduced-motion: reduce) {
   .hud .msdot::after, .hud .mn-claim::after, .hud .checkin-float::after { animation: none; opacity: 0; }
   .hud .msrow.reached .msrail::before { animation: none; }
-  .hud .msrow.can .msdot, .hud .msnow .mspin { animation: none; }
+  .hud .msrow.can .msdot { animation: none; }
 }
 
 /* ---- spotlight tutorial (flashlight) ---- */
