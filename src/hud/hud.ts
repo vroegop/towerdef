@@ -178,8 +178,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   // An upgrade's DISPLAYED value WITH any always-on cosmetic buff for that stat folded in, so the
   // menu shows the real total (e.g. Attack Speed ×1.10). upgradeBuffMult is 1 for unbuffed stats.
   const buffedVal = (meta: Meta, up: UpgradeDef, level: number): number => up.value(level) * upgradeBuffMult(meta, up.id);
-  // "0.5x" / "1x" / "2.5x" — drop the trailing ".0" on whole multipliers.
-  const fmtSpeed = (v: number): string => (Number.isInteger(v) ? String(v) : v.toFixed(1)) + 'x';
+  // "⏸" for the 0x (pause) step, else "0.5x" / "1x" / "2.5x" — dropping the trailing ".0" on whole multipliers.
+  const fmtSpeed = (v: number): string => (v === 0 ? '⏸' : (Number.isInteger(v) ? String(v) : v.toFixed(1)) + 'x');
 
   // gradient used to fill chromatic (max-tier) stars
   root.insertAdjacentHTML(
@@ -685,7 +685,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     if (!m) return;
     const speeds = availableSpeeds(m);
     const i = speeds.indexOf(gameSpeed(m));
-    const next = speeds[(i + 1) % speeds.length]; // wrap past the top back to 0.5x
+    const next = speeds[(i + 1) % speeds.length]; // wrap past the top back to 0x (pause)
     if (handlers.onSetGameSpeed) handlers.onSetGameSpeed(next);
     refreshSpeedBtn();
   });

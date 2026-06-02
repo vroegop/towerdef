@@ -246,6 +246,13 @@ const handlers: HudHandlers = {
       }
     } else if (kind === 'pause') {
       togglePause();
+    } else if (kind === 'turbo') {
+      turbo = !turbo;
+      hud.setDevToggle('turbo', turbo);
+      // surface the resulting effective speed so it's clear what's happening (the top-bar shows the
+      // chosen base speed; turbo is an extra dev multiplier layered on top).
+      hud.showHint(turbo ? 'Turbo ×' + TURBO_MUL + ' on — running at ' + effSpeed() + 'x' : 'Turbo off');
+      setTimeout(() => hud.hideHint(), 2000);
     } else if (kind === 'testbullet') {
       setupTestBullet();
     }
@@ -270,7 +277,14 @@ let sim: Sim | null = null,
   hiddenAt = 0,
   paused = false,
   dyingT = 0,
+  turbo = false, // dev cheat: when on, the loop runs the sim at gameSpeed × TURBO_MUL (bypasses the lab cap)
   lastEarn: EarnSummary | null = null;
+
+const TURBO_MUL = 5;
+// The multiplier actually fed to the sim each frame: the player-chosen speed, ×5 while dev turbo is on.
+function effSpeed(): number {
+  return gameSpeed(meta) * (turbo ? TURBO_MUL : 1);
+}
 
 // Re-apply the CURRENT view to a freshly-swapped HUD.
 function reenter(h: { setMeta(m: Meta): void; showMenu(m: Meta, o: object): void; showOverview(m: Meta, e: EarnSummary): void; hideMenu(): void; hideOverview(): void }): void {
@@ -303,7 +317,7 @@ function reconcileLabs(): string[] {
   return done;
 }
 function gsCatchUp(elapsedSec: number, capSec: number): ReturnType<typeof catchUp> {
-  const gs = gameSpeed(meta);
+  const gs = effSpeed();
   return catchUp(sim!, elapsedSec * gs, capSec * gs);
 }
 
@@ -429,7 +443,7 @@ function frame(now: number): void {
     requestAnimationFrame(frame);
     return;
   }
-  const gs = gameSpeed(meta);
+  const gs = effSpeed(); // 0 while paused-via-speed: no sim steps run, but we still render/refresh below
   acc += dt * gs;
   let g = 0;
   const maxSteps = Math.ceil(8 * gs);

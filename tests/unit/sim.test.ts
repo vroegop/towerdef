@@ -239,23 +239,25 @@ describe('labs scale stats', () => {
 });
 
 describe('game speed lab', () => {
-  it('defaults to 1x and offers only 0.5x / 1x out of the box', () => {
+  it('defaults to 1x and offers 0x (pause) / 0.5x / 1x out of the box', () => {
     const meta = freshMeta();
     expect(meta.gameSpeed).toBe(1);
     expect(gameSpeed(meta)).toBe(1);
-    expect(availableSpeeds(meta)).toEqual([0.5, 1]);
+    expect(availableSpeeds(meta)).toEqual([0, 0.5, 1]);
   });
 
   it('each completed level unlocks the next speed tier, up to 5x at level 7', () => {
-    expect(availableSpeeds(freshMeta({ labs: { gameSpeed: 1 } }))).toEqual([0.5, 1, 2]);
-    expect(availableSpeeds(freshMeta({ labs: { gameSpeed: 3 } }))).toEqual([0.5, 1, 2, 2.5, 3]);
-    expect(availableSpeeds(freshMeta({ labs: { gameSpeed: 7 } }))).toEqual(SPEED_STEPS);
+    expect(availableSpeeds(freshMeta({ labs: { gameSpeed: 1 } }))).toEqual([0, 0.5, 1, 2]);
+    expect(availableSpeeds(freshMeta({ labs: { gameSpeed: 3 } }))).toEqual([0, 0.5, 1, 2, 2.5, 3]);
+    expect(availableSpeeds(freshMeta({ labs: { gameSpeed: 7 } }))).toEqual([0, ...SPEED_STEPS]);
   });
 
-  it('setGameSpeed accepts only currently-unlocked speeds', () => {
+  it('setGameSpeed accepts only currently-unlocked speeds (0x pause is always available)', () => {
     const meta = freshMeta();
     expect(setGameSpeed(meta, 0.5)).toBe(0.5); // always available
-    expect(setGameSpeed(meta, 3)).toBe(0.5); // locked → selection unchanged (still 0.5)
+    expect(setGameSpeed(meta, 0)).toBe(0); // 0x pause is always available
+    expect(gameSpeed(meta)).toBe(0); // and a stored 0 survives (isn't coerced back to 1x)
+    expect(setGameSpeed(meta, 3)).toBe(0); // locked → selection unchanged (still 0x)
     const fast = freshMeta({ labs: { gameSpeed: 3 } });
     expect(setGameSpeed(fast, 3)).toBe(3);
   });
