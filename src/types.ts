@@ -61,6 +61,7 @@ export interface Meta {
   // selected cosmetic id per category (tower / hud / background). Unlock + passive buffs are derived
   // live from src/sim/cosmetics.ts; only the chosen id is persisted here.
   cosmetics?: Record<string, string>;
+  gameSpeed?: number; // player-chosen battle speed (0.5/1 free; higher tiers unlocked by the Game Speed lab)
   ver: number;
 }
 
@@ -312,6 +313,7 @@ export interface HudHandlers {
   onCancelResearch?: (id: string) => boolean;
   onRushResearch?: (id: string) => boolean;
   onBuyLabSlot?: () => boolean;
+  onSetGameSpeed?: (speed: number) => number; // set the battle speed; returns the value now in effect
   onReconcileLabs?: () => string[] | void;
   onCheckIn?: () => unknown;
   onStartRun?: () => void;
@@ -326,7 +328,7 @@ export interface Hud {
   showMenu(meta: Meta, opts: MenuOpts): void;
   refreshMenu(meta: Meta): void;
   hideMenu(): void;
-  showOverview(meta: Meta, earn: EarnSummary): void;
+  showOverview(meta: Meta, earn: EarnSummary, opts?: { offline?: boolean }): void;
   hideOverview(): void;
   showHint(html: string): void;
   hideHint(): void;

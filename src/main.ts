@@ -6,7 +6,7 @@ import type { EarnSummary, HudHandlers, Meta, Settings, State } from './types';
 import { DT, catchUp } from './sim/offline';
 import { Sim, tickDying } from './sim/core';
 import { createState } from './sim/state';
-import { migrateMeta, reconcileResearch, claimCheckIn, startResearch, cancelResearch, rushResearch, buyLabSlot, gameSpeed, LABS, MAX_SLOTS } from './sim/labs';
+import { migrateMeta, reconcileResearch, claimCheckIn, startResearch, cancelResearch, rushResearch, buyLabSlot, gameSpeed, setGameSpeed, LABS, MAX_SLOTS } from './sim/labs';
 import { buyRunUpgradeBulk, buyPermBulk, unlockGroup, claimMilestone, claimAllMilestones, buyCard, buyCardSlot, setActiveCard, FIRST_PERM_COST } from './sim/skills';
 import { MAX_TIER, tierUnlocked, coinsForRun } from './sim/waves';
 import { selectCosmetic, type CosmeticKind } from './sim/cosmetics';
@@ -69,6 +69,7 @@ function loadMeta(): Meta {
     vials: m.vials || 0,
     lastCheckIn: m.lastCheckIn || Date.now(),
     cosmetics: m.cosmetics && typeof m.cosmetics === 'object' ? m.cosmetics : {},
+    gameSpeed: m.gameSpeed ?? 1,
     ver: m.ver || 0,
   };
   return migrateMeta(meta);
@@ -169,6 +170,11 @@ const handlers: HudHandlers = {
     const ok = buyLabSlot(meta);
     if (ok) saveMeta();
     return ok;
+  },
+  onSetGameSpeed: (speed) => {
+    const v = setGameSpeed(meta, speed);
+    saveMeta();
+    return v; // the loop reads gameSpeed(meta) live each frame, so the change takes effect immediately
   },
   onReconcileLabs: () => reconcileLabs(),
   onCheckIn: () => {
@@ -361,13 +367,22 @@ function startDying(): void {
   last = performance.now();
   requestAnimationFrame(frame);
 }
-function enterOverview(earn: EarnSummary): void {
-  mode = 'overview';
+// `offline` = the run ended while the game ran in the background (reopen / tab return), not from a
+// death the player just watched. In that case we land on the menu and float the summary over it as a
+// dismissible notice, so the screen behind isn't blank and the player sees where they actually are.
+function enterOverview(earn: EarnSummary, offline = false): void {
   lastEarn = earn;
   running = false;
   clearSave();
   hud.hideHint();
-  hud.showOverview(meta, earn);
+  if (offline) {
+    mode = 'menu';
+    hud.showMenu(meta, {});
+    hud.showOverview(meta, earn, { offline: true });
+  } else {
+    mode = 'overview';
+    hud.showOverview(meta, earn);
+  }
 }
 
 // ---- main loop: fixed-step sim, free-rate render ----
@@ -427,7 +442,7 @@ document.addEventListener('visibilitychange', () => {
     if (el > 2 && !paused) {
       const r = gsCatchUp(el, OFFLINE_CAP);
       if (!sim.s.alive) {
-        enterOverview(bankRun());
+        enterOverview(bankRun(), true);
         return;
       }
       if (el > 20) {
@@ -465,7 +480,7 @@ if (saved && saved.state) {
       setTimeout(() => hud.hideHint(), 2500);
     }
   }
-  if (!sim.s.alive) enterOverview(bankRun());
+  if (!sim.s.alive) enterOverview(bankRun(), true);
   else {
     hud.hideMenu();
     last = performance.now();
