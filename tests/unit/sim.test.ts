@@ -9,7 +9,7 @@ import { createState, ARENA_W, ARENA_H } from '../../src/sim/state';
 import { makeEnemy } from '../../src/sim/enemies';
 import { migrateMeta } from '../../src/sim/labs';
 import { buyPerm, permCost, computeStats, waveStrSafe } from './helpers';
-import { waveCount, waveStr, tierUnlocked, coinMult } from '../../src/sim/waves';
+import { waveCount, waveStr, tierUnlocked, coinMult, waveRoster, allowedSpecials, isBossWave } from '../../src/sim/waves';
 import { buyCard, buyCardCost, MAX_STARS, CARD_ORDER, evalCurve, UP_BY_ID, PX_PER_METER, isUnlocked, unlockGroup, nextUnlockGroup, skillGroup } from '../../src/sim/skills';
 import { applyHit } from '../../src/sim/projectiles';
 import type { Meta } from '../../src/types';
@@ -86,6 +86,46 @@ describe('sim determinism', () => {
     expect(resumed.s.econ.kills).toBe(ref.s.econ.kills);
     expect(resumed.s.wave.n).toBe(ref.s.wave.n);
     expect(resumed.s.enemies.length).toBe(ref.s.enemies.length);
+  });
+});
+
+describe('wave spawn composition', () => {
+  const roster = (n: number, tier: number, count = 200): string[] => waveRoster(makeRng(n * 7 + tier), n, tier, count);
+  const kinds = (r: string[]): Set<string> => new Set(r);
+  it('waves 1–9 (tier 1) are normal-only — no specials, no boss', () => {
+    for (let n = 1; n <= 9; n++) {
+      expect([...kinds(roster(n, 1))]).toEqual(['melee']);
+    }
+  });
+  it('wave 10 is a boss wave: exactly one boss leading normals, no specials', () => {
+    const r = roster(10, 1);
+    expect(r.filter((t) => t === 'boss').length).toBe(1);
+    expect([...kinds(r)].sort()).toEqual(['boss', 'melee']);
+  });
+  it('non-boss waves 11–99 (tier 1) add tank, but not fast/ranged', () => {
+    const k = kinds(roster(11, 1));
+    expect(k.has('tank')).toBe(true);
+    expect(k.has('fast')).toBe(false);
+    expect(k.has('ranged')).toBe(false);
+  });
+  it('fast unlocks past wave 100, ranged past wave 150 (tier 1)', () => {
+    expect(allowedSpecials(101, 1).sort()).toEqual(['fast', 'tank']);
+    expect(allowedSpecials(151, 1).sort()).toEqual(['fast', 'ranged', 'tank']);
+    expect(allowedSpecials(99, 1)).toEqual(['tank']);
+  });
+  it('tier 2 unlocks every special from wave 1 (boss still only on 10th waves)', () => {
+    expect(allowedSpecials(1, 2).sort()).toEqual(['fast', 'ranged', 'tank']);
+    expect(isBossWave(1)).toBe(false);
+    expect(isBossWave(10)).toBe(true);
+  });
+  it('respects the caps: ≤120 normal + ≤20 special, and ≤1 boss', () => {
+    const r = roster(151, 1, 500); // way over any real wave size, all specials unlocked
+    expect(r.filter((t) => t === 'melee').length).toBeLessThanOrEqual(120);
+    expect(r.filter((t) => t !== 'melee' && t !== 'boss').length).toBeLessThanOrEqual(20);
+    expect(r.filter((t) => t === 'boss').length).toBe(0); // 151 isn't a boss wave
+    const b = roster(150, 1, 500); // boss wave
+    expect(b.filter((t) => t === 'boss').length).toBe(1);
+    expect(b.filter((t) => t === 'melee').length).toBeLessThanOrEqual(120);
   });
 });
 

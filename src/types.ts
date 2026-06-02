@@ -138,6 +138,7 @@ export interface Wave {
   releaseGap: number;
   count: number;
   maxWave: number;
+  queue: string[]; // ordered enemy types still to spawn this wave (resume-safe; see waveRoster)
 }
 export interface Econ {
   gold: number;

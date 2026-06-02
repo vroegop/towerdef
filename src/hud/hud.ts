@@ -687,7 +687,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       eff = Math.max(1, s.wave.n) * tierDifficulty(tier),
       str = waveStr(eff),
       spd = waveSpeed(eff),
-      ch = spawnChances(s.wave.n),
+      ch = spawnChances(s.wave.n, (s.meta && s.meta.tier) || 1),
       st = computeStats(s);
     const waveTime = (WAVE.interval * (1 - (st.waveAccel || 0))).toFixed(1) + 's';
     const spawnRate = (waveCount(s.wave.n) / WAVE.spawnWindow).toFixed(1) + '/s';

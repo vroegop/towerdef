@@ -2,7 +2,7 @@
    A wave starts every WAVE.interval seconds; its enemies spawn over the first spawnWindow
    seconds. screenCap limits CONCURRENT enemies, so a bigger wave only adds pressure when
    the arena isn't already full. Strength/speed baselines rise with wave number. */
-import type { Meta, State } from '../types';
+import type { Meta, Rng, State } from '../types';
 
 export const WAVE = {
   interval: 30, // seconds between wave starts
@@ -16,6 +16,59 @@ export const WAVE = {
   speedPerWave: 0.02,
   coinStep: 10, // base coins/kill = ceil(wave / coinStep): +1 coin every this many waves
 };
+
+// ── Spawn composition (the one place to tweak who shows up, when, and how many) ────────────────
+// A wave is mostly "normal" (melee) bodies, with a capped pool of randomly-typed "specials", and
+// at most one boss on every Nth wave. Each special type only joins the pool once its unlock wave is
+// reached — UNLESS the run's tier is high enough, where everything unlocks from wave 1. Boss waves
+// are kept clean: a single boss leading a column of normals, no specials.
+export const SPAWN = {
+  normalCap: 120, // max "normal" (melee) bodies in a wave
+  specialCap: 20, // max specials (fast/ranged/tank) in a wave, randomly typed among the unlocked ones
+  specials: ['tank', 'fast', 'ranged'] as const, // the special pool (splitter is intentionally not spawned)
+  unlock: { tank: 10, fast: 100, ranged: 150 } as Record<string, number>, // tier-1 unlock wave per special
+  allFromTier: 2, // at this tier and above, every special is available from wave 1
+  bossEveryWaves: 10, // a boss wave occurs on multiples of this…
+  bossUnlockWave: 10, // …starting at this wave
+};
+
+// A boss wave: one boss leads, no specials join it.
+export function isBossWave(n: number): boolean {
+  return n >= SPAWN.bossUnlockWave && n % SPAWN.bossEveryWaves === 0;
+}
+
+// Which special types may spawn at (real) wave n in the given tier.
+export function allowedSpecials(n: number, tier: number): string[] {
+  const open = (tier || 1) >= SPAWN.allFromTier;
+  return SPAWN.specials.filter((t) => open || n >= SPAWN.unlock[t]);
+}
+
+// Build the ordered list of enemy types for a wave. Deterministic given the rng + (n, tier, count),
+// so it replays identically offline. Caps are hard limits, so the wave never exceeds normalCap +
+// specialCap (+1 boss).
+export function waveRoster(rng: Rng, n: number, tier: number, count: number): string[] {
+  const roster: string[] = [];
+  if (count <= 0) return roster;
+  if (isBossWave(n)) {
+    roster.push('boss'); // the boss leads the column…
+    const normals = Math.min(SPAWN.normalCap, count - 1);
+    for (let i = 0; i < normals; i++) roster.push('melee'); // …followed by normals, no specials
+    return roster;
+  }
+  const specials = allowedSpecials(n, tier);
+  const specialN = specials.length ? Math.min(SPAWN.specialCap, count) : 0;
+  const normalN = Math.min(SPAWN.normalCap, count - specialN);
+  for (let i = 0; i < normalN; i++) roster.push('melee');
+  for (let i = 0; i < specialN; i++) roster.push(specials[(rng.next() * specials.length) | 0]);
+  // Deterministic shuffle so specials are sprinkled through the wave instead of clumping at the end.
+  for (let i = roster.length - 1; i > 0; i--) {
+    const j = (rng.next() * (i + 1)) | 0;
+    const tmp = roster[i];
+    roster[i] = roster[j];
+    roster[j] = tmp;
+  }
+  return roster;
+}
 
 // First-run script: spawn a cluster on a fixed-radius ring so they converge together and a
 // no-input 1/1/1/1 hero dies at ~10s (deterministic across seeds). Tuned via headless harness.

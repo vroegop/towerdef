@@ -2,9 +2,9 @@
    No DOM, no canvas, no Date.now() inside a step. Time = the tick counter only. */
 import type { Enemy, Rng, State, Stats } from '../types';
 import { makeRng } from './rng';
-import { ageSurvivors, makeEnemy, pickType } from './enemies';
+import { ageSurvivors, makeEnemy } from './enemies';
 import { TYPES } from './registries';
-import { FIRST_RUN, COIN_DECAY_FACTOR, COIN_DECAY_WAVES, WAVE, waveCount } from './waves';
+import { FIRST_RUN, COIN_DECAY_FACTOR, COIN_DECAY_WAVES, WAVE, waveCount, waveRoster } from './waves';
 import { applyHit, fireProjectile, tickProjectiles } from './projectiles';
 import { computeStats, PX_PER_METER, RAPID_CHECK, RAPID_MULT } from './skills';
 import { tickActiveCards, trySecondWind, heroInvuln } from './cards-active';
@@ -100,7 +100,13 @@ export class Sim {
     const eff = this._effWave(n);
     // Enemy Balance card: more enemies per wave (cash/kill ×mult applied on kill in _cleanup).
     const eb = this.stats.enemyBalance > 1 ? this.stats.enemyBalance : 1;
-    w.count = Math.round(waveCount(eff) * eb);
+    const want = Math.round(waveCount(eff) * eb);
+    // Composition is gated by the REAL wave number + tier (unlocks/boss cadence), while the wave
+    // SIZE scales with the effective wave. The roster (an ordered type list) is the deterministic,
+    // resume-safe source of truth for what spawns; caps may make it shorter than `want`.
+    const tier = (this.s.meta && this.s.meta.tier) || 1;
+    w.queue = waveRoster(this.rng, n, tier, want);
+    w.count = w.queue.length;
     w.toSpawn = w.count;
     w.releaseGap = WAVE.spawnWindow / Math.max(1, w.count);
     w.releaseTimer = 0;
@@ -115,6 +121,7 @@ export class Sim {
       st = this.stats;
     const n = w.toSpawn; // enemies that would have spawned this wave
     w.toSpawn = 0; // skip the spawns
+    if (w.queue) w.queue.length = 0;
     const waveStepCoins = Math.ceil(w.n / Math.max(1, WAVE.coinStep));
     const coins = Math.round(n * waveStepCoins * (st.coinsPerKill || 1) * 1.1);
     const gold = Math.round(n * (st.goldFind || 1) * (st.cashMult || 1) * (st.enemyBalance || 1) * 1.1);
@@ -130,7 +137,8 @@ export class Sim {
   private _spawnOne(): void {
     const s = this.s,
       eff = this._effWave(s.wave.n);
-    const type = pickType(this.rng, eff);
+    // Pop the next planned type from the wave roster; stats still scale with the effective wave.
+    const type = (s.wave.queue && s.wave.queue.shift()) || 'melee';
     s.enemies.push(makeEnemy(s.nextId++, type, eff, this.rng, s.arena, s.hero.x, s.hero.y));
   }
 
