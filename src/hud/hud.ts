@@ -1426,7 +1426,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       let cta: string;
       if (isTower) {
         cta = rewardHtml(reward) +
-          '<span class="mn-tw-status">' + (reached ? icon('check', 13) + ' Unlocked' : icon('lock', 13) + ' Wave ' + short(w)) + '</span>';
+          '<span class="mn-tw-status">' + (reached ? icon('check', 13) + ' Unlocked' : icon('lock', 13) + ' Locked') + '</span>';
       } else if (claimed) {
         cta = '<span class="mn-done">' + icon('check', 15) + ' Claimed</span>';
       } else if (can) {
