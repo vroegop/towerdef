@@ -164,7 +164,7 @@ export function createHudHost(root: HTMLElement, handlers: HudHandlers, opts?: {
     showMenu: (meta: Meta, o: MenuOpts) => void call('showMenu', [meta, o]),
     refreshMenu: (meta: Meta) => void call('refreshMenu', [meta]),
     hideMenu: () => void call('hideMenu', []),
-    showOverview: (meta: Meta, earn: EarnSummary) => void call('showOverview', [meta, earn]),
+    showOverview: (meta: Meta, earn: EarnSummary, opts?: { offline?: boolean }) => void call('showOverview', [meta, earn, opts]),
     hideOverview: () => void call('hideOverview', []),
     showHint: (html: string) => void call('showHint', [html]),
     hideHint: () => void call('hideHint', []),

@@ -1481,15 +1481,26 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   // ---------- game-over OVERVIEW ----------
   const overEl = $('#h-over'),
     overCard = $('#h-over-card');
-  function showOverview(meta: Meta, earn: EarnSummary): void {
+  // When the run ended offline (player reopened the game), the overview floats over the menu as a
+  // dismissible notice — clicking the dimmed backdrop (not the card) closes it, the same idiom the
+  // other modals use. In-session deaths instead get the full-screen overview with the back button.
+  let overDismissible = false;
+  overEl.addEventListener('click', (e) => {
+    if (overDismissible && e.target === overEl) handlers.onToWorkshop && handlers.onToWorkshop();
+  });
+  function showOverview(meta: Meta, earn: EarnSummary, opts?: { offline?: boolean }): void {
     lastMeta = meta;
     const e = earn || {};
+    const offline = !!(opts && opts.offline);
     closeRunModals(); // a run just ended — don't leave an in-run modal floating over the overview
     const tier = meta.tier || 1;
     const rew = '<div class="rew"><span>Coins</span><b>+' + (e.coins || 0) + ' ' + coinsIc(16) + '</b></div>';
     const row = (label: string, val: string): string => '<div class="strow"><span>' + label + '</span><b>' + val + '</b></div>';
     overCard.innerHTML =
       '<div class="statshead"><h2>Run Over</h2></div>' +
+      // offline: the run ended while away, so spell that out — a new player who just opened the game
+      // should never wonder why a finished run is greeting them.
+      (offline ? '<div class="over-sub">Your hero kept fighting while you were away — this run has now ended.</div>' : '') +
       '<div class="over-rewards">' + rew + '</div>' +
       '<div class="statsbody">' +
       row('Kills', fmt(e.kills || 0)) +
@@ -1498,14 +1509,17 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       row('Coin multiplier', 'x' + coinMult(tier).toFixed(1)) +
       row('Total coins', fmt(meta.coins || 0)) +
       '</div>' +
-      '<button class="over-back" id="h-over-back">' + icon('back', 16) + ' Back to the Workshop</button>';
-    $('#h-over-back').addEventListener('click', () => handlers.onToWorkshop && handlers.onToWorkshop());
+      // offline overview is dismissed by tapping the backdrop, so it skips the back button entirely.
+      (offline ? '' : '<button class="over-back" id="h-over-back">' + icon('back', 16) + ' Back to the Workshop</button>');
+    if (!offline) $('#h-over-back').addEventListener('click', () => handlers.onToWorkshop && handlers.onToWorkshop());
+    overDismissible = offline;
     overEl.classList.remove('hide');
     sidemenu.classList.remove('open');
     tabbarEl.style.display = 'none';
     topEl.style.display = 'none';
   }
   function hideOverview(): void {
+    overDismissible = false;
     overEl.classList.add('hide');
     $('#h-stats').classList.add('hide');
   }

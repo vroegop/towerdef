@@ -360,13 +360,22 @@ function startDying(): void {
   last = performance.now();
   requestAnimationFrame(frame);
 }
-function enterOverview(earn: EarnSummary): void {
-  mode = 'overview';
+// `offline` = the run ended while the game ran in the background (reopen / tab return), not from a
+// death the player just watched. In that case we land on the menu and float the summary over it as a
+// dismissible notice, so the screen behind isn't blank and the player sees where they actually are.
+function enterOverview(earn: EarnSummary, offline = false): void {
   lastEarn = earn;
   running = false;
   clearSave();
   hud.hideHint();
-  hud.showOverview(meta, earn);
+  if (offline) {
+    mode = 'menu';
+    hud.showMenu(meta, {});
+    hud.showOverview(meta, earn, { offline: true });
+  } else {
+    mode = 'overview';
+    hud.showOverview(meta, earn);
+  }
 }
 
 // ---- main loop: fixed-step sim, free-rate render ----
@@ -426,7 +435,7 @@ document.addEventListener('visibilitychange', () => {
     if (el > 2 && !paused) {
       const r = gsCatchUp(el, OFFLINE_CAP);
       if (!sim.s.alive) {
-        enterOverview(bankRun());
+        enterOverview(bankRun(), true);
         return;
       }
       if (el > 20) {
@@ -464,7 +473,7 @@ if (saved && saved.state) {
       setTimeout(() => hud.hideHint(), 2500);
     }
   }
-  if (!sim.s.alive) enterOverview(bankRun());
+  if (!sim.s.alive) enterOverview(bankRun(), true);
   else {
     hud.hideMenu();
     last = performance.now();
