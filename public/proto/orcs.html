@@ -66,6 +66,17 @@ function load(orc, anim) {
 }
 ORCS.forEach(o => ANIMS.forEach(a => load(o, a)));
 
+// Sheet row order (vertical) = facing direction:
+//   0 = front / facing down (we see the face)
+//   1 = left, 2 = right (side profiles)
+//   3 = back / facing up (we see the back)
+const DIR = { down: 0, left: 1, right: 2, up: 3 };
+// Pick the facing row from a travel vector (canvas Y points down). Horizontal travel wins ties.
+function dirRow(vx, vy) {
+  if (Math.abs(vx) >= Math.abs(vy)) return vx >= 0 ? DIR.right : DIR.left;
+  return vy >= 0 ? DIR.down : DIR.up;
+}
+
 // Draw one frame from a sheet: cols = width/FRAME, rows = height/FRAME (4 directions).
 function drawFrame(ctx, img, dir, frame, dx, dy, scale) {
   if (!img.complete || !img.naturalWidth) return;
@@ -126,7 +137,9 @@ function arenaLoop() {
     if (m.dist < 30) m.dist = 210;
     const x = cx + Math.cos(m.ang) * m.dist - FRAME * m.scale / 2;
     const y = cy + Math.sin(m.ang) * m.dist - FRAME * m.scale / 2;
-    drawFrame(actx, load(m.orc, 'walk'), 0, frameIndex(8) + Math.floor(m.phase), x, y, m.scale);
+    // travelling toward the centre → face that way (back to us when coming from below, etc.)
+    const row = dirRow(-Math.cos(m.ang), -Math.sin(m.ang));
+    drawFrame(actx, load(m.orc, 'walk'), row, frameIndex(8) + Math.floor(m.phase), x, y, m.scale);
   });
   requestAnimationFrame(arenaLoop);
 }
