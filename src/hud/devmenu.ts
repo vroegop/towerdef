@@ -16,7 +16,6 @@ interface DevSection {
   rows?: DevRow[];
   ff?: [number, string][];
   hud?: boolean;
-  links?: { href: string; label: string }[];
 }
 
 export function createDevMenu(cfg: { handlers?: HudHandlers; hudHost?: HudHost }): DevMenu {
@@ -49,15 +48,6 @@ export function createDevMenu(cfg: { handlers?: HudHandlers; hudHost?: HudHost }
     },
     { title: 'Time', ff: [[30, '+30s'], [60, '+1m'], [300, '+5m'], [3600, '+60m']] },
     { title: 'HUD', hud: true },
-    {
-      title: 'Prototypes',
-      links: [
-        { href: './proto/orcs.html', label: '⚔️ Orc sprite prototype' },
-        { href: './proto/rotation.html', label: '🧭 Directions & free-rotate' },
-        { href: './proto/rotation-3d.html', label: '🧊 Real-time 3D rotation' },
-        { href: './proto/rotation-stack.html', label: '🥞 Sprite stacking' },
-      ],
-    },
   ];
 
   function rowBtn(r: DevRow): string {
@@ -69,7 +59,6 @@ export function createDevMenu(cfg: { handlers?: HudHandlers; hudHost?: HudHost }
     if (sec.rows) body = sec.rows.map(rowBtn).join('');
     else if (sec.ff) body = '<div class="ffrow">' + sec.ff.map((f) => '<button data-ff="' + f[0] + '">' + f[1] + '</button>').join('') + '</div>';
     else if (sec.hud) body = '<div class="hudlist" id="dev-hudlist"></div><div class="devstatus" id="dev-status"></div>';
-    else if (sec.links) body = sec.links.map((l) => '<a class="devlink" href="' + l.href + '" target="_blank" rel="noopener">' + l.label + '</a>').join('');
     return (
       '<div class="devsec' + (i === 0 ? ' open' : '') + '">' +
       '<button class="devsec-h" data-sec="' + i + '">' + sec.title + '<span class="caret">›</span></button>' +
