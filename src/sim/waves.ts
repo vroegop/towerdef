@@ -4,6 +4,7 @@
    the arena isn't already full. Strength/speed baselines rise with wave number. */
 import type { Meta, Rng, State } from '../types';
 import { cosmeticBuffMult } from './cosmetics';
+import { labTierCoinMult } from './labs';
 
 export const WAVE = {
   interval: 30, // seconds between wave starts
@@ -106,9 +107,10 @@ export function coinMult(tier: number): number {
 // this out and the in-run stats panel previews it, so the preview can never drift from the reward.
 export function coinsForRun(state: State, tier: number): number {
   const e = state.econ;
-  // ×coinMult(tier) for the tier baseline, then ×the passive cosmetic coin buff (e.g. Cleric's Sanctum).
+  // ×coinMult(tier) for the tier baseline, ×the passive cosmetic coin buff (e.g. Cleric's Sanctum),
+  // ×the Tier Coin lab multiplier (+1%/level, up to +20%).
   const cos = cosmeticBuffMult(state.meta, 'coinMult');
-  return Math.max(1, Math.round(((state.wave.maxWave || 0) + (e.bonusCoins || 0)) * coinMult(tier) * cos));
+  return Math.max(1, Math.round(((state.wave.maxWave || 0) + (e.bonusCoins || 0)) * coinMult(tier) * cos * labTierCoinMult(state.meta)));
 }
 // Tier 1 is always open; tier N>1 needs TIER_UNLOCK_WAVE reached in the tier below.
 export function tierUnlocked(meta: Meta, tier: number): boolean {

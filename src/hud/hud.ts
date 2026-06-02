@@ -1088,7 +1088,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   }
 
   // Lab picker: lists the labs you can drop into an open slot. Maxed / already-running / locked labs
-  // are disabled. Each row has Start (coins + time) and Info (expands an explanation).
+  // are disabled. Each row has a Start button (coins + time); clicking anywhere else on the banner
+  // expands an explanation.
   let labInfoOpen: string | null = null;
   function openLabPicker(onChange: () => void): void {
     if (!lastMeta) return;
@@ -1106,22 +1107,18 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       const statusTag = maxed ? 'MAX' : running ? 'Running' : !unlocked ? icon('lock', 12) + ' wave ' + L.gate.wave : '';
       const startLabel = maxed ? 'Maxed' : running ? 'In progress' : !unlocked ? 'Locked'
         : cost + ' ' + coinsIc(13) + ' · ' + (t > 0 ? fmtTime(t) : 'instant');
-      rows += '<div class="labpick-row">' +
-        '<div class="labpick-head">' +
+      // The whole banner head is the info toggle (data-info); the Start button stops propagation so a
+      // start-click never also flips the info panel.
+      rows += '<div class="labpick-row' + (labInfoOpen === L.id ? ' open' : '') + '">' +
+        '<div class="labpick-head" data-info="' + L.id + '">' +
           '<div class="labpick-ic">' + icon(LAB_CAT_ICON[L.cat] || 'flask', 18) + '</div>' +
           '<div class="labpick-title"><b>' + L.label + '</b><span>lv ' + lv + ' / ' + L.max +
             (statusTag ? '  ·  ' + statusTag : '') + '</span></div>' +
-          '<button class="labpick-info" data-info="' + L.id + '">' + icon('chart', 14) + ' Info</button>' +
           '<button class="labpick-start' + (disabled ? ' cant' : '') + '" data-startlab="' + L.id + '"' +
             (disabled ? ' disabled' : '') + '>' + startLabel + '</button>' +
         '</div>' +
         (labInfoOpen === L.id
-          ? '<div class="labpick-detail">' + labDesc(L, lv + 1) + '<br>' +
-            (L.target === 'gameSpeed'
-              ? 'Current max ' + fmtSpeed(speedAtLevel(lv)) + ' → next ' + fmtSpeed(speedAtLevel(lv + 1)) +
-                ' (max ' + fmtSpeed(speedAtLevel(L.max)) + ' at lv ' + L.max + ').'
-              : 'Current ×' + (1 + L.per * lv).toFixed(2) + ' → next ×' + (1 + L.per * (lv + 1)).toFixed(2) +
-                ' (max ×' + (1 + L.per * L.max).toFixed(2) + ' at lv ' + L.max + ').') +
+          ? '<div class="labpick-detail">' + labDesc(L, lv + 1) +
             '<br>Instant-complete a running lab for 1 ' + icon('gem', 12, 'gem') + ' per minute left.</div>'
           : '') +
         '</div>';
@@ -1136,7 +1133,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       b.addEventListener('click', () => { labInfoOpen = labInfoOpen === b.dataset.info ? null : b.dataset.info!; openLabPicker(onChange); }),
     );
     updmodalInner.querySelectorAll<HTMLElement>('[data-startlab]').forEach((b) =>
-      b.addEventListener('click', () => {
+      b.addEventListener('click', (e) => {
+        e.stopPropagation(); // don't let the Start click bubble to the banner's info toggle
         if (handlers.onStartResearch && handlers.onStartResearch(b.dataset.startlab!)) {
           labInfoOpen = null;
           updmodal.classList.add('hide');
@@ -1322,17 +1320,28 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     if (sec < 86400) return (sec / 3600).toFixed(1) + 'h';
     return (sec / 86400).toFixed(1) + 'd';
   }
-  const LAB_CAT_ICON: Record<string, string> = { attack: 'sword', defense: 'shield', speed: 'ffwd' };
+  const LAB_CAT_ICON: Record<string, string> = { attack: 'sword', defense: 'shield', economic: 'coin', speed: 'ffwd' };
   // Human description of what a lab does at the given (reached) level. Damage/Health scale a workshop
-  // stat AND raise its cap; the Game Speed lab instead unlocks a faster battle-speed tier.
-  function labDesc(L: UpgradeDef | { per: number; target: string; max: number }, lv: number): string {
+  // stat AND raise its cap; the Game Speed lab unlocks a faster battle-speed tier; the rest scale, add,
+  // or apply an out-of-run bonus described by their `unit`.
+  function labDesc(L: UpgradeDef | { per: number; target: string; max: number; label?: string; unit?: string }, lv: number): string {
     const target = (L as { target: string }).target;
+    const per = (L as { per: number }).per;
+    const unit = (L as { unit?: string }).unit;
+    const label = (L as { label?: string }).label || 'this stat';
     if (target === 'gameSpeed') {
       return 'Unlocks ' + fmtSpeed(speedAtLevel(lv)) + ' battle speed. 0.5x and 1x are always available.';
     }
-    const stat = target === 'maxHp' ? 'Health' : 'Damage';
-    return 'Raises ' + stat + ' workshop value (×' + (1 + (L as { per: number }).per * lv).toFixed(2) + ' at lv ' + lv +
-      ') and lifts its max cap.';
+    if (target === 'rangedDamage' || target === 'maxHp') {
+      const stat = target === 'maxHp' ? 'Health' : 'Damage';
+      return 'Raises ' + stat + ' workshop value (×' + (1 + per * lv).toFixed(2) + ' at lv ' + lv + ') and lifts its max cap.';
+    }
+    if (unit === 'meters') return 'Adds +' + Math.round(per * lv) + 'm attack range (+' + per + 'm per level).';
+    if (unit === 'pct') return 'Adds +' + Math.round(per * lv * 100) + '% ' + label.replace(/ Lab$/, '') + ' (+' + Math.round(per * 100) + '% per level).';
+    if (unit === 'gold') return 'Begin each run with +' + per * lv + ' gold (+' + per + ' per level).';
+    if (unit === 'tierpct') return '+' + Math.round(per * lv * 100) + '% coins from runs (+' + Math.round(per * 100) + '% per level).';
+    // default: a scale lab (×multiplier on its workshop stat).
+    return 'Multiplies ' + label.replace(/ Lab$/, '') + ' (×' + (1 + per * lv).toFixed(2) + ' at lv ' + lv + ').';
   }
   // Build a sideways corked flask: a glass test-tube (rounded closed end at left, cork plugged at
   // right) holding carbonated blue research fluid that turns gold left→right as the research completes.

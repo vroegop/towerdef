@@ -273,7 +273,7 @@ export interface LabCurve {
 export interface LabDef {
   id: string;
   cat: string;
-  kind: 'cap' | 'scale' | 'special';
+  kind: 'cap' | 'scale' | 'flat' | 'special';
   target: string;
   label: string;
   per: number;
@@ -281,6 +281,8 @@ export interface LabDef {
   coin: LabCurve;
   time: LabCurve;
   gate: { wave: number };
+  // How the per-level effect is phrased in the HUD. Defaults to 'mult' (×) for scale labs.
+  unit?: 'mult' | 'meters' | 'pct' | 'gold' | 'tierpct';
 }
 // ---- HUD surface ----
 export interface EarnSummary {

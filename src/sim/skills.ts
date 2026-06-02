@@ -7,7 +7,7 @@
    The effective number of levels a stat has is perm + run (capped at the upgrade's max).
    Tabs: attack / defense / economic (icons, not words). */
 import type { BulkQty, CardDef, CardSpec, CardDrawResult, Curve, Meta, State, Stats, TabDef, UpgradeCurve, UpgradeDef, UpgradeSpec } from '../types';
-import { labCapBonus, labScaleMults } from './labs';
+import { labCapBonus, labFlatAdds, labScaleMults } from './labs';
 import { cosmeticBuffMult, towerForTier, TOWER_UNLOCK_WAVE } from './cosmetics';
 import {
   RAPID_COST, BOUNCECHANCE_COST, BOUNCETARGETS_COST, BOUNCERANGE_COST, SUPERCRIT_COST,
@@ -968,11 +968,17 @@ export function computeStats(state: State): Stats {
     }
   }
   const labMult = labScaleMults(state.meta) || {};
-  const touched = new Set([...Object.keys(flat), ...Object.keys(mult), ...Object.keys(labMult)]);
+  const labFlat = labFlatAdds(state.meta) || {};
+  const touched = new Set([
+    ...Object.keys(flat), ...Object.keys(mult), ...Object.keys(labMult), ...Object.keys(labFlat),
+  ]);
   for (const k of touched) {
     if (typeof out[k] !== 'number') continue;
-    out[k] = (out[k] + (flat[k] || 0)) * (labMult[k] || 1) * (mult[k] || 1);
+    out[k] = (out[k] + (flat[k] || 0) + (labFlat[k] || 0)) * (labMult[k] || 1) * (mult[k] || 1);
   }
+  // The Range lab adds metres (authored on `rangeM`); mirror those metres into the px `range` the sim
+  // actually uses for targeting, so display and gameplay stay in lock-step.
+  if (labFlat.rangeM) out.range += labFlat.rangeM * PX_PER_METER;
   // Surface card aura/mechanic/active magnitudes (these do not scale a base stat).
   for (const k of Object.keys(pass)) out[k] = pass[k];
   // The Coins card multiplies the coins-per-kill stat directly.

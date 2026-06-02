@@ -396,14 +396,13 @@
 /* ---- Lab picker modal ---- */
 .hud .labpick-list { display: flex; flex-direction: column; gap: 9px; padding: 10px 14px 14px; }
 .hud .labpick-row { background: #11151f; border: 1px solid #262c3d; border-radius: 8px; padding: 10px 12px; }
-.hud .labpick-head { display: flex; align-items: center; gap: 10px; }
+.hud .labpick-head { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.hud .labpick-head:hover .labpick-title b { color: #fff; }
+.hud .labpick-row.open { border-color: #3a445e; }
 .hud .labpick-ic { color: #8b93a7; display: inline-flex; }
 .hud .labpick-title { flex: 1; display: flex; flex-direction: column; }
 .hud .labpick-title b { font-size: 14px; color: #e6e9f2; }
 .hud .labpick-title span { font-size: 11px; color: #8b93a7; display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
-.hud .labpick-info { background: transparent; border: 1px solid #2d3344; border-radius: 6px; color: #9aa3b6;
-  font: 600 11px system-ui; padding: 5px 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-.hud .labpick-info:hover { border-color: #4aa8ff; color: #d8deea; }
 .hud .labpick-start { background: #1a2030; border: 1px solid #2d3344; border-radius: 6px; color: #ffd24a;
   font: 700 12px system-ui; padding: 6px 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .hud .labpick-start:hover:not(.cant) { border-color: #ffd24a; }
