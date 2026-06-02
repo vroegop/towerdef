@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Enemy Designs — Jelly Bestiary (dev — throwaway)</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@400;700;900&display=swap"
+    />
+    <style>
+      :root {
+        --bg0: #070b14;
+        --bg1: #0d1626;
+        --panel: #111d31;
+        --panel-lt: #1a2a44;
+        --ink: #eaf2ff;
+        --ink-dim: #8da3c4;
+        --line: #28415f;
+        --accent: #37d7ff;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: 'Nunito', system-ui, sans-serif;
+        background: radial-gradient(circle at 50% -10%, #14233d, var(--bg0) 70%);
+        min-height: 100vh;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 16px;
+        align-items: center;
+        padding: 12px 20px;
+        background: linear-gradient(180deg, #14233d, #0d1626);
+        border-bottom: 1px solid var(--line);
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+      }
+      header h1 {
+        margin: 0;
+        font-family: 'Baloo 2', cursive;
+        font-weight: 800;
+        font-size: 21px;
+        letter-spacing: 0.01em;
+        background: linear-gradient(90deg, #37d7ff, #ff5db0 60%, #ffd24a);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      header .tag {
+        font-size: 12px;
+        color: var(--ink-dim);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 3px 10px;
+      }
+      .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+      .tab {
+        font: 700 13px 'Nunito', sans-serif;
+        color: var(--ink-dim);
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 5px 13px;
+        cursor: pointer;
+        transition: all 0.12s;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .tab .dot { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 7px currentColor; }
+      .tab:hover { color: var(--ink); border-color: #3d5f86; }
+      .tab.on { color: #06101f; background: var(--ink); border-color: var(--ink); }
+      .tab.roster.on { background: #ffd24a; border-color: #ffd24a; }
+      .spacer { flex: 1 1 auto; }
+      .toggles { display: flex; gap: 12px; flex-wrap: wrap; }
+      label.tog {
+        display: inline-flex; align-items: center; gap: 6px;
+        font-size: 13px; color: var(--ink); cursor: pointer; user-select: none;
+      }
+      label.tog input { accent-color: var(--accent); width: 15px; height: 15px; }
+      .stepper { display: none; align-items: center; gap: 8px; }
+      .stepper.show { display: inline-flex; }
+      .stepper button {
+        font: 800 15px 'Nunito'; width: 26px; height: 26px; line-height: 1;
+        border-radius: 7px; border: 1px solid var(--line); background: var(--panel);
+        color: var(--ink); cursor: pointer;
+      }
+      .stepper .lbl { font-size: 13px; color: var(--ink-dim); min-width: 150px; text-align: center; }
+      .stepper .lbl b { color: var(--ink); }
+
+      main {
+        padding: 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(228px, 1fr));
+        gap: 16px;
+        max-width: 1560px;
+        margin: 0 auto;
+      }
+      .card {
+        background: linear-gradient(180deg, var(--panel-lt), var(--panel));
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+        padding: 11px 11px 13px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .card .head { display: flex; align-items: baseline; gap: 8px; }
+      .card .no {
+        font: 800 12px 'Baloo 2', sans-serif; color: var(--accent); flex: 0 0 auto;
+      }
+      .card .nm { font: 800 15px 'Baloo 2', sans-serif; color: var(--ink); }
+      .card .badge {
+        margin-left: auto; font-size: 11px; font-weight: 700; color: #06101f;
+        padding: 2px 8px; border-radius: 999px;
+      }
+      .card canvas {
+        display: block; width: 100%; aspect-ratio: 1 / 1;
+        border-radius: 10px; cursor: pointer; background: #0a1322;
+      }
+      .card .sub {
+        font-size: 12.5px; line-height: 1.4; color: var(--ink-dim);
+        border-top: 1px solid var(--line); padding-top: 7px; min-height: 50px;
+      }
+      .card .sub b { color: var(--ink); }
+      footer {
+        text-align: center; color: var(--ink-dim); font-size: 12px; padding: 6px 20px 34px;
+      }
+      footer b { color: var(--ink); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>🪼 Jelly Bestiary</h1>
+      <span class="tag">dev preview — throwaway, not wired into the game</span>
+      <div class="tabs" id="tabs"></div>
+      <div class="spacer"></div>
+      <div class="stepper" id="stepper">
+        <button id="sPrev">‹</button>
+        <span class="lbl">Style <b id="sNo">1</b> · <b id="sNm">Dewdrop</b></span>
+        <button id="sNext">›</button>
+      </div>
+      <div class="toggles">
+        <label class="tog"><input id="tMotion" type="checkbox" checked /> Drift</label>
+        <label class="tog"><input id="tTrail" type="checkbox" checked /> Slime trail</label>
+        <label class="tog"><input id="tArena" type="checkbox" /> Arena floor</label>
+        <label class="tog"><input id="tPause" type="checkbox" /> Pause</label>
+      </div>
+    </header>
+    <main id="grid"></main>
+    <footer>
+      Floating translucent jelly-heads · click any cell to enlarge · pick a <b>type tab</b> to see its 10
+      prototypes, or <b>Roster</b> to compare one style across all six enemy types.
+    </footer>
+
+    <script>
+      'use strict';
+      const TAU = Math.PI * 2;
+
+      // ----------------------------- colour helpers -----------------------------
+      function hexRGB(hex) {
+        const h = hex.replace('#', '');
+        return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+      }
+      // mix a colour toward a target (default white); returns an [r,g,b] array
+      function mix(hex, amt, target) {
+        const c = Array.isArray(hex) ? hex : hexRGB(hex);
+        const T = target || [255, 255, 255];
+        return [c[0] + (T[0] - c[0]) * amt, c[1] + (T[1] - c[1]) * amt, c[2] + (T[2] - c[2]) * amt];
+      }
+      function rgba(hex, a) {
+        const c = Array.isArray(hex) ? hex : hexRGB(hex);
+        return `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+      }
+      const lighten = (hex, amt) => mix(hex, amt);
+      const deepen = (hex, amt) => mix(hex, amt, [12, 10, 22]);
+
+      // ----------------------------- shared shapes ------------------------------
+      // A jiggly closed blob outline: a circle perturbed by a couple of sine lobes.
+      function pathBlob(ctx, x, y, rx, ry, lobes, wob, t, seed) {
+        const N = 42;
+        ctx.beginPath();
+        for (let i = 0; i <= N; i++) {
+          const a = (i / N) * TAU;
+          const rr = 1 + (wob ? wob * Math.sin(a * lobes + t * 2.2 + seed) + wob * 0.4 * Math.sin(a * (lobes + 2) - t * 1.4) : 0);
+          const px = x + Math.cos(a) * rx * rr;
+          const py = y + Math.sin(a) * ry * rr;
+          i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+        }
+        ctx.closePath();
+      }
+
+      // The wet, water-drop look: a fat specular hotspot, a pin-sharp sparkle, and a
+      // refractive light crescent along the lower rim where light passes through the body.
+      function sheen(ctx, x, y, rx, ry) {
+        const g = ctx.createRadialGradient(x - rx * 0.32, y - ry * 0.42, 0, x - rx * 0.32, y - ry * 0.42, rx * 0.6);
+        g.addColorStop(0, 'rgba(255,255,255,0.92)');
+        g.addColorStop(0.7, 'rgba(255,255,255,0.16)');
+        g.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = g;
+        ctx.save();
+        ctx.translate(x - rx * 0.3, y - ry * 0.4);
+        ctx.rotate(-0.5);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, rx * 0.38, ry * 0.27, 0, 0, TAU);
+        ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = 'rgba(255,255,255,0.95)';
+        ctx.beginPath();
+        ctx.ellipse(x - rx * 0.04, y - ry * 0.08, rx * 0.07, ry * 0.06, 0, 0, TAU);
+        ctx.fill();
+      }
+      function refract(ctx, x, y, rx, ry, color) {
+        ctx.save();
+        ctx.lineWidth = Math.max(1, rx * 0.13);
+        ctx.strokeStyle = rgba(mix(color, 0.78), 0.5);
+        ctx.shadowColor = rgba(mix(color, 0.65), 0.55);
+        ctx.shadowBlur = rx * 0.5;
+        ctx.beginPath();
+        ctx.ellipse(x, y + ry * 0.16, rx * 0.72, ry * 0.64, 0, 0.18 * Math.PI, 0.82 * Math.PI);
+        ctx.stroke();
+        ctx.restore();
+      }
+      // Fill the current path as translucent gel lit from the upper-left, then ink the rim.
+      function gelFill(ctx, x, y, rx, ry, color, coreA, rimA) {
+        const g = ctx.createRadialGradient(x - rx * 0.3, y - ry * 0.38, rx * 0.08, x, y, rx * 1.08);
+        g.addColorStop(0, rgba(lighten(color, 0.62), coreA != null ? coreA : 0.9));
+        g.addColorStop(0.55, rgba(color, (coreA != null ? coreA : 0.9) * 0.66));
+        g.addColorStop(1, rgba(color, rimA != null ? rimA : 0.28));
+        ctx.save();
+        ctx.shadowColor = rgba(color, 0.85);
+        ctx.shadowBlur = rx * 0.85;
+        ctx.fillStyle = g;
+        ctx.fill();
+        ctx.restore();
+        ctx.lineWidth = Math.max(1, rx * 0.06);
+        ctx.strokeStyle = rgba(deepen(color, 0.45), 0.45);
+        ctx.stroke();
+      }
+      // Two little eyes that glance toward the travel direction → reads as a "head".
+      function eyes(ctx, x, y, rx, ry, vx, vy, sz, gap) {
+        const fa = Math.atan2(vy, vx);
+        const gx = Math.cos(fa), gy = Math.sin(fa);
+        sz = sz == null ? rx * 0.17 : sz;
+        gap = gap == null ? 0.42 : gap;
+        for (const s of [-1, 1]) {
+          const ex = x + s * rx * gap, ey = y - ry * 0.14;
+          ctx.fillStyle = 'rgba(255,255,255,0.96)';
+          ctx.beginPath();
+          ctx.ellipse(ex, ey, sz, sz * 1.12, 0, 0, TAU);
+          ctx.fill();
+          ctx.fillStyle = '#10131c';
+          ctx.beginPath();
+          ctx.arc(ex + gx * sz * 0.42, ey + gy * sz * 0.42, sz * 0.52, 0, TAU);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(255,255,255,0.95)';
+          ctx.beginPath();
+          ctx.arc(ex - sz * 0.18, ey - sz * 0.28, sz * 0.2, 0, TAU);
+          ctx.fill();
+        }
+      }
+
+      // ----------------------- per-TYPE identity accents ------------------------
+      // Each game enemy type keeps its own colour, scale and a signature accent so the
+      // SAME jelly style still reads as melee / fast / tank / boss / etc.
+      const TYPES = [
+        { key: 'melee', name: 'Melee', color: '#ff6b6b', scale: 1.0, bob: 1.0, desc: 'the baseline grunt — a plain coral blob.' },
+        { key: 'fast', name: 'Fast', color: '#37d7ff', scale: 0.8, bob: 1.7, desc: 'a small darting cyan jelly with speed streaks.' },
+        { key: 'ranged', name: 'Ranged', color: '#4aa8ff', scale: 0.94, bob: 1.15, desc: 'a spitter — charges a glowing droplet up front.' },
+        { key: 'tank', name: 'Tank', color: '#ffb3d1', scale: 1.42, bob: 0.55, desc: 'a heavy bulwark in light pink with a thick double rim.' },
+        { key: 'boss', name: 'Boss', color: '#e64cff', scale: 1.7, bob: 0.5, desc: 'a huge magenta behemoth ringed by an aura halo.' },
+        { key: 'splitter', name: 'Splitter', color: '#ff8a33', scale: 1.12, bob: 0.95, desc: 'an orange brood-blob — inner nuclei seam, ready to divide.' },
+      ];
+      const TYPE_BY = Object.fromEntries(TYPES.map((t) => [t.key, t]));
+
+      function typeAccent(ctx, x, y, R, t, type, vx, vy) {
+        const fa = Math.atan2(vy, vx);
+        if (type.key === 'fast') {
+          // speed streaks trailing opposite the travel direction
+          const bx = -Math.cos(fa), by = -Math.sin(fa), px = -by, py = bx;
+          ctx.strokeStyle = rgba(lighten(type.color, 0.5), 0.5);
+          ctx.lineWidth = Math.max(1, R * 0.1);
+          ctx.lineCap = 'round';
+          for (let i = -1; i <= 1; i++) {
+            const o = i * R * 0.45;
+            const ph = (t * 4 + i * 0.5) % 1;
+            const sx = x + px * o + bx * R * 0.7, sy = y + py * o + by * R * 0.7;
+            ctx.globalAlpha = 0.55 * (1 - ph);
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(sx + bx * R * (0.7 + ph * 1.1), sy + by * R * (0.7 + ph * 1.1));
+            ctx.stroke();
+          }
+          ctx.globalAlpha = 1;
+        } else if (type.key === 'tank') {
+          // thick armoured double rim
+          ctx.lineWidth = Math.max(1.5, R * 0.12);
+          ctx.strokeStyle = rgba(deepen(type.color, 0.35), 0.5);
+          ctx.beginPath();
+          ctx.arc(x, y, R * 1.06, 0, TAU);
+          ctx.stroke();
+        } else if (type.key === 'ranged') {
+          // a glowing charge-droplet held out in front
+          const cx = x + Math.cos(fa) * R * 1.04, cy = y + Math.sin(fa) * R * 1.04;
+          const pulse = 0.6 + 0.4 * Math.sin(t * 5);
+          ctx.save();
+          ctx.shadowColor = lighten(type.color, 0.3);
+          ctx.shadowBlur = R * 0.6 * pulse;
+          const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.3);
+          g.addColorStop(0, '#ffffff');
+          g.addColorStop(1, rgba(type.color, 0.7));
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(cx, cy, R * 0.22 * (0.7 + 0.3 * pulse), 0, TAU);
+          ctx.fill();
+          ctx.restore();
+        } else if (type.key === 'boss') {
+          // a slow expanding aura halo
+          const halo = (t * 0.45) % 1;
+          ctx.strokeStyle = rgba(lighten(type.color, 0.3), (1 - halo) * 0.5);
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(x, y, R * (1.05 + halo * 0.5), 0, TAU);
+          ctx.stroke();
+        } else if (type.key === 'splitter') {
+          // a couple of inner nuclei + a faint division seam
+          ctx.save();
+          ctx.strokeStyle = rgba(deepen(type.color, 0.4), 0.4);
+          ctx.lineWidth = Math.max(1, R * 0.05);
+          ctx.setLineDash([R * 0.18, R * 0.14]);
+          ctx.beginPath();
+          ctx.moveTo(x, y - R * 0.7);
+          ctx.lineTo(x, y + R * 0.7);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = rgba(deepen(type.color, 0.25), 0.5);
+          for (const s of [-1, 1]) {
+            ctx.beginPath();
+            ctx.arc(x + s * R * 0.32, y + R * 0.18, R * 0.16, 0, TAU);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+      }
+
+      // ============================ THE 10 PROTOTYPES ===========================
+      // draw(ctx, cx, cy, R, t, type, vx, vy) — R already scaled by type.scale.
+
+      // 1 — Comet: a glassy tear-drop head trailing a long fading tail. No face.
+      function comet(ctx, x, y, R, t, type, vx, vy) {
+        const fa = Math.atan2(vy, vx);
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(fa); // +x points along travel; the tail streams out behind (−x)
+        const g = ctx.createLinearGradient(0, 0, -R * 2.5, 0);
+        g.addColorStop(0, rgba(type.color, 0.55));
+        g.addColorStop(1, rgba(type.color, 0));
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(R * 0.2, -R * 0.5);
+        ctx.quadraticCurveTo(-R * 1.2, -R * 0.16 + Math.sin(t * 6) * R * 0.12, -R * 2.5, 0);
+        ctx.quadraticCurveTo(-R * 1.2, R * 0.16 + Math.sin(t * 6) * R * 0.12, R * 0.2, R * 0.5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        // the glassy head
+        const hr = R * 0.72;
+        ctx.beginPath();
+        ctx.arc(x, y, hr, 0, TAU);
+        gelFill(ctx, x, y, hr, hr, type.color, 0.86, 0.28);
+        refract(ctx, x, y, hr, hr, type.color);
+        sheen(ctx, x, y, hr, hr);
+      }
+
+      // 2 — Capsule: a smooth gel pill that leans into its travel direction. No face.
+      function capsule(ctx, x, y, R, t, type, vx, vy) {
+        const fa = Math.atan2(vy, vx);
+        const rad = R * 0.62, hx = R * 0.62; // cap radius + centre offset → length ≈ 2.5R
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(fa);
+        ctx.beginPath();
+        ctx.arc(hx, 0, rad, -Math.PI / 2, Math.PI / 2, false);
+        ctx.arc(-hx, 0, rad, Math.PI / 2, (3 * Math.PI) / 2, false);
+        ctx.closePath();
+        gelFill(ctx, 0, 0, hx + rad, rad, type.color, 0.84, 0.26);
+        // long top gloss-line + a sheen blob
+        ctx.lineCap = 'round';
+        ctx.lineWidth = Math.max(1, R * 0.12);
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.beginPath();
+        ctx.moveTo(-hx, -rad * 0.5);
+        ctx.lineTo(hx, -rad * 0.5);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.beginPath();
+        ctx.ellipse(-hx * 0.2, -rad * 0.42, rad * 0.32, rad * 0.18, 0, 0, TAU);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 3 — Halo: a translucent ring/torus — its open centre shows the floor through it.
+      function halo(ctx, x, y, R, t, type) {
+        const pulse = 1 + Math.sin(t * 3) * 0.03;
+        const outer = R * 0.95 * pulse, inner = R * 0.44;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, outer, 0, TAU, false);
+        ctx.arc(x, y, inner, 0, TAU, true); // punch the hole (concentric → clean annulus)
+        const g = ctx.createRadialGradient(x - outer * 0.3, y - outer * 0.3, inner, x, y, outer);
+        g.addColorStop(0, rgba(lighten(type.color, 0.6), 0.88));
+        g.addColorStop(1, rgba(type.color, 0.3));
+        ctx.shadowColor = rgba(type.color, 0.85);
+        ctx.shadowBlur = R * 0.8;
+        ctx.fillStyle = g;
+        ctx.fill('evenodd');
+        ctx.restore();
+        ctx.lineWidth = Math.max(1, R * 0.05);
+        ctx.strokeStyle = rgba(deepen(type.color, 0.4), 0.4);
+        ctx.beginPath(); ctx.arc(x, y, outer, 0, TAU); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, y, inner, 0, TAU); ctx.stroke();
+        // glossy highlight along the upper-left of the ring
+        ctx.lineCap = 'round';
+        ctx.lineWidth = Math.max(1, R * 0.13);
+        ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+        ctx.beginPath();
+        ctx.arc(x, y, (outer + inner) / 2, Math.PI * 1.05, Math.PI * 1.5);
+        ctx.stroke();
+      }
+
+      // 4 — Marble: a near-perfect glass sphere, double specular + inner caustic ring.
+      function marble(ctx, x, y, R, t, type) {
+        ctx.beginPath();
+        ctx.arc(x, y, R * 0.94, 0, TAU);
+        gelFill(ctx, x, y, R * 0.94, R * 0.94, type.color, 0.7, 0.16);
+        // inner caustic ring (focused light low-right)
+        ctx.save();
+        ctx.lineWidth = Math.max(1, R * 0.07);
+        ctx.strokeStyle = rgba(lighten(type.color, 0.7), 0.55);
+        ctx.beginPath();
+        ctx.arc(x + R * 0.12, y + R * 0.16, R * 0.55, -0.2, Math.PI * 0.9);
+        ctx.stroke();
+        ctx.restore();
+        // a slim vertical refraction streak
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.beginPath();
+        ctx.ellipse(x - R * 0.42, y, R * 0.08, R * 0.6, 0, 0, TAU);
+        ctx.fill();
+        sheen(ctx, x, y, R * 0.94, R * 0.94);
+        // a tiny secondary glint bottom-right sells the glass
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.beginPath();
+        ctx.arc(x + R * 0.4, y + R * 0.4, R * 0.07, 0, TAU);
+        ctx.fill();
+      }
+
+      // 5 — Kite: a rounded gem-rhombus lit like cut glass. Four soft points, no face.
+      function kite(ctx, x, y, R, t, type) {
+        const spin = Math.sin(t * 1.4) * 0.12;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(spin);
+        const a = R * 1.05, b = R * 0.8; // vertical / horizontal reach
+        ctx.beginPath();
+        ctx.moveTo(0, -a);
+        ctx.quadraticCurveTo(b * 0.62, -a * 0.18, b, 0);
+        ctx.quadraticCurveTo(b * 0.62, a * 0.18, 0, a);
+        ctx.quadraticCurveTo(-b * 0.62, a * 0.18, -b, 0);
+        ctx.quadraticCurveTo(-b * 0.62, -a * 0.18, 0, -a);
+        ctx.closePath();
+        gelFill(ctx, 0, 0, b, a, type.color, 0.84, 0.26);
+        // a bright cut-glass facet down the centre
+        ctx.fillStyle = 'rgba(255,255,255,0.32)';
+        ctx.beginPath();
+        ctx.moveTo(0, -a * 0.9);
+        ctx.lineTo(b * 0.42, 0);
+        ctx.lineTo(0, a * 0.55);
+        ctx.lineTo(-b * 0.2, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        sheen(ctx, x, y, b, a);
+      }
+
+      // 6 — Frogspawn: a cluster of fused soap-bubbles with iridescent rims.
+      function frogspawn(ctx, x, y, R, t, type, vx, vy) {
+        const blobs = [
+          [0, 0, 0.7], [-0.55, 0.18, 0.45], [0.5, 0.28, 0.5], [0.18, -0.5, 0.4], [-0.32, -0.42, 0.34],
+        ];
+        for (const [dx, dy, rr] of blobs) {
+          const bx = x + dx * R + Math.sin(t * 2 + dx * 5) * R * 0.04;
+          const by = y + dy * R + Math.cos(t * 2 + dy * 5) * R * 0.04;
+          const br = R * rr;
+          const g = ctx.createRadialGradient(bx - br * 0.3, by - br * 0.3, br * 0.1, bx, by, br);
+          g.addColorStop(0, rgba(lighten(type.color, 0.7), 0.5));
+          g.addColorStop(0.7, rgba(type.color, 0.28));
+          g.addColorStop(1, rgba(type.color, 0.12));
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(bx, by, br, 0, TAU);
+          ctx.fill();
+          // iridescent rim
+          ctx.lineWidth = Math.max(1, br * 0.08);
+          ctx.strokeStyle = rgba(lighten(type.color, 0.85), 0.55);
+          ctx.beginPath();
+          ctx.arc(bx, by, br * 0.97, -0.9, 1.4);
+          ctx.stroke();
+          ctx.fillStyle = 'rgba(255,255,255,0.85)';
+          ctx.beginPath();
+          ctx.arc(bx - br * 0.32, by - br * 0.34, br * 0.14, 0, TAU);
+          ctx.fill();
+        }
+        eyes(ctx, x, y, R * 0.7, R * 0.7, vx, vy, R * 0.12, 0.3);
+      }
+
+      // 7 — Prism: a faceted gel — gem-like internal planes, still translucent.
+      function prism(ctx, x, y, R, t, type) {
+        const rot = t * 0.3;
+        const n = 6;
+        ctx.beginPath();
+        for (let i = 0; i < n; i++) {
+          const a = rot + (i / n) * TAU;
+          const px = x + Math.cos(a) * R * 0.95, py = y + Math.sin(a) * R * 0.95;
+          i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+        }
+        ctx.closePath();
+        gelFill(ctx, x, y, R * 0.95, R * 0.95, type.color, 0.72, 0.2);
+        // internal facet lines from centre to each vertex, alternating light/dark
+        for (let i = 0; i < n; i++) {
+          const a = rot + (i / n) * TAU;
+          ctx.strokeStyle = i % 2 ? rgba(lighten(type.color, 0.8), 0.5) : rgba(deepen(type.color, 0.4), 0.35);
+          ctx.lineWidth = Math.max(1, R * 0.04);
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + Math.cos(a) * R * 0.95, y + Math.sin(a) * R * 0.95);
+          ctx.stroke();
+        }
+        // bright top facet
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + Math.cos(rot) * R * 0.95, y + Math.sin(rot) * R * 0.95);
+        ctx.lineTo(x + Math.cos(rot + TAU / n) * R * 0.95, y + Math.sin(rot + TAU / n) * R * 0.95);
+        ctx.closePath();
+        ctx.fill();
+        sheen(ctx, x, y, R * 0.95, R * 0.95);
+      }
+
+      // 8 — Star: a soft five-point gel star with a glowing core. Slowly spins, no face.
+      function star(ctx, x, y, R, t, type) {
+        const rot = t * 0.5, pts = 5, outer = R * 1.08, inner = R * 0.5;
+        ctx.beginPath();
+        for (let i = 0; i < pts * 2; i++) {
+          const a = rot - Math.PI / 2 + (i / (pts * 2)) * TAU;
+          const rr = i % 2 ? inner : outer;
+          const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr;
+          i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+        }
+        ctx.closePath();
+        gelFill(ctx, x, y, outer, outer, type.color, 0.82, 0.24);
+        // a brighter inner core glow
+        ctx.save();
+        ctx.shadowColor = rgba(lighten(type.color, 0.5), 0.9);
+        ctx.shadowBlur = R * 0.7;
+        const cg = ctx.createRadialGradient(x, y, 0, x, y, inner);
+        cg.addColorStop(0, 'rgba(255,255,255,0.85)');
+        cg.addColorStop(1, rgba(type.color, 0));
+        ctx.fillStyle = cg;
+        ctx.beginPath();
+        ctx.arc(x, y, inner * 0.9, 0, TAU);
+        ctx.fill();
+        ctx.restore();
+        sheen(ctx, x, y, outer * 0.7, outer * 0.7);
+      }
+
+      // 9 — Magma: a clear gel shell with a pulsing molten core glowing through.
+      function magma(ctx, x, y, R, t, type, vx, vy) {
+        const pulse = 0.7 + 0.3 * Math.sin(t * 4);
+        // clear shell
+        ctx.beginPath();
+        ctx.arc(x, y, R * 0.94, 0, TAU);
+        gelFill(ctx, x, y, R * 0.94, R * 0.94, type.color, 0.5, 0.16);
+        // molten core (warm, tinted slightly by the type)
+        const heat = mix(type.color, 0.5, [255, 150, 40]);
+        ctx.save();
+        ctx.shadowColor = rgba(heat, 0.9);
+        ctx.shadowBlur = R * 1.1 * pulse;
+        const cg = ctx.createRadialGradient(x, y, 0, x, y, R * 0.55);
+        cg.addColorStop(0, '#fff7e0');
+        cg.addColorStop(0.45, rgba(heat, 0.95));
+        cg.addColorStop(1, rgba(heat, 0.05));
+        ctx.fillStyle = cg;
+        ctx.beginPath();
+        ctx.arc(x, y, R * 0.5 * pulse, 0, TAU);
+        ctx.fill();
+        ctx.restore();
+        // a few embers drifting up inside the shell
+        for (let i = 0; i < 4; i++) {
+          const ph = (t * 0.8 + i * 0.31) % 1;
+          const ex = x + Math.sin(i * 2.1 + t) * R * 0.3;
+          const ey = y + R * 0.4 - ph * R * 0.8;
+          ctx.globalAlpha = (1 - ph) * 0.8;
+          ctx.fillStyle = '#ffd98a';
+          ctx.fillRect(ex - 1, ey - 1, 2, 2);
+        }
+        ctx.globalAlpha = 1;
+        sheen(ctx, x, y, R * 0.94, R * 0.94);
+      }
+
+      // 10 — Trefoil: a wobbling three-lobed clover of goo that turns as it drifts. No face.
+      function trefoil(ctx, x, y, R, t, type) {
+        pathBlob(ctx, x, y, R * 0.84, R * 0.84, 3, 0.3, t, 0);
+        gelFill(ctx, x, y, R, R, type.color, 0.84, 0.26);
+        refract(ctx, x, y, R * 0.84, R * 0.84, type.color);
+        sheen(ctx, x, y, R * 0.78, R * 0.78);
+      }
+
+      // ----------------------------- registry -----------------------------------
+      const STYLES = [
+        { nm: 'Comet', draw: comet, sub: 'A glassy <b>tear-drop head with a long fading tail</b> that streams behind its travel. Sleek and directional — no face.' },
+        { nm: 'Capsule', draw: capsule, sub: 'A smooth <b>gel pill</b> that leans into its travel direction, with a long top gloss-line. Calm and clean — no face.' },
+        { nm: 'Halo', draw: halo, sub: 'A translucent <b>ring / torus</b> with an open centre you can see the floor through. The most graphic silhouette — no face.' },
+        { nm: 'Marble', draw: marble, sub: 'A near-perfect <b>glass sphere</b>: double specular, an inner caustic ring and a vertical refraction streak. Very clean.' },
+        { nm: 'Kite', draw: kite, sub: 'A rounded <b>gem-rhombus</b> — four soft points, lit like cut glass. Angular without being spiky — no face.' },
+        { nm: 'Frogspawn', draw: frogspawn, sub: 'A <b>cluster of fused soap-bubbles</b> of mixed sizes, each with an iridescent rim. Reads as gooey and unstable.' },
+        { nm: 'Prism', draw: prism, sub: 'A <b>faceted gel</b> — gem-like internal planes catching light — that is still see-through. Crystalline but wet.' },
+        { nm: 'Star', draw: star, sub: 'A soft five-point <b>gel star</b> with a glowing core. Spins slowly; reads as a threat with no face needed.' },
+        { nm: 'Magma', draw: magma, sub: 'A clear gel <b>shell over a pulsing molten core</b> that glows through, shedding embers. A lava-lamp creature.' },
+        { nm: 'Trefoil', draw: trefoil, sub: 'A wobbling <b>three-lobed clover</b> of goo that turns as it drifts. Organic and unmistakably alive — no face.' },
+      ];
+
+      // ----------------------------- board state --------------------------------
+      const opts = { motion: true, trail: true, arena: false, paused: false };
+      const view = { mode: 'type', type: 'melee', style: 0 };
+      document.getElementById('tMotion').onchange = (e) => (opts.motion = e.target.checked);
+      document.getElementById('tTrail').onchange = (e) => (opts.trail = e.target.checked);
+      document.getElementById('tArena').onchange = (e) => (opts.arena = e.target.checked);
+      document.getElementById('tPause').onchange = (e) => (opts.paused = e.target.checked);
+
+      // tabs (one per type + a Roster tab)
+      const tabsEl = document.getElementById('tabs');
+      TYPES.forEach((ty) => {
+        const b = document.createElement('button');
+        b.className = 'tab';
+        b.innerHTML = `<span class="dot" style="color:${ty.color}"></span>${ty.name}`;
+        b.onclick = () => { view.mode = 'type'; view.type = ty.key; syncTabs(); rebuild(); };
+        b.dataset.type = ty.key;
+        tabsEl.appendChild(b);
+      });
+      const rosterBtn = document.createElement('button');
+      rosterBtn.className = 'tab roster';
+      rosterBtn.textContent = '★ Roster';
+      rosterBtn.onclick = () => { view.mode = 'roster'; syncTabs(); rebuild(); };
+      tabsEl.appendChild(rosterBtn);
+
+      const stepperEl = document.getElementById('stepper');
+      const sNo = document.getElementById('sNo'), sNm = document.getElementById('sNm');
+      document.getElementById('sPrev').onclick = () => { view.style = (view.style + STYLES.length - 1) % STYLES.length; syncStepper(); rebuild(); };
+      document.getElementById('sNext').onclick = () => { view.style = (view.style + 1) % STYLES.length; syncStepper(); rebuild(); };
+      function syncStepper() { sNo.textContent = view.style + 1; sNm.textContent = STYLES[view.style].nm; }
+
+      function syncTabs() {
+        for (const b of tabsEl.children) {
+          const isType = b.dataset.type && view.mode === 'type' && b.dataset.type === view.type;
+          const isRoster = b.classList.contains('roster') && view.mode === 'roster';
+          b.classList.toggle('on', !!(isType || isRoster));
+        }
+        stepperEl.classList.toggle('show', view.mode === 'roster');
+      }
+
+      // ----------------------------- grid wiring --------------------------------
+      const grid = document.getElementById('grid');
+      let cells = [];
+      function rebuild() {
+        grid.innerHTML = '';
+        cells = [];
+        let items;
+        if (view.mode === 'type') {
+          const ty = TYPE_BY[view.type];
+          items = STYLES.map((st, i) => ({
+            no: i + 1, nm: st.nm, sub: st.sub, draw: st.draw, type: ty, badge: ty.name, badgeColor: ty.color,
+          }));
+        } else {
+          const st = STYLES[view.style];
+          items = TYPES.map((ty, i) => ({
+            no: i + 1, nm: ty.name, sub: `<b>${st.nm}</b> styling — ${ty.desc}`, draw: st.draw, type: ty, badge: st.nm, badgeColor: ty.color,
+          }));
+        }
+        items.forEach((it) => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML =
+            `<div class="head"><span class="no">${String(it.no).padStart(2, '0')}</span>` +
+            `<span class="nm">${it.nm}</span>` +
+            `<span class="badge" style="background:${it.badgeColor}">${it.badge}</span></div>` +
+            `<canvas></canvas><div class="sub">${it.sub}</div>`;
+          grid.appendChild(card);
+          const cv = card.querySelector('canvas');
+          cv.onclick = () => openZoom(it);
+          cells.push({ it, cv, ctx: cv.getContext('2d'), w: 0, h: 0, trail: [], lastx: 0, lasty: 0, ph: Math.random() * 10 });
+        });
+      }
+
+      function fit(cell) {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const cssW = cell.cv.clientWidth, cssH = cell.cv.clientHeight;
+        if (!cssW || !cssH) return;
+        if (cssW === cell.w && cssH === cell.h) return;
+        cell.w = cssW; cell.h = cssH;
+        cell.cv.width = Math.floor(cssW * dpr); cell.cv.height = Math.floor(cssH * dpr);
+        cell.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      // background — dark "tank" by default, or the game's parchment arena floor.
+      function bg(ctx, W, H) {
+        if (opts.arena) {
+          const cx = W / 2, cy = H / 2;
+          const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.72);
+          g.addColorStop(0, '#ecdcb6'); g.addColorStop(0.55, '#dcc596'); g.addColorStop(1, '#b89a62');
+          ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+          ctx.strokeStyle = 'rgba(90,60,25,.16)'; ctx.lineWidth = 1; ctx.beginPath();
+          for (let x = 0; x <= W; x += 26) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+          for (let y = 0; y <= H; y += 26) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
+          ctx.stroke();
+        } else {
+          const g = ctx.createRadialGradient(W / 2, H * 0.42, 0, W / 2, H * 0.42, Math.max(W, H) * 0.8);
+          g.addColorStop(0, '#13233c'); g.addColorStop(1, '#070d18');
+          ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+        }
+      }
+
+      // the quick-fading slime trail: tapering translucent dabs in the body colour,
+      // with a wet glossy nub on the freshest few.
+      function drawTrail(ctx, cell, color, R) {
+        const tr = cell.trail;
+        for (let i = 0; i < tr.length; i++) {
+          const p = tr[i];
+          const f = i / tr.length; // 0 = oldest, ~1 = newest
+          const a = f * f * 0.42;
+          const rr = R * (0.16 + 0.5 * f);
+          ctx.save();
+          ctx.shadowColor = rgba(color, a);
+          ctx.shadowBlur = rr * 0.8;
+          ctx.fillStyle = rgba(mix(color, 0.15), a);
+          ctx.beginPath();
+          ctx.ellipse(p.x, p.y, rr, rr * 0.82, 0, 0, TAU);
+          ctx.fill();
+          ctx.restore();
+          if (f > 0.78) {
+            ctx.fillStyle = rgba([255, 255, 255], (f - 0.78) * 1.6);
+            ctx.beginPath();
+            ctx.arc(p.x - rr * 0.25, p.y - rr * 0.3, rr * 0.22, 0, TAU);
+            ctx.fill();
+          }
+        }
+      }
+
+      function paint(cell, t) {
+        const ctx = cell.ctx, W = cell.w, H = cell.h;
+        if (!W || !H) return;
+        const ty = cell.it.type;
+        const R = Math.min(W, H) * 0.165 * ty.scale;
+        const cx = W / 2, cy = H / 2;
+        ctx.clearRect(0, 0, W, H);
+        bg(ctx, W, H);
+
+        // motion path within the cell (Lissajous drift + a floating bob)
+        const u = t * 0.13 + cell.ph;
+        const ax = W * 0.2, ay = H * 0.14;
+        const px = (uu) => cx + (opts.motion ? Math.sin(uu * TAU) * ax : 0);
+        const py = (uu) => cy + (opts.motion ? Math.sin(uu * 2 * TAU + 1.1) * ay : 0) + Math.sin((uu * TAU) * 1.6 * ty.bob) * Math.min(W, H) * 0.03;
+        const x = px(u), y = py(u);
+        const x2 = px(u + 0.004), y2 = py(u + 0.004);
+        let vx = x2 - x, vy = y2 - y;
+        const vlen = Math.hypot(vx, vy) || 1;
+        vx /= vlen; vy /= vlen;
+        if (vlen < 0.0001) { vx = 0; vy = 1; }
+
+        // advance + draw the slime trail
+        if (opts.trail && !opts.paused) {
+          const moved = Math.hypot(x - cell.lastx, y - cell.lasty);
+          if (cell.trail.length === 0 || moved > R * 0.16) {
+            cell.trail.push({ x, y });
+            cell.lastx = x; cell.lasty = y;
+            if (cell.trail.length > 16) cell.trail.shift();
+          }
+        } else if (!opts.trail) {
+          cell.trail.length = 0;
+        }
+        if (opts.trail && cell.trail.length) drawTrail(ctx, cell, ty.color, R);
+
+        // the creature
+        cell.it.draw(ctx, x, y, R, t, ty, vx, vy);
+        typeAccent(ctx, x, y, R, t, ty, vx, vy);
+      }
+
+      // ----------------------------- click-to-enlarge ---------------------------
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(4,8,16,.84);z-index:50;cursor:zoom-out;';
+      const big = document.createElement('canvas');
+      big.style.cssText = 'width:min(560px,86vw);height:min(560px,86vw);border-radius:16px;box-shadow:0 22px 60px rgba(0,0,0,.7);background:#0a1322;';
+      overlay.appendChild(big);
+      document.body.appendChild(overlay);
+      const zoom = { open: false, cell: null };
+      function openZoom(it) {
+        zoom.open = true;
+        zoom.cell = { it, cv: big, ctx: big.getContext('2d'), w: 0, h: 0, trail: [], lastx: 0, lasty: 0, ph: 0 };
+        overlay.style.display = 'flex';
+      }
+      overlay.onclick = () => { zoom.open = false; zoom.cell = null; overlay.style.display = 'none'; };
+
+      // ----------------------------- the loop -----------------------------------
+      let t0 = performance.now(), tHold = 0;
+      function loop(now) {
+        const t = opts.paused ? tHold : (now - t0) / 1000;
+        if (!opts.paused) tHold = t;
+        for (const cell of cells) { fit(cell); paint(cell, t); }
+        if (zoom.open && zoom.cell) { fit(zoom.cell); paint(zoom.cell, t); }
+        requestAnimationFrame(loop);
+      }
+
+      syncTabs();
+      syncStepper();
+      rebuild();
+      requestAnimationFrame(loop);
+    </script>
+  </body>
+</html>

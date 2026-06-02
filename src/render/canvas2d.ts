@@ -7,9 +7,11 @@ import type { Settings, State } from '../types';
 import { BASE_RANGE_M, PX_PER_METER } from '../sim/skills';
 import { selectedCosmeticId } from '../sim/cosmetics';
 import { drawTowerSkin } from './towers';
+import { drawEnemy } from './enemies';
 
 const RANGE_PAD = 0.1; // fraction of range kept as padding outside the ring so bounced enemies stay visible
 const BOTTOM_MARGIN = 0.4; // bottom 40% of the screen is reserved (upgrade menus) — tower stays in the top 60%
+const TRAIL_LIFE = 0.32; // seconds a slime-trail dab lingers behind a moving enemy before it fully fades
 
 type Ctx = CanvasRenderingContext2D;
 interface Spark { x: number; y: number; vx: number; vy: number; life: number; color: string }
@@ -21,67 +23,6 @@ interface Pos { x: number; y: number }
 export interface Renderer {
   resize(): void;
   draw(s: State, alpha: number, paused: boolean): void;
-}
-
-// Mix a hex colour toward white — used for the lit top-left face of each token.
-function lighten(hex: string, amt = 0.5): string {
-  const h = hex.replace('#', '');
-  const r = parseInt(h.slice(0, 2), 16),
-    g = parseInt(h.slice(2, 4), 16),
-    b = parseInt(h.slice(4, 6), 16);
-  const m = (c: number): number => Math.round(c + (255 - c) * amt);
-  return `rgb(${m(r)},${m(g)},${m(b)})`;
-}
-
-function drawShape(ctx: Ctx, shape: string, x: number, y: number, r: number, color: string, facing: number, flash: number): void {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(facing || 0);
-  ctx.beginPath();
-  if (shape === 'circle') ctx.arc(0, 0, r, 0, Math.PI * 2);
-  else if (shape === 'square') ctx.rect(-r, -r, r * 2, r * 2);
-  else if (shape === 'triangle') {
-    ctx.moveTo(0, -r);
-    ctx.lineTo(r * 0.9, r * 0.8);
-    ctx.lineTo(-r * 0.9, r * 0.8);
-    ctx.closePath();
-  } else if (shape === 'hexagon') {
-    for (let i = 0; i < 6; i++) {
-      const a = Math.PI / 6 + (i * Math.PI) / 3,
-        px = Math.cos(a) * r,
-        py = Math.sin(a) * r;
-      i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
-    }
-    ctx.closePath();
-  } else if (shape === 'diamond') {
-    ctx.moveTo(0, -r);
-    ctx.lineTo(r, 0);
-    ctx.lineTo(0, r);
-    ctx.lineTo(-r, 0);
-    ctx.closePath();
-  } else if (shape === 'pentagon') {
-    for (let i = 0; i < 5; i++) {
-      const a = -Math.PI / 2 + (i * Math.PI * 2) / 5,
-        px = Math.cos(a) * r,
-        py = Math.sin(a) * r;
-      i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
-    }
-    ctx.closePath();
-  }
-  // Polished "C" look: a radial gradient lit from the top-left, a soft coloured glow,
-  // then a dark ink rim so the token reads as a piece sitting on the parchment map.
-  const g = ctx.createRadialGradient(-r * 0.35, -r * 0.35, r * 0.1, 0, 0, r * 1.1);
-  g.addColorStop(0, flash > 0 ? '#ffffff' : lighten(color));
-  g.addColorStop(1, color);
-  ctx.shadowColor = color;
-  ctx.shadowBlur = flash > 0 ? 18 : 9;
-  ctx.fillStyle = flash > 0 ? '#ffffff' : g;
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = 'rgba(38,26,10,.85)';
-  ctx.stroke();
-  ctx.restore();
 }
 
 // thin health bar: solid red for current HP, white for the HP lost. No number, no gradient.
@@ -106,69 +47,6 @@ function drawShadow(ctx: Ctx, x: number, y: number, r: number): void {
   ctx.fill();
 }
 
-// A mote orbiting a melee enemy. Drawn twice per orbit: dim+small when behind the body, then
-// bright+large when in front — reading as a particle circling a 3D object.
-function drawMote(ctx: Ctx, ox: number, oy: number, pr: number, color: string, front: boolean): void {
-  ctx.globalAlpha = front ? 1 : 0.45;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = front ? pr * 2.6 : pr;
-  const g = ctx.createRadialGradient(ox, oy, 0, ox, oy, pr);
-  g.addColorStop(0, '#ffffff');
-  g.addColorStop(1, color);
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.arc(ox, oy, pr, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.globalAlpha = 1;
-}
-
-// Speed streaks trailing a triangle (ranged), so it reads as fast without actually moving faster.
-function drawWind(ctx: Ctx, x: number, y: number, r: number, facing: number, t: number, id: number): void {
-  const bx = Math.cos(facing + Math.PI),
-    by = Math.sin(facing + Math.PI); // trailing direction
-  const px = -by,
-    py = bx;
-  ctx.strokeStyle = 'rgba(190,225,255,0.5)';
-  ctx.lineWidth = Math.max(1, r * 0.14);
-  for (let i = 0; i < 3; i++) {
-    const off = (i - 1) * r * 0.5;
-    const phase = (t * 5 + i * 0.6 + (id % 13) * 0.27) % 1; // 0→1 sweep out, then repeat
-    const len = r * (1 + phase * 1.4);
-    const sx = x + px * off + bx * r * 0.6,
-      sy = y + py * off + by * r * 0.6;
-    ctx.globalAlpha = 0.6 * (1 - phase);
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(sx + bx * len, sy + by * len);
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-}
-
-// A small metal shield on the tank's leading edge, facing the tower it is marching on.
-function drawShield(ctx: Ctx, x: number, y: number, r: number, facing: number): void {
-  ctx.save();
-  ctx.translate(x + Math.cos(facing) * r * 1.05, y + Math.sin(facing) * r * 1.05);
-  ctx.rotate(facing + Math.PI / 2);
-  const grad = ctx.createLinearGradient(-r * 0.85, 0, r * 0.85, 0);
-  grad.addColorStop(0, '#6b7785');
-  grad.addColorStop(0.5, '#cdd6df');
-  grad.addColorStop(1, '#6b7785');
-  ctx.fillStyle = grad;
-  ctx.strokeStyle = 'rgba(38,26,10,0.85)';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, r * 0.85, r * 0.32, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = '#eef2f6';
-  ctx.beginPath();
-  ctx.arc(0, 0, r * 0.12, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
 export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<Settings>): Renderer {
   const ctx = canvas.getContext('2d') as Ctx;
   const cfg: Partial<Settings> = settings || {};
@@ -179,6 +57,7 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
   let lastFxSeq = -1;
   const seen = new Map<number, number>();
   const prevEnemies = new Map<number, { x: number; y: number; color: string }>();
+  const trails = new Map<number, { x: number; y: number; born: number }[]>();
   let prevPos = new Map<number, Pos>();
   let curPos = new Map<number, Pos>();
   let lastTick = -1;
@@ -333,44 +212,52 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     ctx.strokeRect(aL + 3, aT + 3, aW - 6, aH - 6);
     ctx.restore();
 
+    // Slime trails — a quick-fading smear of colour behind each moving enemy, drawn UNDER the
+    // bodies. Per-id screen-space history; each dab fades out over TRAIL_LIFE seconds (frozen on pause).
+    for (const e of s.enemies) {
+      const ep = ipos(e.id, e.x, e.y),
+        sx = tx(ep.x),
+        sy = ty(ep.y),
+        er = e.r * scale;
+      let tr = trails.get(e.id);
+      if (!tr) trails.set(e.id, (tr = []));
+      const last = tr[tr.length - 1];
+      if (!last || Math.hypot(sx - last.x, sy - last.y) > Math.max(er * 0.5, 3)) tr.push({ x: sx, y: sy, born: animClock });
+      while (tr.length && animClock - tr[0].born > TRAIL_LIFE) tr.shift();
+      for (const p of tr) {
+        const frac = 1 - (animClock - p.born) / TRAIL_LIFE; // newest ≈ 1
+        if (frac <= 0) continue;
+        const rr = Math.max(er, 4) * (0.28 + 0.5 * frac);
+        ctx.globalAlpha = 0.3 * frac;
+        ctx.fillStyle = e.color;
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y, rr, rr * 0.82, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+    for (const id of trails.keys()) if (!curPos.has(id)) trails.delete(id);
+
     for (const e of s.enemies) {
       const col = e.color;
       const ep = ipos(e.id, e.x, e.y),
         esx = tx(ep.x),
         esy = ty(ep.y);
-      const rot = e.shape === 'triangle' ? e.facing + Math.PI / 2 : 0;
       const er = e.r * scale;
-      // Effects use a floored radius so the flourishes stay readable on the now-tiny bodies.
-      const fxR = Math.max(er, 5);
-      drawShadow(ctx, esx, esy, er);
-      // Normal (melee) enemies get a mote orbiting in pseudo-3D: behind the body it's dim+small
-      // (drawn first, so the body occludes it), in front it's bright+large (drawn after).
-      let mote: { ox: number; oy: number; pr: number; front: boolean } | null = null;
-      if (e.type === 'melee') {
-        const a = animClock * 2.6 + (e.id % 97) * 0.65;
-        const depth = Math.sin(a); // <0 behind, ≥0 in front
-        mote = {
-          ox: esx + Math.cos(a) * fxR * 1.8,
-          oy: esy + Math.sin(a) * fxR * 0.75, // squashed ellipse → perspective
-          pr: fxR * 0.4 * (0.55 + 0.45 * (depth * 0.5 + 0.5)),
-          front: depth >= 0,
-        };
-        if (!mote.front) drawMote(ctx, mote.ox, mote.oy, mote.pr, col, false);
-      }
-      drawShape(ctx, e.shape, esx, esy, er, col, rot, e.hitFlash);
-      if (mote && mote.front) drawMote(ctx, mote.ox, mote.oy, mote.pr, col, true);
-      if (e.shape === 'triangle') drawWind(ctx, esx, esy, fxR, e.facing, animClock, e.id);
-      if (e.type === 'tank') drawShield(ctx, esx, esy, fxR, e.facing);
+      // Floor the body a touch so the wet detail stays legible once tokens get tiny.
+      const bodyR = Math.max(er, 4);
+      drawShadow(ctx, esx, esy, bodyR);
+      drawEnemy(ctx, e.type, esx, esy, bodyR, col, animClock, e.hitFlash, e.facing);
       const prev = seen.get(e.id) || 0;
       if (e.hitFlash > 0 && prev <= 0) {
         spawnSparks(esx, esy, col);
         if (s.atkMode === 'lightning') spawnBolt(hsx, hsy, esx, esy);
-        if (cfg.damageNumbers && e.hitDmg) spawnFloat(esx, esy - e.r * scale - 4, '' + e.hitDmg, '#ffffff', 13);
+        if (cfg.damageNumbers && e.hitDmg) spawnFloat(esx, esy - bodyR - 4, '' + e.hitDmg, '#ffffff', 13);
       }
       seen.set(e.id, e.hitFlash);
       if (e.rend > 0) {
         ctx.fillStyle = '#e64cff';
-        const py = esy - e.r * scale - 9;
+        const py = esy - bodyR - 9;
         for (let i = 0; i < e.rend; i++) {
           ctx.beginPath();
           ctx.arc(esx - (e.rend - 1) * 2.5 + i * 5, py, 1.7, 0, Math.PI * 2);
@@ -379,8 +266,8 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
       }
       if (cfg.enemyHp && e.hp < e.hpMax && e.hp > 0) {
         const bh = 3,
-          bw = Math.max(30, e.r * scale * 2 + 8),
-          by = esy - e.r * scale - bh - 5;
+          bw = Math.max(30, bodyR * 2 + 8),
+          by = esy - bodyR - bh - 5;
         drawHealthBar(ctx, esx, by, bw, bh, e.hp / e.hpMax);
       }
     }

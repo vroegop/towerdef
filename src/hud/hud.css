@@ -58,6 +58,8 @@
 .hud .enemytbl th { text-align: right; font-weight: 700; color: #8b93a7; padding: 3px 6px; border-bottom: 1px solid #2a3142; }
 .hud .enemytbl td { text-align: right; padding: 3px 6px; border-bottom: 1px solid #1f2740; }
 .hud .enemytbl th:first-child, .hud .enemytbl td:first-child { text-align: left; }
+.hud .enemytbl .etype { display: inline-flex; align-items: center; gap: 7px; }
+.hud .enemytbl .eicon { flex: 0 0 auto; display: block; filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.4)); }
 
 /* ---- side menu: a narrow, one-icon-wide rail pinned under the header toggle. It is only as tall as
        its content (icon buttons + padding), so it never blocks the arena. Toggled by the header menu
