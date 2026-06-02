@@ -883,6 +883,13 @@
 .hud .tabbar.pulse { animation: tabpulse 1.2s ease-in-out infinite; }
 @keyframes tabpulse { 0%,100% { box-shadow: 0 0 0 rgba(74,168,255,0); } 50% { box-shadow: 0 -4px 20px rgba(74,168,255,.55); } }
 
+/* ---- in-run "temporary upgrades" tutorial: lock the bar to the step's tab + target upgrade ---- */
+.hud .tabs button.tut { color: #ffd24a; border-top-color: #ffd24a; animation: tutpulse 1.2s ease-in-out infinite; }
+.hud .tabs button.tut-off { opacity: .35; pointer-events: none; } /* the off-step tabs can't be opened */
+/* only the highlighted upgrade is buyable; everything else in the open tab is dimmed + inert */
+.hud .tabcontent.ir-lock .up:not(.ir-target) { opacity: .35; pointer-events: none; }
+.hud .up.ir-target { border-color: #ffd24a; box-shadow: 0 0 0 3px rgba(255,210,74,.15); }
+
 /* ---- settings: gear buttons + modal with toggle rows ---- */
 .hud .menugear { position: absolute; top: 12px; right: 14px; z-index: 5; pointer-events: auto; background: transparent;
   border: 0; color: #8b93a7; cursor: pointer; padding: 4px; display: flex; }

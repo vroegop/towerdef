@@ -588,17 +588,36 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   let activeTab = TAB_DEFS[0].id,
     tabOpen = false,
     taughtTabs = false;
+  // ---- in-run "temporary upgrades" tutorial (see runTut(), driven from update()) ----
+  // Step the player is on, or null when inactive. While active the tab bar is locked to the step's
+  // target tab and only the target upgrade is buyable, so the lesson can't be skipped.
+  type IrStep = 'damage' | 'health' | 'recap';
+  let irStep: IrStep | null = null;
+  const irTargetId = (): string | null => (irStep === 'damage' ? 'rangedDamage' : irStep === 'health' ? 'health' : null);
+  const irTargetTab = (): string => (irStep === 'health' ? 'defense' : 'attack');
+  const irLocked = (): boolean => irStep === 'damage' || irStep === 'health'; // recap leaves the bar free
+  // Does a tab have at least one buyable (unlocked) upgrade right now? Locked-only tabs (e.g. the
+  // gated Utility/economic tab before it's bought in the Workshop) render empty, so we never open them.
+  function tabHasContent(tab: string, meta: Meta | null): boolean {
+    if (!meta) return true;
+    for (const u of upgradesIn(tab)) if (isUnlocked(meta, u.id)) return true;
+    return false;
+  }
   TAB_DEFS.forEach((tab) => {
     const b = document.createElement('button');
     b.innerHTML = icon(tab.icon, 22);
     b.dataset.tab = tab.id;
     b.title = tab.id;
     b.addEventListener('click', () => {
-      if (tabOpen && activeTab === tab.id) tabOpen = false;
-      else {
-        activeTab = tab.id;
-        tabOpen = true;
+      if (irLocked()) return; // locked to the tutorial's target tab while a step is in progress
+      const opening = !(tabOpen && activeTab === tab.id);
+      // An empty (locked-only) tab never opens — show a tip that it unlocks with coins in the Workshop.
+      if (opening && !tabHasContent(tab.id, lastS ? lastS.meta : null)) {
+        showUnlockTip(b, 'Unlock with ' + coinsIc(12) + ' in the Workshop');
+        return;
       }
+      tabOpen = opening;
+      activeTab = tab.id;
       taughtTabs = true;
       $('#h-tabbar').classList.remove('pulse');
       renderTabButtons();
@@ -607,7 +626,14 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     tabsEl.appendChild(b);
   });
   function renderTabButtons(): void {
-    for (const b of Array.from(tabsEl.children) as HTMLElement[]) b.classList.toggle('on', tabOpen && b.dataset.tab === activeTab);
+    const lock = irLocked(),
+      tgtTab = irTargetTab();
+    for (const b of Array.from(tabsEl.children) as HTMLElement[]) {
+      b.classList.toggle('on', tabOpen && b.dataset.tab === activeTab);
+      // during an interactive tutorial step: pulse the target tab, dim + disable the rest
+      b.classList.toggle('tut', lock && b.dataset.tab === tgtTab);
+      b.classList.toggle('tut-off', lock && b.dataset.tab !== tgtTab);
+    }
   }
   function renderTabContent(): void {
     contentEl.innerHTML = '';
@@ -645,6 +671,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       contentEl.appendChild(btn);
       rowEls[u.id] = { btn, cur: btn.querySelector('.cur')!, nxt: btn.querySelector('.nxt')!, cost: btn.querySelector('.cost')!, lv: btn.querySelector('.uplv')!, mult };
     }
+    // tutorial: spotlight + only the step's target upgrade is buyable (the rest are dimmed/inert).
+    const tgt = irTargetId();
+    contentEl.classList.toggle('ir-lock', !!tgt);
+    if (tgt) for (const id in rowEls) rowEls[id].btn.classList.toggle('ir-target', id === tgt);
   }
 
   let lastS: State | null = null;
@@ -702,6 +732,73 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     void (el as HTMLElement).offsetWidth;
     el.classList.add('shake');
   }
+  // ---- in-run "temporary upgrades" tutorial (player's first NORMAL run) ----
+  // Fires once, the first moment the player can afford one Damage + one Health upgrade. Forces buying
+  // one of each, then explains run upgrades are temporary (the Workshop's are permanent). Persisted via
+  // meta.inRunTutDone — set the instant both are bought, so a mid-run death can't make it repeat.
+  let irDmgBase = 0, irHpBase = 0, irRecapAt = 0, irLastState: State | null = null;
+  function irForceTab(tab: string): void {
+    if (tabOpen && activeTab === tab) return;
+    activeTab = tab;
+    tabOpen = true;
+    renderTabButtons();
+    renderTabContent();
+  }
+  function irReset(): void {
+    irStep = null;
+    setSpotlight(false);
+    renderTabButtons();
+    renderTabContent();
+  }
+  function runTut(s: State): void {
+    const meta = s.meta;
+    // A fresh run object means the player restarted; abandon a half-finished lesson so it can't get
+    // stuck spotlighting an unaffordable upgrade (the recap already banked the flag, so it won't repeat).
+    if (irLastState !== s) {
+      irLastState = s;
+      if (irStep && irStep !== 'recap') irReset();
+    }
+    if (!irStep) {
+      if (s.firstRun || meta.inRunTutDone) return;
+      if (!isUnlocked(meta, 'rangedDamage') || !isUnlocked(meta, 'health')) return;
+      if (runAtMax(s, 'rangedDamage') || runAtMax(s, 'health')) return;
+      if (s.econ.gold < runUpgradeCost(s, 'rangedDamage') + runUpgradeCost(s, 'health')) return;
+      irStep = 'damage';
+      irDmgBase = boughtOf(s, 'rangedDamage');
+      irHpBase = boughtOf(s, 'health');
+      taughtTabs = true;
+      if (uel) uel.tabbar.classList.remove('pulse');
+      irForceTab('attack');
+    }
+    if (irStep === 'damage') {
+      irForceTab('attack');
+      if (boughtOf(s, 'rangedDamage') > irDmgBase) { irStep = 'health'; irForceTab('defense'); }
+    }
+    if (irStep === 'health') {
+      irForceTab('defense');
+      if (boughtOf(s, 'health') > irHpBase) {
+        irStep = 'recap';
+        irRecapAt = performance.now();
+        meta.inRunTutDone = true; // mandatory part (buy one of each) is done — never show it again
+        handlers.onSaveMeta && handlers.onSaveMeta();
+        renderTabButtons(); // drop the tab lock — the player can roam again
+        renderTabContent();
+        setSpotlight(false);
+        showHint('<b>Run upgrades are temporary.</b><br>They reset every game. Buy upgrades in the <b>Workshop</b> to keep them <b>forever</b>.');
+      }
+    }
+    if (irStep === 'recap') {
+      if (performance.now() - irRecapAt > 6000) { irStep = null; hideHint(); }
+      return;
+    }
+    // spotlight the step's target upgrade every frame (so it tracks any layout shift)
+    const tgt = irTargetId();
+    const btn = tgt && rowEls[tgt] ? rowEls[tgt].btn : null;
+    setSpotlight(!!btn, btn, irStep === 'damage'
+      ? 'Buy <b>Damage</b> — upgrades bought in a run last only this game'
+      : 'Now buy <b>Health</b> — these reset when the run ends');
+  }
+
   function update(s: State): void {
     lastS = s;
     if (!uel)
@@ -712,6 +809,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         hpfill: $('#h-hpfill'), wavefill: $('#h-wavefill'), statline: $('#h-statline'),
         tabbar: $('#h-tabbar'), stats: $('#h-stats'), speedval: $('#h-speedval'),
       };
+    runTut(s);
     const tier = s.meta.tier || 1;
     uel.speedval.textContent = fmtSpeed(gameSpeed(s.meta));
     uel.wave.textContent = String(s.wave.n);
