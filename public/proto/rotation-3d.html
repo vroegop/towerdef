@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Arena — Real-time 3D Rotation</title>
+<style>
+  html,body { margin:0; height:100%; background:#1a1510; color:#ecdcb6;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  header { padding:14px 18px; border-bottom:1px solid #3a2d18; }
+  header h1 { margin:0; font-size:18px; } header p { margin:4px 0 0; font-size:13px; opacity:.7; }
+  a.back { color:#e7c987; }
+  .wrap { display:flex; flex-wrap:wrap; gap:20px; padding:18px; align-items:flex-start; }
+  .panel { background:#211a10; border:1px solid #3a2d18; border-radius:10px; padding:14px; }
+  #view { width:360px; height:360px; border-radius:8px; background:#181208; cursor:grab; image-rendering:auto; }
+  #view.pixel { image-rendering:pixelated; }
+  .label { font-size:11px; text-transform:uppercase; letter-spacing:.08em; opacity:.6; margin:10px 0 6px; }
+  .row { display:flex; align-items:center; gap:10px; margin-top:10px; }
+  input[type=range] { flex:1; accent-color:#b89a62; }
+  button { background:#3a2d18; color:#ecdcb6; border:1px solid #5a4628; border-radius:6px; padding:6px 11px; font-size:13px; cursor:pointer; }
+  button.on { background:#b89a62; color:#211a10; font-weight:600; }
+  .note { font-size:12px; opacity:.62; line-height:1.5; margin-top:10px; max-width:340px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🧊 Real-time 3D Rotation</h1>
+  <p>One model, every angle, free. Drag to rotate. <a class="back" href="../index.html">← game</a> · <a class="back" href="./orcs.html">orc prototype</a></p>
+</header>
+
+<div class="wrap">
+  <div class="panel">
+    <canvas id="view" width="360" height="360"></canvas>
+    <div class="row">
+      <button id="spin" class="on">Auto-spin: on</button>
+      <button id="px">Pixelate: off</button>
+      <button id="toon" class="on">Toon shade: on</button>
+    </div>
+    <div class="row"><span class="label" style="margin:0">Heading</span><input id="ang" type="range" min="0" max="360" value="0" /></div>
+  </div>
+  <div class="panel">
+    <div class="label">Why this is the "free rotation" answer</div>
+    <p class="note">This is a stand-in low-poly figure (body + head + a snout cone so you can read its facing), not the real orc — building the actual orc in 3D is the work. But it shows the payoff: <b>any</b> heading with no baked frames, plus <b>dynamic lighting</b> that reacts as it turns.</p>
+    <p class="note"><b>Toon shade</b> steps the lighting into bands so it reads like hand-drawn cel art instead of smooth plastic. <b>Pixelate</b> renders at low resolution and upscales, faking the pixel-art look over 3D. Combine them and a 3D model can sit convincingly next to 2D pixel sprites.</p>
+    <p class="note">Trade-off vs sprites: needs a modeller + per-frame GPU cost, but kills the angle-count problem entirely and unlocks the 36-direction pre-render as a bonus (just screenshot this from N angles).</p>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'https://esm.sh/three@0.160.0';
+
+const canvas = document.getElementById('view');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+const BASE = 360;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#181208');
+
+const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+camera.position.set(0, 2.6, 5.2); camera.lookAt(0, 0.7, 0);
+
+// Lights — a warm key + cool fill so turning the model visibly changes shading.
+const key = new THREE.DirectionalLight('#ffe7b0', 2.2); key.position.set(3, 5, 2); scene.add(key);
+scene.add(new THREE.DirectionalLight('#5577aa', 0.7).translateX(-4).translateZ(-2));
+scene.add(new THREE.AmbientLight('#404858', 0.6));
+
+// Stepped gradient map → cel/toon banding.
+function gradientTex(steps) {
+  const c = document.createElement('canvas'); c.width = steps; c.height = 1;
+  const g = c.getContext('2d');
+  for (let i = 0; i < steps; i++) { const v = Math.round((i / (steps - 1)) * 255); g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(i, 0, 1, 1); }
+  const tex = new THREE.CanvasTexture(c); tex.minFilter = tex.magFilter = THREE.NearestFilter; return tex;
+}
+const ramp = gradientTex(4);
+let toon = true;
+const mat = (color) => toon
+  ? new THREE.MeshToonMaterial({ color, gradientMap: ramp })
+  : new THREE.MeshStandardMaterial({ color, roughness: 0.7 });
+
+// Stand-in "orc": green body, head, and an orange snout cone marking forward (+z).
+const fig = new THREE.Group();
+function rebuild() {
+  fig.clear();
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.55, 0.7, 6, 16), mat('#6fae46')); body.position.y = 0.75; fig.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.45, 20, 16), mat('#7ab84a')); head.position.y = 1.6; fig.add(head);
+  const snout = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.4, 12), mat('#cf6a3a'));
+  snout.rotation.x = Math.PI / 2; snout.position.set(0, 1.55, 0.45); fig.add(snout);
+  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), mat('#201810')); eyeL.position.set(-0.16, 1.68, 0.4); fig.add(eyeL);
+  const eyeR = eyeL.clone(); eyeR.position.x = 0.16; fig.add(eyeR);
+}
+rebuild();
+scene.add(fig);
+// ground disc (parchment-ish)
+const ground = new THREE.Mesh(new THREE.CircleGeometry(2.2, 48), new THREE.MeshStandardMaterial({ color: '#cdb37e' }));
+ground.rotation.x = -Math.PI / 2; scene.add(ground);
+
+let spin = true, heading = 0, dragging = false, lastX = 0;
+const spinBtn = document.getElementById('spin'), pxBtn = document.getElementById('px'), toonBtn = document.getElementById('toon'), angSlider = document.getElementById('ang');
+spinBtn.onclick = () => { spin = !spin; spinBtn.textContent = 'Auto-spin: ' + (spin ? 'on' : 'off'); spinBtn.classList.toggle('on', spin); };
+pxBtn.onclick = () => { const on = canvas.classList.toggle('pixel'); pxBtn.textContent = 'Pixelate: ' + (on ? 'on' : 'off'); pxBtn.classList.toggle('on', on); setRes(on); };
+toonBtn.onclick = () => { toon = !toon; toonBtn.textContent = 'Toon shade: ' + (toon ? 'on' : 'off'); toonBtn.classList.toggle('on', toon); rebuild(); };
+angSlider.oninput = () => { spin = false; spinBtn.textContent = 'Auto-spin: off'; spinBtn.classList.remove('on'); heading = (+angSlider.value) * Math.PI / 180; };
+canvas.addEventListener('pointerdown', e => { dragging = true; lastX = e.clientX; spin = false; spinBtn.textContent = 'Auto-spin: off'; spinBtn.classList.remove('on'); canvas.style.cursor = 'grabbing'; });
+addEventListener('pointerup', () => { dragging = false; canvas.style.cursor = 'grab'; });
+addEventListener('pointermove', e => { if (!dragging) return; heading += (e.clientX - lastX) * 0.01; lastX = e.clientX; });
+
+function setRes(pixel) {
+  const r = pixel ? 90 : BASE;          // render small when pixelating, CSS upscales
+  renderer.setPixelRatio(1);
+  renderer.setSize(r, r, false);
+  canvas.width = r; canvas.height = r;
+  camera.aspect = 1; camera.updateProjectionMatrix();
+}
+setRes(false);
+
+function frame() {
+  if (spin) heading += 0.012;
+  fig.rotation.y = heading;
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>

@@ -51,7 +51,12 @@ export function createDevMenu(cfg: { handlers?: HudHandlers; hudHost?: HudHost }
     { title: 'HUD', hud: true },
     {
       title: 'Prototypes',
-      links: [{ href: './proto/orcs.html', label: '⚔️ Orc sprite prototype' }],
+      links: [
+        { href: './proto/orcs.html', label: '⚔️ Orc sprite prototype' },
+        { href: './proto/rotation.html', label: '🧭 Directions & free-rotate' },
+        { href: './proto/rotation-3d.html', label: '🧊 Real-time 3D rotation' },
+        { href: './proto/rotation-stack.html', label: '🥞 Sprite stacking' },
+      ],
     },
   ];
 

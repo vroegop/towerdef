@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Arena — Directions & Free Rotation</title>
+<style>
+  html,body { margin:0; height:100%; background:#1a1510; color:#ecdcb6;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  header { padding:14px 18px; border-bottom:1px solid #3a2d18; }
+  header h1 { margin:0; font-size:18px; }
+  header p { margin:4px 0 0; font-size:13px; opacity:.7; }
+  a.back { color:#e7c987; }
+  .wrap { display:flex; flex-wrap:wrap; gap:20px; padding:18px; }
+  .panel { background:#211a10; border:1px solid #3a2d18; border-radius:10px; padding:14px; max-width:360px; }
+  canvas { image-rendering:pixelated; display:block; border-radius:8px; background:#181208; margin:auto; }
+  .label { font-size:11px; text-transform:uppercase; letter-spacing:.08em; opacity:.6; margin:10px 0 6px; }
+  .row { display:flex; align-items:center; gap:10px; margin-top:10px; }
+  input[type=range] { flex:1; accent-color:#b89a62; }
+  button { background:#3a2d18; color:#ecdcb6; border:1px solid #5a4628; border-radius:6px; padding:6px 11px; font-size:13px; cursor:pointer; }
+  button.on { background:#b89a62; color:#211a10; font-weight:600; }
+  .big { font-size:20px; font-weight:700; color:#e7c987; }
+  .note { font-size:12px; opacity:.62; line-height:1.5; margin-top:10px; }
+  .ok { color:#9bd17a; } .bad { color:#e58a6b; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🧭 Directions &amp; Free Rotation</h1>
+  <p>How many baked angles is "enough", and why a flat sprite can't truly free-rotate. <a class="back" href="../index.html">← game</a> · <a class="back" href="./orcs.html">orc prototype</a></p>
+</header>
+
+<div class="wrap">
+  <!-- A: N-direction snapping on an "ideal" sprite that has every angle -->
+  <div class="panel">
+    <div class="label">A · Baked directions — "ideal" sprite (has every angle)</div>
+    <canvas id="ideal" width="300" height="300"></canvas>
+    <div class="row"><span class="big" id="nVal">8</span><input id="nSlider" type="range" min="4" max="36" step="1" value="8" /></div>
+    <p class="note">Drag to change how many baked angles exist. The arrow = a character rendered at that facing. At 4 it's choppy; by ~16–32 the snapping is invisible and it <span class="ok">reads as smooth rotation</span>. This is the 3D→sprite render trick (Diablo/GTA). Code is trivial; the cost is authoring this many angles.</p>
+  </div>
+
+  <!-- B: real orc — correct 4-dir snap vs naive free-rotate -->
+  <div class="panel">
+    <div class="label">B · The real orc art</div>
+    <div style="display:flex; gap:10px; justify-content:center">
+      <div style="text-align:center"><canvas id="orcSnap" width="128" height="128"></canvas><div class="note ok">4-dir snap (correct)</div></div>
+      <div style="text-align:center"><canvas id="orcFree" width="128" height="128"></canvas><div class="note bad">naive free-rotate</div></div>
+    </div>
+    <p class="note">Same orc orbiting the hero. <b>Left</b> snaps to the nearest of the 4 hand-drawn facings — always correct, but limited. <b>Right</b> rotates the single front-frame freely — smooth, but <span class="bad">visibly wrong</span>: the 3/4 perspective tilts, the shadow spins, the orc never actually turns to face sideways. That's why flat 3/4 art can't free-rotate.</p>
+  </div>
+</div>
+
+<script>
+const FRAME = 64;
+const orc = new Image(); orc.src = 'assets/orc1_walk.png';
+
+let t = 0, N = 8;
+const nSlider = document.getElementById('nSlider'), nVal = document.getElementById('nVal');
+nSlider.oninput = () => { N = +nSlider.value; nVal.textContent = N; };
+
+// --- A: ideal arrow rendered at angle snapped to N directions ---
+const ideal = document.getElementById('ideal'), ictx = ideal.getContext('2d');
+function drawArrow(ctx, cx, cy, ang, r) {
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang);
+  ctx.fillStyle = '#7ab84a'; ctx.strokeStyle = 'rgba(38,26,10,.9)'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(0, 0, r * 0.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // snout points along +x = facing
+  ctx.beginPath(); ctx.moveTo(r, 0); ctx.lineTo(r * 0.25, -r * 0.4); ctx.lineTo(r * 0.25, r * 0.4); ctx.closePath();
+  ctx.fillStyle = '#cf6a3a'; ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+function loopIdeal() {
+  t += 1 / 60;
+  ictx.clearRect(0, 0, 300, 300);
+  const trueAng = t * 0.9;
+  const step = (Math.PI * 2) / N;
+  const snapped = Math.round(trueAng / step) * step;
+  // faint ghost = true continuous angle, solid = snapped (what the player sees)
+  drawArrow(ictx, 150, 150, snapped, 70);
+  ictx.globalAlpha = 0.18; drawArrow(ictx, 150, 150, trueAng, 70); ictx.globalAlpha = 1;
+  ictx.fillStyle = 'rgba(236,220,182,.5)'; ictx.font = '12px system-ui';
+  ictx.fillText('faint = true heading · solid = nearest of ' + N, 12, 290);
+  requestAnimationFrame(loopIdeal);
+}
+loopIdeal();
+
+// --- B: orc snap vs naive free-rotate ---
+const snapC = document.getElementById('orcSnap'), sctx = snapC.getContext('2d');
+const freeC = document.getElementById('orcFree'), fctx = freeC.getContext('2d');
+function orcFrame(ctx, row, frame, rotate) {
+  ctx.clearRect(0, 0, 128, 128);
+  if (!orc.complete || !orc.naturalWidth) return;
+  const cols = Math.floor(orc.naturalWidth / FRAME);
+  const c = frame % cols;
+  ctx.save();
+  if (rotate != null) { ctx.translate(64, 64); ctx.rotate(rotate); ctx.translate(-64, -64); }
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(orc, c * FRAME, row * FRAME, FRAME, FRAME, 0, 0, 128, 128);
+  ctx.restore();
+}
+// 4-dir row from a travel vector (canvas Y down): 0 down,1 left,2 right,3 up
+function row4(vx, vy) {
+  if (Math.abs(vx) >= Math.abs(vy)) return vx >= 0 ? 2 : 1;
+  return vy >= 0 ? 0 : 3;
+}
+function loopOrc() {
+  const ang = t * 0.9;                 // orbit heading (shared clock with A)
+  const vx = Math.cos(ang), vy = Math.sin(ang);
+  const f = Math.floor(t * 8);
+  orcFrame(sctx, row4(vx, vy), f, null);     // correct: snap to nearest drawn facing
+  orcFrame(fctx, 0, f, ang + Math.PI / 2);   // naive: spin the front frame
+  requestAnimationFrame(loopOrc);
+}
+loopOrc();
+</script>
+</body>
+</html>
