@@ -97,9 +97,9 @@ function spawnMovers() {
   movers.length = 0;
   const cx = arena.width / 2, cy = arena.height / 2;
   const defs = [
-    { orc: 'orc1', scale: 1.4 }, { orc: 'orc1', scale: 1.4 },
-    { orc: 'orc2', scale: 1.6 }, { orc: 'orc3', scale: 2.4 },
-    { orc: 'orc1', scale: 1.2 },
+    { orc: 'orc1', scale: 0.7 }, { orc: 'orc1', scale: 0.7 },
+    { orc: 'orc2', scale: 0.8 }, { orc: 'orc3', scale: 1.2 },
+    { orc: 'orc1', scale: 0.6 },
   ];
   defs.forEach((d, i) => {
     const ang = (i / defs.length) * Math.PI * 2 + 0.4;
