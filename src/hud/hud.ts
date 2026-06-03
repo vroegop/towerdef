@@ -45,11 +45,14 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     close: '<path d="M6 6l12 12M18 6L6 18"/>',
     cards: '<rect x="3" y="7" width="12" height="14" rx="1"/><path d="M8 7V5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2"/>',
     cardslot: '<rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M12 9.5v5M9.5 12h5"/>',
-    // gold = two solid coins (no star). Each coin gets a soft dark shadow circle behind it (drawn
-    // first, offset down-right) for depth; the front coin keeps a dark rim to separate the pair.
+    // gold = two solid gold coins (currentColor, tinted by the 'gold' class). Each coin has a slight
+    // shadow; the front coin's shadow is drawn after the back coin so it casts onto it at the overlap.
     coin: '<circle cx="15.3" cy="10.6" r="6" fill="rgba(8,10,16,.4)" stroke="none"/><circle cx="14.5" cy="9.5" r="6" fill="currentColor" stroke="none"/><circle cx="10.3" cy="15.6" r="6" fill="rgba(8,10,16,.4)" stroke="none"/><circle cx="9.5" cy="14.5" r="6" fill="currentColor" stroke="rgba(8,10,16,.55)" stroke-width="1.5"/>',
-    // out-run coins = a coin with a star struck into it
-    coinstar: '<circle cx="12" cy="12" r="9"/><path transform="translate(12 12) scale(.42) translate(-11.8 -11.4)" fill="currentColor" stroke="none" d="M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6z"/>',
+    // out-run coins = a struck COPPER coin with a star. Explicit metallic palette (copper body, dark
+    // rim, lighter star) + a slight offset shadow so it reads as a real coin, not a flat outline.
+    coinstar: '<circle cx="12.9" cy="12.9" r="8.5" fill="rgba(8,10,16,.28)" stroke="none"/>' +
+      '<circle cx="12" cy="12" r="8.5" fill="#c47f3c" stroke="#6e3f12" stroke-width="1"/>' +
+      '<path transform="translate(12 12) scale(.46) translate(-11.8 -11.4)" fill="#e8b06a" stroke="none" d="M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6z"/>',
     // gems = faceted brilliant-cut gem (card currency)
     gem: '<path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/>',
     // vials = erlenmeyer flask with liquid level (lab currency)
@@ -598,7 +601,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       case 'vials': return icon('vial', 15, 'vial');
       case 'energy': return icon('prestige', 15);
     }
-    if (label === 'Gold/Coin ×') return icon('coin', 14, 'gold') + '<span class="spt-plus">+</span>' + icon('coinstar', 14, 'coin');
+    if (label === 'Gold/Coin ×') return icon('coin', 12, 'gold') + '<span class="spt-plus">+</span>' + icon('coinstar', 13);
     return label;
   }
   function superPaneHtml(meta: Meta): string {
