@@ -36,7 +36,7 @@ export function createState(seed: number, meta: Meta, firstRun?: boolean): State
     fxSeq: 0, // transient per-kill UI events (gold/coin drops) the renderer consumes
     wave: { n: 0, clock: WAVE.interval, toSpawn: 0, releaseTimer: 0, releaseGap: 1, count: 0, maxWave: 0, queue: [] },
     // gold starts at the Starting Gold lab bonus (+30/level); bonusCoins banked at run end
-    econ: { gold: labStartingGold(meta || ({} as Meta)), xp: 0, level: 1, kills: 0, goldEarned: 0, bonusCoins: 0, hitsTaken: 0, killsByDamage: 0, killsByReflect: 0, dmgTaken: 0, dmgDealt: 0, reflectDealt: 0 },
+    econ: { gold: labStartingGold(meta || ({} as Meta)), kills: 0, goldEarned: 0, bonusCoins: 0, hitsTaken: 0, killsByDamage: 0, killsByReflect: 0, dmgTaken: 0, dmgDealt: 0, reflectDealt: 0 },
     // levels + Rapid Fire burst timers + active-card timers (ALL reset each run)
     run: { levels: {}, rapidT: 0, rapidCheckCd: RAPID_CHECK, actCd: {}, actActive: {}, secondWindUsed: false, invuln: 0, dmgBoost: 1 },
     meta: meta || ({ coins: 0, perm: {} } as Meta), // PERMANENT (coins + permanent levels)

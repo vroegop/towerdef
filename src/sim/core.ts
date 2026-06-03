@@ -4,7 +4,7 @@ import type { Enemy, Rng, State, Stats } from '../types';
 import { makeRng } from './rng';
 import { ageSurvivors, makeEnemy } from './enemies';
 import { TYPES } from './registries';
-import { FIRST_RUN, COIN_DECAY_FACTOR, COIN_DECAY_WAVES, WAVE, waveCount, waveRoster, econStr } from './waves';
+import { FIRST_RUN, COIN_DECAY_FACTOR, COIN_DECAY_WAVES, WAVE, waveCount, waveRoster } from './waves';
 import { applyHit, fireProjectile, tickProjectiles } from './projectiles';
 import { computeStats, PX_PER_METER, RAPID_CHECK, RAPID_MULT } from './skills';
 import { tickActiveCards, trySecondWind, heroInvuln } from './cards-active';
@@ -441,9 +441,6 @@ export class Sim {
     }
   }
 
-  private _xpNeed(): number {
-    return Math.round(20 * Math.pow(this.s.econ.level, 1.5));
-  }
 
   private _cleanup(): void {
     const s = this.s,
@@ -499,21 +496,12 @@ export class Sim {
             spawned.push(c);
           }
         }
-        // XP uses the TAME economy-strength curve at this wave (NOT e.strMult, which now carries the
-        // tier multiplier and Tower-scale HP and would overflow levelling). Tier-independent by design.
-        s.econ.xp += Math.round(2 * econStr(s.wave.n) * this.stats.xpGain);
         // UI-facing transient kill events (consumed by the renderer).
         s.fx.push({ seq: ++s.fxSeq, x: e.x, y: e.y, gold: g, coin: killCoins });
         if (s.fx.length > 32) s.fx.shift();
       } else keep.push(e);
     }
     s.enemies = spawned.length ? keep.concat(spawned) : keep;
-    let need = this._xpNeed();
-    while (s.econ.xp >= need) {
-      s.econ.xp -= need;
-      s.econ.level++;
-      need = this._xpNeed();
-    }
   }
 }
 

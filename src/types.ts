@@ -154,8 +154,6 @@ export interface Wave {
 }
 export interface Econ {
   gold: number;
-  xp: number;
-  level: number;
   kills: number;
   goldEarned: number;
   bonusCoins: number;

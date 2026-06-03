@@ -948,7 +948,6 @@ export function computeStats(state: State): Stats {
     coinsPerWave: U.coinsPerWave.value(b('coinsPerWave')),
     coinsPerKill: U.coinsPerKill.value(b('coinsPerKill')),
     goldFind: U.goldPerKill.value(b('goldPerKill')), // value IS the ×multiplier (1.00 → 2.49)
-    xpGain: 1,
     // ---- card-driven aura/mechanic/active stats (0 / 1 when no card supplies them) ----
     cardCoinMult: 1,   // ×coins from the Coins card
     slowAura: 0,       // enemy speed reduction within range (fraction)

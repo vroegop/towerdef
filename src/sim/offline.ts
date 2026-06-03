@@ -12,7 +12,6 @@ interface CatchUpResult {
   gold: number;
   kills: number;
   waves: number;
-  levels: number;
   died: boolean;
 }
 
@@ -24,7 +23,6 @@ export function catchUp(sim: Sim, elapsedSec: number, maxSec?: number): CatchUpR
     gold: sim.s.econ.goldEarned,
     kills: sim.s.econ.kills,
     wave: sim.s.wave.n,
-    level: sim.s.econ.level,
   };
   const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now();
   sim.refreshStats(); // stats are invariant across the replay batch — compute once, not per tick
@@ -43,7 +41,6 @@ export function catchUp(sim: Sim, elapsedSec: number, maxSec?: number): CatchUpR
     gold: sim.s.econ.goldEarned - before.gold,
     kills: sim.s.econ.kills - before.kills,
     waves: sim.s.wave.n - before.wave,
-    levels: sim.s.econ.level - before.level,
     died: !sim.s.alive,
   };
 }
