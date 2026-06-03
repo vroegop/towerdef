@@ -78,6 +78,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     // refresh = cooldown; stopwatch = duration (both feather-style, 24×24 stroked)
     refresh: '<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3.5v5h-5"/>',
     stopwatch: '<circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9"/><path d="M9.5 2h5"/><path d="M12 2v3.5"/><path d="M18.8 6.8l1.4-1.4"/>',
+    crystal: '<path d="M12 2l4 6-4 14-4-14z"/><path d="M8 8h8"/>', // a tall shard, matching the Crystal Circle art
   };
   function icon(name: string, size?: number, cls?: string): string {
     size = size || 16;
@@ -585,10 +586,17 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   // Energy chip + one panel per power: unlock button (Energy, by purchase order) when locked, else a
   // pause toggle and a row per upgrade track (live value, level, Energy cost).
   function eIc(sz = 13): string { return icon('prestige', sz); }
-  // Track labels as icons: cooldown → refresh, duration → stopwatch, any "Gold/Coin ×" → gold + coin.
+  // Every track label rendered as an icon. "Gold/Coin ×" (ids mult/gold) → gold + coin with a +.
   function superTrackLabel(trackId: string, label: string): string {
-    if (trackId === 'cooldown') return icon('refresh', 15);
-    if (trackId === 'duration') return icon('stopwatch', 15);
+    switch (trackId) {
+      case 'cooldown': return icon('refresh', 15);
+      case 'duration': return icon('stopwatch', 15);
+      case 'width': return icon('ruler', 15);
+      case 'count': return icon('crystal', 15);
+      case 'gems': return icon('gem', 15, 'gem');
+      case 'vials': return icon('vial', 15, 'vial');
+      case 'energy': return icon('prestige', 15);
+    }
     if (label === 'Gold/Coin ×') return icon('coin', 14, 'gold') + '<span class="spt-plus">+</span>' + icon('coinstar', 14, 'coin');
     return label;
   }
@@ -613,7 +621,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
           const lvl = superLevel(meta, sp.id, tr.id), val = trackValue(meta, sp.id, tr.id);
           const max = trackAtMax(meta, sp.id, tr.id), cost = trackCost(meta, sp.id, tr.id);
           html += '<div class="sp-track">' +
-            '<span class="spt-label">' + superTrackLabel(tr.id, tr.label) + '</span>' +
+            '<span class="spt-label" title="' + tr.label + '">' + superTrackLabel(tr.id, tr.label) + '</span>' +
             '<span class="spt-val">' + tr.fmt(val) + '</span>' +
             '<span class="spt-lvl">' + lvl + '/' + tr.max + '</span>' +
             (max
