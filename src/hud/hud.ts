@@ -47,7 +47,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     cardslot: '<rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M12 9.5v5M9.5 12h5"/>',
     // gold = two solid coins (no star). Each coin gets a soft dark shadow circle behind it (drawn
     // first, offset down-right) for depth; the front coin keeps a dark rim to separate the pair.
-    coin: '<circle cx="15.3" cy="10.6" r="6" fill="rgba(8,10,16,.4)" stroke="none"/><circle cx="10.3" cy="15.6" r="6" fill="rgba(8,10,16,.4)" stroke="none"/><circle cx="14.5" cy="9.5" r="6" fill="currentColor" stroke="none"/><circle cx="9.5" cy="14.5" r="6" fill="currentColor" stroke="rgba(8,10,16,.55)" stroke-width="1.5"/>',
+    coin: '<circle cx="15.3" cy="10.6" r="6" fill="rgba(8,10,16,.4)" stroke="none"/><circle cx="14.5" cy="9.5" r="6" fill="currentColor" stroke="none"/><circle cx="10.3" cy="15.6" r="6" fill="rgba(8,10,16,.4)" stroke="none"/><circle cx="9.5" cy="14.5" r="6" fill="currentColor" stroke="rgba(8,10,16,.55)" stroke-width="1.5"/>',
     // out-run coins = a coin with a star struck into it
     coinstar: '<circle cx="12" cy="12" r="9"/><path transform="translate(12 12) scale(.42) translate(-11.8 -11.4)" fill="currentColor" stroke="none" d="M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6z"/>',
     // gems = faceted brilliant-cut gem (card currency)
