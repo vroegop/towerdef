@@ -1,6 +1,6 @@
 /* hud/hud.css — in-game HUD (top stats + bottom 3-tab bar) and the between-games MENU
    (5 mobile bottom tabs + framed Hero avatar). */
-.hud { position: fixed; inset: 0; pointer-events: none; font: 14px system-ui, sans-serif; color: #d8deea; z-index: 20; }
+.hud { position: fixed; inset: 0; pointer-events: none; font: 14px 'Roboto', system-ui, sans-serif; color: #d8deea; z-index: 20; }
 
 /* ---- in-game top header (no box: just icon + value over the arena) ----
    nowrap + reserved widths keep every control in a fixed spot across devices and themes (whose
@@ -22,13 +22,13 @@
 
 /* ---- in-run top currency strip (kept; colours restyled to parchment+ink by the D&D theme) ---- */
 .hud .curbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.hud .cur { display: inline-flex; align-items: center; gap: 4px; font: 700 13px system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.hud .cur { display: inline-flex; align-items: center; gap: 4px; font: 700 13px 'Roboto', system-ui, sans-serif; font-variant-numeric: tabular-nums; }
 .hud .cur b { color: #d8deea; }
 .hud .cur.gold b { color: #ffd24a; min-width: 5ch; display: inline-block; }
 
 /* battle-speed toggle: an icon + value pill in the top bar, just left of the menu toggle */
 .hud .speedbtn { flex: 0 0 auto; gap: 4px; border-radius: 999px; padding: 3px 9px;
-  background: rgba(255,255,255,.07); font: 700 12px system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+  background: rgba(255,255,255,.07); font: 700 12px 'Roboto', system-ui, sans-serif; font-variant-numeric: tabular-nums; }
 .hud .speedbtn:hover { background: rgba(255,255,255,.14); }
 .hud .speedbtn b { color: #d8deea; min-width: 2.6ch; text-align: center; }
 
@@ -307,7 +307,7 @@
 /* ---- 15-minute check-in button (Hero screen) ---- */
 .hud .checkin { display: inline-flex; align-items: center; justify-content: center; gap: 5px; margin: 2px auto 0;
   background: #11151f; border: 1px solid #2d3344; border-radius: 8px; color: #8b93a7;
-  font: 600 13px system-ui; padding: 8px 14px; cursor: default; }
+  font: 600 13px 'Roboto', system-ui; padding: 8px 14px; cursor: default; }
 .hud .checkin.ready { color: #0c0e14; background: linear-gradient(90deg, #37d7ff, #3ddc84); border-color: #37d7ff; cursor: pointer;
   box-shadow: 0 0 14px rgba(55,215,255,.35); animation: checkinpulse 1.6s ease-in-out infinite; }
 .hud .checkin.ready .ic { color: #0c0e14; }
@@ -317,7 +317,7 @@
 .hud .checkin-float { position: fixed; left: 10px; bottom: 150px; z-index: 60; pointer-events: auto;
   display: flex; flex-direction: column; align-items: stretch; gap: 4px; width: max-content;
   background: #11151f; color: #d8deea; border: 1px solid #2d3344;
-  border-radius: 8px; padding: 7px 8px; font: 700 12px system-ui, sans-serif; cursor: pointer;
+  border-radius: 8px; padding: 7px 8px; font: 700 12px 'Roboto', system-ui, sans-serif; cursor: pointer;
   box-shadow: 0 2px 10px rgba(0,0,0,.35); }
 .hud .checkin-float:hover { border-color: #3a4256; }
 .hud .checkin-float.hide { display: none; }
@@ -387,11 +387,11 @@
 .hud .labactions { margin-top: 9px; display: flex; align-items: center; gap: 8px; }
 .hud .labactions .labrem { font-size: 12px; color: #8b93a7; font-variant-numeric: tabular-nums; margin-right: auto; }
 .hud .labactions .rushlab { background: transparent; border: 1px solid #2d3344; border-radius: 6px; color: #ffd24a;
-  font: 600 12px system-ui; padding: 5px 9px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  font: 600 12px 'Roboto', system-ui; padding: 5px 9px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .hud .labactions .rushlab:hover:not(.cant) { border-color: #ffd24a; }
 .hud .labactions .rushlab.cant { opacity: .4; cursor: default; }
 .hud .labactions .changelab { background: transparent; border: 1px solid #2d3344; border-radius: 6px; color: #9aa3b6;
-  font: 600 12px system-ui; padding: 5px 9px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  font: 600 12px 'Roboto', system-ui; padding: 5px 9px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .hud .labactions .changelab:hover { border-color: #4aa8ff; color: #d8deea; }
 /* ---- Lab picker modal ---- */
 .hud .labpick-list { display: flex; flex-direction: column; gap: 9px; padding: 10px 14px 14px;
@@ -406,14 +406,14 @@
 .hud .labpick-title b { font-size: 14px; color: #e6e9f2; }
 .hud .labpick-title span { font-size: 11px; color: #8b93a7; display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
 .hud .labpick-start { background: #1a2030; border: 1px solid #2d3344; border-radius: 6px; color: #ffd24a;
-  font: 700 12px system-ui; padding: 6px 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  font: 700 12px 'Roboto', system-ui; padding: 6px 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .hud .labpick-start:hover:not(.cant) { border-color: #ffd24a; }
 .hud .labpick-start.cant { opacity: .45; cursor: default; color: #8b93a7; }
 .hud .labpick-detail { margin-top: 9px; padding-top: 9px; border-top: 1px solid #262c3d;
   font-size: 12px; line-height: 1.5; color: #9aa3b6; }
 .hud .labpick-detail svg { vertical-align: -2px; }
 .hud .slotbtn { display: block; width: 100%; margin-top: 12px; background: #11151f; border: 1px solid #2d3344; border-radius: 6px;
-  color: #d8deea; font: 600 13px system-ui; padding: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+  color: #d8deea; font: 600 13px 'Roboto', system-ui; padding: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
 .hud .slotbtn:hover:not(.cant) { border-color: #4aa8ff; }
 .hud .slotbtn.cant { opacity: .45; cursor: default; }
 
@@ -424,7 +424,7 @@
 /* menu bottom tab strip */
 .hud .menutabs { flex: 0 0 auto; display: flex; background: rgba(15,18,27,.96); border-top: 1px solid #262c3d; }
 .hud .menutabs button { position: relative; flex: 1; background: transparent; border: 0; border-top: 2px solid transparent; color: #8b93a7;
-  padding: 9px 2px; font: 600 11px system-ui; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  padding: 9px 2px; font: 600 11px 'Roboto', system-ui; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .hud .menutabs button.on { color: #fff; border-top-color: #4aa8ff; background: rgba(74,168,255,.08); }
 .hud .menutabs button.locked { color: #434a60; cursor: default; }
 .hud .menutabs button.tut { color: #ffd24a; border-top-color: #ffd24a; animation: tutpulse 1.2s ease-in-out infinite; }
@@ -449,7 +449,7 @@
 .hud .modal h2 { margin: 16px 18px 2px; }
 .hud .modal .msnote { color: #8b93a7; font-size: 13px; margin: 0 18px 10px; }
 .hud .modal .close { position: absolute; top: 12px; right: 14px; background: transparent; border: 0; color: #8b93a7;
-  font: 700 20px system-ui; line-height: 1; cursor: pointer; padding: 2px 4px; }
+  font: 700 20px 'Roboto', system-ui; line-height: 1; cursor: pointer; padding: 2px 4px; }
 .hud .modal .close:hover { color: #fff; }
 /* ---- milestones: a hexagon trail down a spine — gold up to the furthest wave, dim beyond ---- */
 .hud .mspath { display: flex; flex-direction: column; overflow: auto; padding: 0 16px 16px; }
@@ -477,7 +477,7 @@
 .hud .mn-reward.locked { color: #6b7488; }
 .hud .mn-done { font-size: 12px; color: #3ddc84; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .hud .mn-claim { background: rgba(61,220,132,.12); border: 1px solid #2bb673; border-radius: 6px; color: #3ddc84;
-  font: 700 12px system-ui; padding: 6px 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  font: 700 12px 'Roboto', system-ui; padding: 6px 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .hud .mn-claim:hover { background: rgba(61,220,132,.22); }
 /* ---- milestones: header band, reward chips, animated nodes, tower-skin medallion ---- */
 .hud .ms-head { margin: 16px 18px 6px; }
@@ -571,8 +571,9 @@
   border: 2px solid rgba(255,210,74,.7); transition: left .15s, top .15s, width .15s, height .15s; }
 .hud .tut-dim.hide { display: none; }
 .hud .tut-thought { position: fixed; transform: translate(-50%, -100%); z-index: 61; pointer-events: none;
-  background: #1c2030; color: #fff; border: 1px solid #2f3854; border-radius: 5px; padding: 10px 16px; font-size: 13px; font-weight: 700;
-  max-width: 220px; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,.55); }
+  background: #1c2030; color: #e9edf6; border: 1px solid #2f3854; border-radius: 6px; padding: 10px 14px; font-size: 13px; font-weight: 500; line-height: 1.4;
+  max-width: 250px; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,.55); }
+.hud .tut-thought b { color: #ffd24a; font-weight: 700; }
 .hud .tut-thought.hide { display: none; }
 .hud .tut-thought:after { content: ''; position: absolute; left: var(--arrow-x, 50%); bottom: -9px; transform: translateX(-50%);
   border: 9px solid transparent; border-top-color: #1c2030; border-bottom: 0; }
@@ -592,12 +593,12 @@
 /* ---- DEV overlay (hud/devmenu.js) — appended to <body>, OUTSIDE the swappable .hud root,
        so it survives HUD swaps. Selectors are top-level (not under .hud) for that reason. ---- */
 .dev { position: fixed; left: 10px; bottom: 110px; z-index: 60; pointer-events: auto;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  font-family: 'Roboto', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
 .dev .devtoggle { background: rgba(21,24,35,.85); border: 1px solid #43223f; color: #e66; border-radius: 4px; padding: 5px 10px; font: 700 11px ui-monospace, monospace; letter-spacing: 1px; cursor: pointer; opacity: .65; }
 .dev .devtoggle:hover { opacity: 1; }
 .dev .devpanel { margin-top: 6px; background: rgba(15,18,27,.98); border: 1px solid #43223f; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 4px; width: 200px; max-height: 72vh; overflow: auto; box-shadow: 0 12px 30px rgba(0,0,0,.55); }
 .dev .devpanel.hide { display: none; }
-.dev .devpanel button { background: #1c2030; border: 1px solid #2a3145; color: #d8deea; border-radius: 5px; padding: 8px; font: 12px system-ui; cursor: pointer; transition: border-color .1s, background .1s; }
+.dev .devpanel button { background: #1c2030; border: 1px solid #2a3145; color: #d8deea; border-radius: 5px; padding: 8px; font: 12px 'Roboto', system-ui; cursor: pointer; transition: border-color .1s, background .1s; }
 .dev .devpanel button:hover { border-color: #e64cff; }
 .dev .devpanel button.on { background: #2a3550; border-color: #4aa8ff; color: #dff0ff; }
 /* panel header: title + close */
@@ -608,7 +609,7 @@
 /* button groups: a clean column, or a compact 2-col grid for the currency cheats */
 .dev .devbtns { display: flex; flex-direction: column; gap: 6px; }
 .dev .devbtns.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.dev .devnote { color: #7e8aa3; font: 11px system-ui; line-height: 1.35; margin-bottom: 2px; }
+.dev .devnote { color: #7e8aa3; font: 11px 'Roboto', system-ui; line-height: 1.35; margin-bottom: 2px; }
 .dev .ffrow { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 /* section groups in the single scrollable list */
 .dev .devsec { border-top: 1px solid #2a2030; padding-top: 6px; display: flex; flex-direction: column; gap: 6px; }
@@ -925,7 +926,7 @@
 .hud .tut-skip { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 62;
   display: inline-flex; align-items: center; gap: 6px; pointer-events: auto; cursor: pointer;
   background: rgba(28,32,48,.92); color: #b9c2d6; border: 1px solid #2f3854; border-radius: 999px;
-  padding: 7px 14px; font: 700 12px system-ui, sans-serif; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+  padding: 7px 14px; font: 700 12px 'Roboto', system-ui, sans-serif; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
 .hud .tut-skip:hover { color: #fff; border-color: #4a5570; background: rgba(36,40,58,.96); }
 .hud .tut-skip.hide { display: none; }
 
@@ -963,7 +964,7 @@
 .hud .infomodal-card .im-chip b { font-size: 15px; color: #fff; }
 /* "don't show again" checkbox */
 .hud .im-dsa { display: inline-flex; align-items: center; gap: 8px; margin: 16px auto 0; cursor: pointer;
-  background: transparent; border: 0; color: #8b93a7; font: 600 12px system-ui, sans-serif; }
+  background: transparent; border: 0; color: #8b93a7; font: 600 12px 'Roboto', system-ui, sans-serif; }
 .hud .im-dsa:hover { color: #c2cadb; }
 .hud .im-dsa .im-check { position: relative; flex: 0 0 auto; width: 18px; height: 18px; border-radius: 5px;
   border: 1.5px solid #3a4566; background: #11151f; transition: background .12s, border-color .12s; }
@@ -973,7 +974,7 @@
   border: solid #0e121c; border-width: 0 2px 2px 0; transform: rotate(45deg); }
 /* primary button */
 .hud .im-ok { display: block; width: 100%; margin-top: 18px; padding: 11px; border-radius: 10px; cursor: pointer;
-  border: 0; font: 800 14px system-ui, sans-serif; color: #0e121c; }
+  border: 0; font: 800 14px 'Roboto', system-ui, sans-serif; color: #0e121c; }
 .hud .infomodal-card.im-amber .im-ok { background: linear-gradient(180deg, #ffe1a0, #ffae3a); }
 .hud .infomodal-card.im-gold .im-ok { background: linear-gradient(180deg, #ffeaa6, #ffc738); }
 .hud .im-ok:hover { filter: brightness(1.06); }
@@ -1048,13 +1049,13 @@
   box-shadow: inset 0 0 0 2px #b08a4a, inset 0 0 16px rgba(154,106,26,.45), 0 2px 8px rgba(40,28,10,.3); }
 .hud .twmedal::after { content: ''; position: absolute; inset: -3px; border-radius: 50%; border: 1px solid rgba(255,255,255,.22); }
 .hud .twthumb { width: 96px; height: 96px; position: relative; }
-.hud .twname { font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 13px; }
-.hud .twbuff { font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 11.5px; color: #6a4a12;
+.hud .twname { font-family: 'Roboto', system-ui, sans-serif; font-weight: 700; font-size: 13px; }
+.hud .twbuff { font-family: 'Roboto', system-ui, sans-serif; font-weight: 700; font-size: 11.5px; color: #6a4a12;
   padding: 2px 11px; border-radius: 999px; border: 1px solid #b08a4a;
   background: linear-gradient(180deg, #f1da8c, #d8b157); box-shadow: inset 0 1px 0 rgba(255,255,255,.5); }
 .hud .twfoot { font-size: 11px; opacity: .72; }
 .hud .twfoot.eq { color: #5e7a3a; opacity: 1; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; }
-.hud .twbuy { font: inherit; font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 12px; cursor: pointer;
+.hud .twbuy { font: inherit; font-family: 'Roboto', system-ui, sans-serif; font-weight: 700; font-size: 12px; cursor: pointer;
   color: #221033; padding: 4px 12px; border-radius: 999px; border: 1px solid #5a3fae;
   background: linear-gradient(180deg, #cdb8ff, #9a7cff); box-shadow: 0 2px 0 #5a3fae;
   display: inline-flex; align-items: center; gap: 4px; }

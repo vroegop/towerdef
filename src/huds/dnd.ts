@@ -3,7 +3,7 @@
 import { createThemedHud } from '../hud/hud';
 
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@100..900&display=swap');
 
 /* ============ D&D parchment skin — scoped to .hud.theme-dnd ============ */
 .hud.theme-dnd {
@@ -11,7 +11,7 @@ const CSS = `
   --ink: #2a1a08; --ink-dim: #7a5a2a; --rule: #b09a6a;
   --accent: #7a4a1a; --crimson: #9a2a1a; --gold-ink: #9a6a1a;
   color: var(--ink);
-  font-family: 'IM Fell English', Georgia, serif;
+  font-family: 'Roboto', system-ui, sans-serif;
 }
 .hud.theme-dnd b, .hud.theme-dnd .stat b { color: var(--ink); }
 
@@ -26,15 +26,15 @@ const CSS = `
 
 /* ---- in-run top stats: engraved on the arena ---- */
 .hud.theme-dnd .topbar, .hud.theme-dnd .wavebanner, .hud.theme-dnd .statline { text-shadow: none; }
-.hud.theme-dnd .stat .lbl { color: var(--ink-dim); font-family: 'Cinzel', serif; font-weight: 700; }
-.hud.theme-dnd .wave b { color: var(--crimson); font-family: 'Cinzel', serif; }
-.hud.theme-dnd .gold b { color: var(--gold-ink); font-family: 'Cinzel', serif; }
-.hud.theme-dnd .stat.hp b { color: var(--ink); font-family: 'Cinzel', serif; }
+.hud.theme-dnd .stat .lbl { color: var(--ink-dim); font-family: 'Roboto', system-ui, sans-serif; font-weight: 700; }
+.hud.theme-dnd .wave b { color: var(--crimson); font-family: 'Roboto', system-ui, sans-serif; }
+.hud.theme-dnd .gold b { color: var(--gold-ink); font-family: 'Roboto', system-ui, sans-serif; }
+.hud.theme-dnd .stat.hp b { color: var(--ink); font-family: 'Roboto', system-ui, sans-serif; }
 .hud.theme-dnd .iconbtn { color: var(--ink-dim); }
 .hud.theme-dnd .iconbtn:hover { color: var(--ink); }
 .hud.theme-dnd .speedbtn { background: rgba(122,74,26,.12); border: 1px solid var(--rule); }
 .hud.theme-dnd .speedbtn:hover { background: rgba(122,74,26,.2); }
-.hud.theme-dnd .speedbtn b { color: var(--ink); font-family: 'Cinzel', serif; }
+.hud.theme-dnd .speedbtn b { color: var(--ink); font-family: 'Roboto', system-ui, sans-serif; }
 
 /* side menu: a small parchment rail pinned in the margin */
 .hud.theme-dnd .sidemenu { background: var(--parch); background-image: radial-gradient(circle at 70% 8%, var(--parch-lt), #e3d3b0 70%);
@@ -54,7 +54,7 @@ const CSS = `
 
 /* ---- in-run upgrade dock: a leather-trimmed shelf ---- */
 .hud.theme-dnd .tabbar { background: #c9b285; border-top: 3px double #7a5a2a; backdrop-filter: none; }
-.hud.theme-dnd .tabs button { color: var(--ink-dim); font-family: 'Cinzel', serif; font-weight: 700; }
+.hud.theme-dnd .tabs button { color: var(--ink-dim); font-family: 'Roboto', system-ui, sans-serif; font-weight: 700; }
 .hud.theme-dnd .tabs button.on { color: var(--ink); border-top-color: var(--crimson); background: rgba(122,74,26,.12); }
 .hud.theme-dnd .up { background: var(--parch-lt); border: 1px solid var(--rule); color: var(--ink); border-radius: 4px; }
 .hud.theme-dnd .up:hover:not(:disabled):not(.cant) { border-color: var(--crimson); }
@@ -65,10 +65,10 @@ const CSS = `
 
 /* ---- menu chrome: illuminated headings, dotted ledger rules ---- */
 .hud.theme-dnd .menutabs { background: #c9b285; border-top: 3px double #7a5a2a; }
-.hud.theme-dnd .menutabs button { color: var(--ink-dim); font-family: 'Cinzel', serif; }
+.hud.theme-dnd .menutabs button { color: var(--ink-dim); font-family: 'Roboto', system-ui, sans-serif; }
 .hud.theme-dnd .menutabs button.on { color: var(--ink); border-top-color: var(--crimson); background: rgba(122,74,26,.14); }
 .hud.theme-dnd .menutabs button.locked { color: #a99570; }
-.hud.theme-dnd .statshead, .hud.theme-dnd .modal h2 { font-family: 'Cinzel Decorative', serif; }
+.hud.theme-dnd .statshead, .hud.theme-dnd .modal h2 { font-family: 'Roboto', system-ui, sans-serif; }
 .hud.theme-dnd .statshead { border-bottom: 2px solid var(--rule); }
 .hud.theme-dnd .statshead h2 { color: var(--ink); }
 .hud.theme-dnd .menugear { color: var(--accent); }
@@ -89,7 +89,7 @@ const CSS = `
   color: var(--ink);
 }
 .hud.theme-dnd .mgmt-head { border-bottom: 1px solid var(--rule); }
-.hud.theme-dnd .mgmt-head h2 { color: var(--ink); font-family: 'Cinzel Decorative', serif; }
+.hud.theme-dnd .mgmt-head h2 { color: var(--ink); font-family: 'Roboto', system-ui, sans-serif; }
 .hud.theme-dnd .iconclose { color: var(--ink-dim); }
 .hud.theme-dnd .iconclose:hover { color: var(--ink); }
 /* upgrade detail modal on parchment */
@@ -157,7 +157,7 @@ const CSS = `
 .hud.theme-dnd .chip.cur-vials .ic { color: #14564a; }
 .hud.theme-dnd .chip.cur-energy .ic { color: #5a2a8a; }
 .hud.theme-dnd .chip .ic { position: relative; z-index: 1; color: var(--accent); }
-.hud.theme-dnd .chip b { position: relative; z-index: 1; margin: 0; font-family: 'Cinzel', serif; font-size: 14px; line-height: 1.05; color: var(--ink); }
+.hud.theme-dnd .chip b { position: relative; z-index: 1; margin: 0; font-family: 'Roboto', system-ui, sans-serif; font-size: 14px; line-height: 1.05; color: var(--ink); }
 /* a thin gleam sweeps across the polished face now and then; the three are staggered so they twinkle
    in turn rather than in unison. */
 .hud.theme-dnd .chip::after {
@@ -189,13 +189,13 @@ const CSS = `
 
 /* in-run Tower-style HUD (currency strip, wave banner, You/Enemy stat lines) in parchment + ink. */
 .hud.theme-dnd .cur { color: var(--ink); }
-.hud.theme-dnd .cur b { color: var(--ink); font-family: 'Cinzel', serif; }
+.hud.theme-dnd .cur b { color: var(--ink); font-family: 'Roboto', system-ui, sans-serif; }
 .hud.theme-dnd .cur.gold b { color: var(--gold-ink); }
 .hud.theme-dnd .cur .ic { color: var(--ink-dim); }
 .hud.theme-dnd .statline .sl { background: var(--parch-lt); border: 1px solid #8a6a3a; color: var(--ink);
   box-shadow: inset 0 0 0 2px var(--parch); }
 .hud.theme-dnd .sl:hover { border-color: var(--accent); }
-.hud.theme-dnd .sl b { color: var(--ink); font-family: 'Cinzel', serif; }
+.hud.theme-dnd .sl b { color: var(--ink); font-family: 'Roboto', system-ui, sans-serif; }
 .hud.theme-dnd .sl-row .ic { color: var(--ink-dim); }
 .hud.theme-dnd .sl-wave { color: var(--ink); }
 .hud.theme-dnd .sl.enemy .sl-wave { color: var(--crimson); }
@@ -204,17 +204,17 @@ const CSS = `
 .hud.theme-dnd .sl-bar.wave .slbarfill { background: linear-gradient(90deg, #7a5a2a, #b08a4a); }
 .hud.theme-dnd .sl-bar b { color: var(--ink); }
 /* enemy specs table in the stats modal */
-.hud.theme-dnd .enemytbl th { color: var(--ink-dim); border-bottom-color: var(--rule); font-family: 'Cinzel', serif; }
+.hud.theme-dnd .enemytbl th { color: var(--ink-dim); border-bottom-color: var(--rule); font-family: 'Roboto', system-ui, sans-serif; }
 .hud.theme-dnd .enemytbl td { color: var(--ink); border-bottom-color: rgba(176,154,106,.4); }
 
 /* floating check-in: a small carved parchment tablet (no neon) matching the ability-score stones. */
 .hud.theme-dnd .checkin-float { background: var(--parch-lt); border: 1px solid #8a6a3a; color: var(--ink);
-  box-shadow: inset 0 0 0 2px var(--parch), 0 3px 8px rgba(0,0,0,.3); font-family: 'Cinzel', serif; }
+  box-shadow: inset 0 0 0 2px var(--parch), 0 3px 8px rgba(0,0,0,.3); font-family: 'Roboto', system-ui, sans-serif; }
 .hud.theme-dnd .checkin-float:hover { border-color: var(--accent); }
 .hud.theme-dnd .checkin-float .cf-chip { background: rgba(122,74,26,.12); color: var(--ink); }
 .hud.theme-dnd .checkin-float .cf-chip .ic { color: var(--ink-dim); }
-.hud.theme-dnd .earncard .el { color: var(--ink-dim); font-family: 'Cinzel', serif; }
-.hud.theme-dnd .earncard .ev { color: var(--gold-ink); font-family: 'Cinzel', serif; }
+.hud.theme-dnd .earncard .el { color: var(--ink-dim); font-family: 'Roboto', system-ui, sans-serif; }
+.hud.theme-dnd .earncard .ev { color: var(--gold-ink); font-family: 'Roboto', system-ui, sans-serif; }
 .hud.theme-dnd .earncard .ev span, .hud.theme-dnd .earncard .es { color: var(--ink-dim); }
 
 /* the hero "character sheet" avatar frame */
@@ -229,7 +229,7 @@ const CSS = `
 .hud.theme-dnd .tiersel .tierstep,
 .hud.theme-dnd .slotbtn {
   background: #c9b285; border: 2px solid #7a5a2a; color: var(--ink); box-shadow: 2px 2px 0 #7a5a2a;
-  font-family: 'Cinzel', serif; border-radius: 4px;
+  font-family: 'Roboto', system-ui, sans-serif; border-radius: 4px;
 }
 .hud.theme-dnd .ms-section:hover, .hud.theme-dnd .tiersel .tierstep:hover { border-color: var(--crimson); color: var(--ink); }
 .hud.theme-dnd .ms-section .ms-sec-ic { color: var(--gold-ink); }
@@ -243,7 +243,7 @@ const CSS = `
 
 /* the Start button: an embossed wax seal, not neon */
 .hud.theme-dnd .startsq {
-  color: var(--parch-lt); font-family: 'Cinzel Decorative', serif;
+  color: var(--parch-lt); font-family: 'Roboto', system-ui, sans-serif;
   background: radial-gradient(circle at 50% 38%, #b3331f, #7a1a10);
   border: 3px solid #5a140c; box-shadow: 0 4px 0 #4a100a, 0 0 22px rgba(154,42,26,.4), inset 0 0 18px rgba(0,0,0,.3);
 }
@@ -257,8 +257,8 @@ const CSS = `
 }
 .hud.theme-dnd .perm:hover:not(:disabled):not(.cant) { border-color: var(--gold-ink); }
 .hud.theme-dnd .perm.tut { border-color: var(--crimson); box-shadow: 0 0 0 3px rgba(154,42,26,.18); }
-.hud.theme-dnd .perm .pname { font-family: 'Cinzel', serif; color: var(--ink-dim); }
-.hud.theme-dnd .perm .pcur { color: var(--ink); font-family: 'Cinzel', serif; }
+.hud.theme-dnd .perm .pname { font-family: 'Roboto', system-ui, sans-serif; color: var(--ink-dim); }
+.hud.theme-dnd .perm .pcur { color: var(--ink); font-family: 'Roboto', system-ui, sans-serif; }
 /* perm header/footer zone tints adapted to parchment palette */
 .hud.theme-dnd .perm .phead { background: rgba(42,26,8,.10); border-bottom-color: rgba(42,26,8,.12); }
 .hud.theme-dnd .perm .pcost { color: var(--crimson); background: rgba(154,106,26,.10); border-top-color: rgba(154,106,26,.22); }
@@ -274,7 +274,7 @@ const CSS = `
 .hud.theme-dnd .permgroup .pg-act { color: var(--crimson); }
 .hud.theme-dnd .permgroup.future .pg-act { color: var(--ink-dim); }
 /* in-run upgrade tiles — same card shape; ink colours replace the dark-theme defaults */
-.hud.theme-dnd .up .pname { font-family: 'Cinzel', serif; color: var(--ink-dim); }
+.hud.theme-dnd .up .pname { font-family: 'Roboto', system-ui, sans-serif; color: var(--ink-dim); }
 .hud.theme-dnd .up .phead { background: rgba(42,26,8,.10); border-bottom-color: rgba(42,26,8,.12); }
 .hud.theme-dnd .up .cur { color: var(--ink); }
 .hud.theme-dnd .up .nxt { color: #4a7a2a; }
@@ -282,9 +282,9 @@ const CSS = `
 .hud.theme-dnd .up .pcost { color: var(--gold-ink); background: rgba(154,106,26,.10); border-top-color: rgba(154,106,26,.22); }
 .hud.theme-dnd .up:hover:not(:disabled):not(.cant) { border-color: var(--crimson); }
 .hud.theme-dnd .up:hover:not(:disabled):not(.cant) .pcost { background: rgba(154,42,26,.14); border-top-color: rgba(154,42,26,.28); }
-/* bulk-buy multiplier chip: an inked parchment tab matching the ledger (Cinzel, gold rule). */
+/* bulk-buy multiplier chip: an inked parchment tab matching the ledger (gold rule). */
 .hud.theme-dnd .bmult { background: var(--parch-dk); color: var(--accent); border-color: var(--rule);
-  font-family: 'Cinzel', serif; font-weight: 700; box-shadow: 0 1px 2px rgba(42,26,8,.18); }
+  font-family: 'Roboto', system-ui, sans-serif; font-weight: 700; box-shadow: 0 1px 2px rgba(42,26,8,.18); }
 .hud.theme-dnd .bmult:hover { background: #ecdcb6; color: var(--ink); border-color: var(--accent); }
 .hud.theme-dnd .subtabs .subtab.on { color: var(--ink); border-color: var(--crimson); background: rgba(122,74,26,.14); }
 .hud.theme-dnd .subtabs .subtab .ic { color: var(--ink-dim); }
@@ -339,7 +339,7 @@ const CSS = `
 /* ---- Superpowers (Prestige tab) parchment skin — mirrors the .perm / .labslot panels ---- */
 .hud.theme-dnd .superpower { background: var(--parch-lt); border: 1px solid var(--rule); }
 .hud.theme-dnd .superpower.locked { background: var(--parch-dk); }
-.hud.theme-dnd .sp-head { color: var(--ink); font-family: 'Cinzel', serif; }
+.hud.theme-dnd .sp-head { color: var(--ink); font-family: 'Roboto', system-ui, sans-serif; }
 .hud.theme-dnd .sp-head b { color: var(--ink); }
 .hud.theme-dnd .sp-cat { color: var(--ink-dim); border-color: var(--rule); }
 .hud.theme-dnd .sp-blurb { color: var(--ink-dim); }
@@ -356,7 +356,7 @@ const CSS = `
 
 .hud.theme-dnd .card-img { box-shadow: inset 0 0 0 1px rgba(122,74,26,.25); }
 .hud.theme-dnd .card-band { opacity: .22; }
-.hud.theme-dnd .card-name { font-family: 'Cinzel', serif; color: var(--ink); text-shadow: none; }
+.hud.theme-dnd .card-name { font-family: 'Roboto', system-ui, sans-serif; color: var(--ink); text-shadow: none; }
 .hud.theme-dnd .card-desc { color: var(--ink-dim); border-top-color: rgba(122,74,26,.25); }
 .hud.theme-dnd .cmhead .cm-title b { color: var(--ink); }
 .hud.theme-dnd .cmhead .cm-title span, .hud.theme-dnd .cm-sub { color: var(--ink-dim); }
@@ -367,7 +367,7 @@ const CSS = `
 /* labs → spell research scrolls */
 .hud.theme-dnd .lab { background: var(--parch-lt); border: 1px solid var(--rule); }
 .hud.theme-dnd .lab.active { border-color: var(--accent); box-shadow: inset 0 0 16px rgba(122,74,26,.12); }
-.hud.theme-dnd .lab .pname { color: var(--ink); font-family: 'Cinzel', serif; }
+.hud.theme-dnd .lab .pname { color: var(--ink); font-family: 'Roboto', system-ui, sans-serif; }
 .hud.theme-dnd .lab .lablv, .hud.theme-dnd .lab .pcost { color: var(--ink-dim); }
 .hud.theme-dnd .lab .pcur { color: #4a7a2a; }
 .hud.theme-dnd .lab .reslab { background: var(--parch); border: 1px solid var(--rule); color: var(--gold-ink); }
@@ -394,7 +394,7 @@ const CSS = `
 .hud.theme-dnd .exitrun:hover { background: #9a2a1a; color: #fff; }
 /* Run-Over "Back" + End-run "Keep playing" + confirm copy → parchment, not dark */
 .hud.theme-dnd .over-back,
-.hud.theme-dnd .endkeep { background: #c9b285; border-top: 2px solid #7a5a2a; color: var(--ink); font-family: 'Cinzel', serif; }
+.hud.theme-dnd .endkeep { background: #c9b285; border-top: 2px solid #7a5a2a; color: var(--ink); font-family: 'Roboto', system-ui, sans-serif; }
 .hud.theme-dnd .over-back:hover,
 .hud.theme-dnd .endkeep:hover { background: #d8c8a8; color: var(--ink); }
 .hud.theme-dnd .over-back .ic { color: var(--ink-dim); }
@@ -411,7 +411,7 @@ const CSS = `
 .hud.theme-dnd .msrow.reached .msdot { background: linear-gradient(180deg, #e2bd66, var(--gold-ink)); color: #2a1a08; box-shadow: none; }
 .hud.theme-dnd .msrow.can .msdot { background: linear-gradient(180deg, #8aa64f, #5e7a3a); color: var(--parch-lt); box-shadow: 0 0 0 3px rgba(107,138,58,.3); }
 .hud.theme-dnd .mscard { border-bottom-color: rgba(122,74,26,.22); }
-.hud.theme-dnd .mn-info b { color: var(--ink); font-family: 'Cinzel', serif; }
+.hud.theme-dnd .mn-info b { color: var(--ink); font-family: 'Roboto', system-ui, sans-serif; }
 .hud.theme-dnd .msrow.locked .mn-info b { color: var(--ink-dim); }
 .hud.theme-dnd .mn-reward { color: var(--gold-ink); }
 .hud.theme-dnd .mn-reward.locked { color: var(--ink-dim); }
