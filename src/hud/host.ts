@@ -169,6 +169,8 @@ export function createHudHost(root: HTMLElement, handlers: HudHandlers, opts?: {
     showHint: (html: string) => void call('showHint', [html]),
     hideHint: () => void call('hideHint', []),
     showOfflineReward: (reward: OfflineReward) => void call('showOfflineReward', [reward]),
+    showPausePrompt: (info: { awaySec: number; speed: number }, onCollect: () => void, onKeepPaused?: () => void) =>
+      void call('showPausePrompt', [info, onCollect, onKeepPaused]),
     setMeta: (meta: Meta) => void call('setMeta', [meta]),
   };
   return facade;

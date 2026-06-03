@@ -1283,6 +1283,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     rewards?: string;   // optional reward-chip HTML row
     primary: string;    // primary button label
     onPrimary?: () => void;
+    secondary?: string;     // optional second (subdued) button below the primary
+    onSecondary?: () => void;
     dontShowAgain?: { key: keyof Settings; label: string };
   }
   function showInfoModal(o: InfoModalOpts): void {
@@ -1295,7 +1297,14 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       '<div class="im-body">' + o.body + '</div>' +
       (o.rewards ? '<div class="im-rewards">' + o.rewards + '</div>' : '') +
       (dsa ? '<button class="im-dsa" id="h-im-dsa"><span class="im-check"><i></i></span><span>' + dsa.label + '</span></button>' : '') +
-      '<button class="im-ok" id="h-im-ok">' + o.primary + '</button>';
+      '<button class="im-ok" id="h-im-ok">' + o.primary + '</button>' +
+      (o.secondary ? '<button class="im-secondary" id="h-im-sec">' + o.secondary + '</button>' : '');
+    if (o.secondary) {
+      $('#h-im-sec').addEventListener('click', () => {
+        hideInfoModal();
+        o.onSecondary && o.onSecondary();
+      });
+    }
     if (dsa) {
       const b = $('#h-im-dsa');
       b.addEventListener('click', () => {
@@ -1326,6 +1335,22 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         chip('tier', '+' + abbr(reward.waves || 0)),
       primary: 'Collect',
       dontShowAgain: { key: 'showOfflineReward', label: "Don't show this again" },
+    });
+  }
+  // Public: shown on return when the run was left PAUSED (so it earned nothing). Asks whether the
+  // pause was intentional; "collect" lets the caller fast-forward the missed time at the player's
+  // fastest unlocked speed, while "I paused on purpose" simply dismisses and leaves the run paused.
+  function showPausePrompt(info: { awaySec: number; speed: number }, onCollect: () => void, onKeepPaused?: () => void): void {
+    showInfoModal({
+      accent: 'amber',
+      iconName: 'ffwd',
+      title: 'Were you paused on purpose?',
+      body: 'Your run sat <b>paused</b> for about <b>' + fmtTime(info.awaySec) + '</b>, so it earned nothing while you were away. ' +
+        'If you didn\'t mean to pause, collect what you\'d have made running at <b>' + fmtSpeed(info.speed) + '</b> — your fastest unlocked speed.',
+      primary: 'Collect at ' + fmtSpeed(info.speed),
+      onPrimary: onCollect,
+      secondary: 'I paused on purpose',
+      onSecondary: onKeepPaused,
     });
   }
 
@@ -2169,7 +2194,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     }
   }, 1000);
 
-  return { update, showMenu, refreshMenu, hideMenu, showOverview, hideOverview, showHint, hideHint, showOfflineReward, setMeta, root };
+  return { update, showMenu, refreshMenu, hideMenu, showOverview, hideOverview, showHint, hideHint, showOfflineReward, showPausePrompt, setMeta, root };
 }
 
 // Factory for a themed skin: same core + wiring, restyled by `theme = { cls, css }`.
