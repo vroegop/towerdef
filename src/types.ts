@@ -70,6 +70,7 @@ export interface Meta {
   cosmeticsOwned?: Record<string, boolean>; // gem-bought cosmetics (tier-gated ones derive from progress)
   gameSpeed?: number; // player-chosen battle speed (0.5/1 free; higher tiers unlocked by the Game Speed lab)
   inRunTutDone?: boolean; // the "run upgrades are temporary" in-run tutorial has been shown once
+  speedTutDone?: boolean; // the "battle speed → Game Speed lab" tutorial has been shown once
   ver: number;
 }
 

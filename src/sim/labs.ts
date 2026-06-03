@@ -76,8 +76,10 @@ export const LABS: LabDef[] = [
     per: 0.03, max: 100, coin: tcurve(LAB_COST), time: tcurve(LAB_TIME), gate: { wave: 30 } },
   // Game Speed: a 'special' lab. It does NOT scale a sim stat (so it never enters labScaleMults /
   // computeStats) — completing a level just widens the set of selectable battle speeds (see below).
+  // Unlike every other lab it is available from wave 0 (gate.wave 0): it's the tutorial lab that
+  // teaches the research mechanic before the wave-30 milestone opens the rest of the tier-1 ladder.
   { id: SPEED_LAB, cat: 'speed', kind: 'special', target: 'gameSpeed', label: 'Game Speed',
-    per: 0.5, max: 7, coin: tcurve(SPEED_COST), time: tcurve(SPEED_TIME), gate: { wave: 30 } },
+    per: 0.5, max: 7, coin: tcurve(SPEED_COST), time: tcurve(SPEED_TIME), gate: { wave: 0 } },
 
   // ---- flat labs (kind 'flat' → ADDS to a sim stat in computeStats, via labFlatAdds) ----
   // Range: +1 metre per level (20 levels), same durations as the first 20 Damage levels.
@@ -172,7 +174,10 @@ export function labUnlocked(meta: Meta, id: string): boolean {
   if (!L) return false;
   return ((meta && meta.bestWave) || 0) >= ((L.gate && L.gate.wave) || 0);
 }
-export const labsTabUnlocked = (meta: Meta): boolean => ((meta && meta.bestWave) || 0) >= 30;
+// The Labs TAB itself is always open: the Game Speed lab (gate.wave 0) is researchable from the very
+// first run, so the rail/tab never hides. INDIVIDUAL labs are still gated by labUnlocked() — the rest
+// of the tier-1 ladder stays locked until wave 30. (meta kept for signature/back-compat.)
+export const labsTabUnlocked = (_meta: Meta): boolean => true;
 export function researchRemaining(meta: Meta, id: string, nowMs: number): number {
   const r = researchOf(meta, id);
   return r ? Math.max(0, (r.endsAt - nowMs) / 1000) : 0;
