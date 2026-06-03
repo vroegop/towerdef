@@ -71,6 +71,38 @@ const tcurve = (points: [number, number][]): UpgradeCurve => ({
     return Math.round(interpTable(this.points!, n));
   },
 });
+// piecewise COMPOUNDING cost: level 1 costs `start`; each later level multiplies the previous
+// level's price by that segment's ratio (and adds its flat term). Segments are [uptoLevel, ratio,
+// add]; the final segment's ratio applies to every level beyond its bound. Evaluated in closed form
+// per segment so cost(n) stays O(#segments). Used by the deep (1000+) skills so prices creep up
+// early, then eventually outrun what a player can bank.
+const stepCurve = (start: number, segs: [number, number, number][]): UpgradeCurve => ({
+  base: start,
+  grow: 0,
+  cost(n: number) {
+    let level = 1,
+      val = start;
+    for (const [upto, r, a] of segs) {
+      if (level >= n) break;
+      const m = Math.min(n, upto) - level; // compounding steps that land inside this segment
+      if (m <= 0) continue;
+      const rm = Math.pow(r, m);
+      val = r === 1 ? val + a * m : rm * val + (a * (rm - 1)) / (r - 1);
+      level += m;
+    }
+    return Math.round(val);
+  },
+});
+// Shared endgame curves for the four deep skills (rangedDamage, health, regen, armor).
+// Permanent COIN price (all four share it): 30 → ×1.01+1/level to 1k, ×1.005/level to 5k, ×1.05
+// beyond. In-run GOLD price keeps each skill's own start, then ramps gently: ×1.01+1/level to 100,
+// ×1.005 to 1k, ×1.0003 to 3k, ×1.0002 to 6k.
+const DEEP_COIN_SEGS: [number, number, number][] = [[1000, 1.01, 1], [5000, 1.005, 0], [Infinity, 1.05, 0]];
+const DEEP_GOLD_SEGS: [number, number, number][] = [[100, 1.01, 1], [1000, 1.005, 0], [3000, 1.0003, 0], [Infinity, 1.0002, 0]];
+const deepCoin = stepCurve(30, DEEP_COIN_SEGS);
+const deepGold = (start: number): UpgradeCurve => stepCurve(start, DEEP_GOLD_SEGS);
+// Skills whose gold price is the authored deepGold formula above (not derived from the coin curve).
+const SELF_GOLD = new Set(['rangedDamage', 'health', 'regen', 'armor']);
 
 // The three subtabs shared by the in-run bar and the out-of-run Upgrades menu.
 export const TAB_DEFS: TabDef[] = [
@@ -102,20 +134,6 @@ const DAMAGE_VALUE: [number, number][] = [
   [4900, 26130000], [5000, 29050000], [5100, 32190000], [5200, 35560000], [5300, 39160000], [5400, 42990000],
   [5500, 47060000], [5600, 51370000], [5700, 55930000], [5800, 60740000], [5900, 65800000], [6000, 71110000],
 ];
-const DAMAGE_COST: [number, number][] = [
-  [1, 30], [100, 80730], [200, 643070], [300, 1590000], [400, 3030000], [500, 5000000], [600, 7520000],
-  [700, 10610000], [800, 14320000], [900, 18640000], [1000, 23600000], [1100, 29210000], [1200, 35500000],
-  [1300, 42470000], [1400, 50140000], [1500, 58530000], [1600, 67630000], [1700, 77470000], [1800, 88050000],
-  [1900, 99390000], [2000, 111490000], [2100, 124360000], [2200, 138020000], [2300, 152480000], [2400, 167730000],
-  [2500, 183790000], [2600, 200670000], [2700, 218370000], [2800, 236910000], [2900, 256280000], [3000, 276510000],
-  [3100, 297580000], [3200, 319520000], [3300, 342320000], [3400, 365990000], [3500, 390550000], [3600, 415990000],
-  [3700, 442320000], [3800, 469550000], [3900, 497690000], [4000, 526730000], [4100, 556690000], [4200, 587560000],
-  [4300, 619370000], [4400, 652100000], [4500, 685770000], [4600, 720380000], [4700, 755930000], [4800, 792440000],
-  [4900, 829900000], [5000, 868320000], [5100, 1820000000], [5200, 3790000000], [5300, 7920000000], [5400, 16510000000],
-  [5500, 43000000000], [5600, 111930000000], [5700, 291140000000], [5800, 756760000000], [5900, 1970000000000],
-  [6000, 5100000000000],
-];
-
 // Attack Speed per-level cost (exact). Indexed by OUR level n (= price to buy level n+1), so
 // cost(0)=30 buys the 1st level, cost(1)=56 the 2nd, … matching the reference's next-level price.
 const ATKSPEED_COST: [number, number][] = [
@@ -133,21 +151,6 @@ const ATKSPEED_COST: [number, number][] = [
   [93, 105690], [94, 108240], [95, 110830], [96, 113450], [97, 116110], [98, 118800],
 ];
 
-// Health & HP-Regen share one cost curve (sampled every 100 levels). Defense Absolute uses a near-
-// identical cost but starts at 50 and stops at level 5000.
-const HP_COST: [number, number][] = [
-  [1, 30], [100, 77220], [200, 610350], [300, 1500000], [400, 2860000], [500, 4700000], [600, 7050000],
-  [700, 9940000], [800, 13390000], [900, 17410000], [1000, 22030000], [1100, 27240000], [1200, 33080000],
-  [1300, 39540000], [1400, 46640000], [1500, 54400000], [1600, 62820000], [1700, 71920000], [1800, 81700000],
-  [1900, 92170000], [2000, 103330000], [2100, 115210000], [2200, 127810000], [2300, 141130000], [2400, 155180000],
-  [2500, 169970000], [2600, 185500000], [2700, 201790000], [2800, 218840000], [2900, 236660000], [3000, 255240000],
-  [3100, 274610000], [3200, 294750000], [3300, 315690000], [3400, 337420000], [3500, 359960000], [3600, 383300000],
-  [3700, 407450000], [3800, 432420000], [3900, 458200000], [4000, 484820000], [4100, 512270000], [4200, 540550000],
-  [4300, 569670000], [4400, 599640000], [4500, 630460000], [4600, 662130000], [4700, 694660000], [4800, 728060000],
-  [4900, 762320000], [5000, 797450000], [5100, 1670000000], [5200, 3480000000], [5300, 7260000000],
-  [5400, 15150000000], [5500, 39450000000], [5600, 102670000000], [5700, 267020000000], [5800, 693950000000],
-  [5900, 1800000000000], [6000, 4680000000000],
-];
 const HEALTH_VALUE: [number, number][] = [
   [1, 10], [100, 21560], [200, 143010], [300, 431240], [400, 943900], [500, 1730000], [600, 2850000], [700, 4330000],
   [800, 6230000], [900, 8590000], [1000, 11440000], [1100, 14830000], [1200, 18790000], [1300, 23360000],
@@ -182,18 +185,6 @@ const DEFABS_VALUE: [number, number][] = [
   [4100, 39830000], [4200, 43430000], [4300, 47250000], [4400, 51280000], [4500, 55530000], [4600, 60010000],
   [4700, 64710000], [4800, 69640000], [4900, 74810000], [5000, 80210000],
 ];
-const DEFABS_COST: [number, number][] = [
-  [1, 50], [100, 77240], [200, 610390], [300, 1500000], [400, 2860000], [500, 4700000], [600, 7050000], [700, 9940000],
-  [800, 13390000], [900, 17410000], [1000, 22030000], [1100, 27240000], [1200, 33080000], [1300, 39540000],
-  [1400, 46640000], [1500, 54400000], [1600, 62820000], [1700, 71920000], [1800, 81700000], [1900, 92170000],
-  [2000, 103330000], [2100, 115210000], [2200, 127810000], [2300, 141130000], [2400, 155180000], [2500, 169970000],
-  [2600, 185500000], [2700, 201790000], [2800, 218840000], [2900, 236660000], [3000, 255240000], [3100, 274610000],
-  [3200, 294750000], [3300, 315690000], [3400, 337420000], [3500, 359960000], [3600, 383300000], [3700, 407450000],
-  [3800, 432420000], [3900, 458200000], [4000, 484820000], [4100, 512270000], [4200, 540550000], [4300, 569670000],
-  [4400, 599640000], [4500, 630460000], [4600, 662130000], [4700, 694660000], [4800, 728060000], [4900, 762320000],
-  [5000, 797450000],
-];
-
 // Every upgrade as a SPEC: `curve` is the balance data (graphable/rebalanceable); `value` is
 // generated from it below. `fmt(v)` formats a COMPUTED value; `max` caps perm+run; `gold`/`coin`
 // are the cost curves. `tip` is static or (up) => string and derives any numbers via up.value/fmt.
@@ -207,7 +198,7 @@ const UPGRADE_SPECS: UpgradeSpec[] = [
   { id: 'rangedDamage', tab: 'attack', icon: 'bow', label: 'Damage',
     name: 'Damage',
     tip: (up) => 'Damage per shot. Base ' + up.fmt(up.value(0)) + ' → ' + up.fmt(up.value(up.max)) + ' at level ' + up.max + '. Cards & labs multiply it.',
-    max: 6000, curve: { kind: 'table', points: DAMAGE_VALUE }, fmt: abbrNum, gold: tcurve(DAMAGE_COST), coin: tcurve(DAMAGE_COST) },
+    max: 6000, curve: { kind: 'table', points: DAMAGE_VALUE }, fmt: abbrNum, gold: deepGold(10), coin: deepCoin },
   { id: 'dmgPerMeter', tab: 'attack', icon: 'ruler', label: 'DMG/m',
     name: 'Damage per Metre',
     tip: (up) => 'Damage multiplier per metre of distance to the target. Max: ' + up.fmt(up.value(up.max)) + '/m.',
@@ -289,12 +280,12 @@ const UPGRADE_SPECS: UpgradeSpec[] = [
   { id: 'health', stat: 'maxHp', tab: 'defense', icon: 'heart', label: 'HP',
     name: 'Max HP',
     tip: (up) => 'Maximum HP. Base ' + up.fmt(up.value(0)) + ' → ' + up.fmt(up.value(up.max)) + ' at level ' + up.max + '. Cards & labs multiply it.',
-    max: 6000, curve: { kind: 'table', points: HEALTH_VALUE }, fmt: abbrNum, gold: tcurve(HP_COST), coin: tcurve(HP_COST) },
+    max: 6000, curve: { kind: 'table', points: HEALTH_VALUE }, fmt: abbrNum, gold: deepGold(10), coin: deepCoin },
   { id: 'regen', tab: 'defense', icon: 'regen', label: 'HP Regen',
     name: 'HP Regeneration',
     tip: (up) => 'HP recovered per second whenever below max HP. Max: ' + up.fmt(up.value(up.max)) + '.',
     max: 6000, curve: { kind: 'table', points: REGEN_VALUE }, fmt: (v) => abbrNum(v) + '/s',
-    gold: tcurve(HP_COST), coin: tcurve(HP_COST) },
+    gold: deepGold(5), coin: deepCoin },
   { id: 'knockbackChance', tab: 'defense', icon: 'arrow', label: 'Knockback',
     name: 'Knockback Chance',
     tip: (up) => 'Chance each hit knocks the enemy back — or slows it if it is too heavy. Max: ' + up.fmt(up.value(up.max)) + '.',
@@ -308,7 +299,7 @@ const UPGRADE_SPECS: UpgradeSpec[] = [
   { id: 'armor', tab: 'defense', icon: 'shield', label: 'Armor',
     name: 'Armor',
     tip: (up) => 'Flat damage blocked per hit, applied AFTER Defense %. Base ' + up.fmt(up.value(0)) + ' → ' + up.fmt(up.value(up.max)) + ' at level ' + up.max + '.',
-    max: 5000, curve: { kind: 'table', points: DEFABS_VALUE }, fmt: abbrNum, gold: tcurve(DEFABS_COST), coin: tcurve(DEFABS_COST) },
+    max: 5000, curve: { kind: 'table', points: DEFABS_VALUE }, fmt: abbrNum, gold: deepGold(3), coin: deepCoin },
   { id: 'defPct', tab: 'defense', icon: 'shield', label: 'Defense %',
     name: 'Defense Percentage',
     tip: (up) => 'Percentage damage reduction applied after Armor. Max: ' + up.fmt(up.value(up.max)) + '.',
@@ -384,7 +375,10 @@ export const UPGRADES: UpgradeDef[] = UPGRADE_SPECS.map((spec) => {
   def.value = (b: number) => evalCurve(def.curve, b);
   const coinCurve = def.coin;
   const goldTable = GOLD_COST[spec.id];
-  if (goldTable) {
+  if (SELF_GOLD.has(spec.id)) {
+    // Deep skills carry an authored gold formula on the spec — keep it, don't derive from coin.
+    def.gold = spec.gold;
+  } else if (goldTable) {
     // Explicit authored gold curve (sampled). Overrides the coin×GOLD_FACTOR default.
     def.gold = {
       base: goldTable[0][1],

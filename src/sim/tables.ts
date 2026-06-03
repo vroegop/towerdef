@@ -230,10 +230,7 @@ const G1 = (vals: number[]): [number, number][] => vals.map((v, i) => [i, v]);
 export const GOLD_COST: Record<string, [number, number][]> = {
   // ---- ATTACK ----
   attackSpeed: G10([5, 10760, 18050, 27410, 38920, 52630, 68590, 67900]),
-  rangedDamage: G10(
-    [10, 252, 1080, 2800, 5470, 9140, 13870, 19670, 26580, 34630, 43830, 54200],
-    [372, 9e6], // ~262 more levels ramp to ≈9M, then hold
-  ),
+  // rangedDamage, health, regen, armor: gold is an authored formula in skills.ts (deepGold), not here.
   dmgPerMeter: G10(
     [20, 513, 1930, 4630, 8730, 14290, 21380, 30050, 40000, 52000, 66000, 122000, 220000, 400000, 700000, 1220000],
     [182, 9e6], // ~32 more levels ramp to ≈9M, then hold
@@ -253,11 +250,8 @@ export const GOLD_COST: Record<string, [number, number][]> = {
   bounceTargets: G1([250, 700, 1500, 4000, 12500, 50000, 140000]),
   bounceRange: G10([20, 1160, 6600, 18500, 39000, 120000, 420000]), // L31 listed "1850" → 18500 (typo fix)
   // ---- DEFENSE ----
-  health: G10([10, 280, 1150, 2830, 5380, 8840, 13230, 18500, 24900, 32230], [440, 13.5e6]),
-  regen: G10([5, 230, 1100, 2800, 5330, 8790, 13180, 18530, 24860, 32180], [450, 13.5e6]),
   knockbackChance: G10([10, 450, 2200, 5600, 10500, 17500, 27000, 37000, 49000]),
   knockbackForce: G10([10, 450, 2200, 5600, 10600]),
-  armor: G10([3, 210, 1080, 2800, 5300, 8770, 13160, 18500, 25000, 32000, 40000], [450, 13.5e6]),
   defPct: G10([5, 350, 1660, 4000, 8000, 12500, 19000, 26000, 35000, 45000, 50000]),
   thorns: G10([10, 400, 2000, 5000, 9400, 15500, 23500, 33000, 44000, 58000, 65000]),
   lifesteal: G10([10, 400, 1900, 5000, 9400, 15500, 24000, 33000, 45000]),
