@@ -13,7 +13,7 @@ import { drawGoldenBg, goldenBoltStyle, drawGoldenRing, drawMoat, drawCrystals }
 const RANGE_PAD = 0.25; // frame out to 1.25× range so the fog edge (1.2×) and its dim silhouettes are on-screen
 const FOG_VISION = 1.2; // vision edge as a multiple of range: inside = clear, outside = fog (enemies spawn at 1.4×)
 const FOG_FADE = 0.2;   // over how many ×range past the vision edge an enemy fades from clear to full silhouette
-const FOG_COLOR = '12,10,22'; // rgb of the fog overlay (deep cold blue-black), alpha applied per-stop below
+const FOG_COLOR = '226,224,240'; // rgb of the fog overlay (soft warm-cool cloud white), alpha applied per-stop below
 const BOTTOM_MARGIN = 0.4; // bottom 40% of the screen is reserved (upgrade menus) — tower stays in the top 60%
 const TRAIL_LIFE = 0.32; // seconds a slime-trail dab lingers behind a moving enemy before it fully fades
 const PLASMA_ARC_H = 48; // world-px peak height of a lobbed plasma orb (render-only; sim travels flat)
@@ -252,8 +252,8 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
       const fogged = fog > 0.02;
       if (fogged) {
         ctx.save();
-        ctx.globalAlpha = 1 - 0.65 * fog; // silhouettes hold ~0.35 alpha at full fog
-        ctx.filter = 'blur(' + (2.6 * fog).toFixed(2) + 'px)';
+        ctx.globalAlpha = 1 - 0.4 * fog; // enemies stay visible through the cozy clouds (~0.6 alpha at full fog)
+        ctx.filter = 'blur(' + (2.2 * fog).toFixed(2) + 'px)'; // a gentle, soft-cloud blur
       }
       drawEnemy(ctx, e.type, esx, esy, bodyR, col, animClock, e.hitFlash, e.facing);
       if (fogged) ctx.restore();
@@ -285,20 +285,22 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     // Crystal Circle: orbiting crystals + flying shards. Drawn BEFORE the fog overlay so shards that
     // fly out past the vision edge get dimmed by the fog as they die there.
     drawCrystals(ctx, s, tx, ty, animClock);
-    // Fog overlay: darken the world beyond the vision edge with a soft radial gradient. Drawn AFTER the
-    // enemies (so silhouettes sit under it) but BEFORE the projectiles, tower and range ring (so those
-    // always stay crisp and readable). Inside the vision edge it's fully transparent.
+    // Fog overlay: veil the world beyond the vision edge with a soft, semi-transparent cloud bank. Drawn
+    // AFTER the enemies (so silhouettes sit under it) but BEFORE the projectiles, tower and range ring (so
+    // those always stay crisp). It's a light, see-through haze — enemies stay readable through it — that
+    // thickens gently toward the spawn ring rather than blacking the world out. Transparent at the edge.
     {
-      const inner = fogVisionWR * scale;       // screen-px where fog begins
-      const outer = range * 1.45 * scale;       // screen-px where fog reaches full density
+      const inner = fogVisionWR * scale;       // screen-px where the clouds begin
+      const outer = range * 1.55 * scale;       // screen-px where the clouds reach full (still partial) density
       const fgrad = ctx.createRadialGradient(hsx, hsy, inner, hsx, hsy, outer);
       fgrad.addColorStop(0, 'rgba(' + FOG_COLOR + ',0)');
-      fgrad.addColorStop(1, 'rgba(' + FOG_COLOR + ',0.9)');
+      fgrad.addColorStop(0.45, 'rgba(' + FOG_COLOR + ',0.22)'); // eased mid-stop keeps the falloff soft and fluffy
+      fgrad.addColorStop(1, 'rgba(' + FOG_COLOR + ',0.58)');    // peak haze stays translucent so silhouettes read through
       ctx.fillStyle = fgrad;
       ctx.fillRect(0, 0, W, H);
-      // a faint cool rim right at the vision edge so the boundary reads as a deliberate horizon
-      ctx.strokeStyle = 'rgba(150,180,220,0.18)';
-      ctx.lineWidth = 1.5;
+      // a faint warm rim right at the vision edge so the boundary reads as a gentle horizon, not a hard wall
+      ctx.strokeStyle = 'rgba(245,240,255,0.14)';
+      ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(hsx, hsy, inner, 0, Math.PI * 2);
       ctx.stroke();
