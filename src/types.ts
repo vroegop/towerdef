@@ -160,6 +160,7 @@ export interface Econ {
   dmgTaken: number; // total damage the hero has actually taken this run (post defense/armor)
   dmgDealt: number; // total hit damage the hero has dealt to enemies this run
   reflectDealt: number; // total reflect/thorns damage dealt back to attackers this run
+  wavesSkipped: number; // waves auto-skipped by the Wave Skip card this run
 }
 export interface Run {
   levels: Record<string, number>;

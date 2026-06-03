@@ -73,8 +73,11 @@ function nearestNotHit(state: State, x: number, y: number, range: number, hitIds
 }
 
 // Apply one hit's damage to an enemy, folding in Amp (rend), Lifesteal, Knockback, and the
-// ranged-enemy ram-bounce.
-export function applyHit(state: State, e: Enemy, baseDmg: number, stats: Stats, rng?: Rng): number {
+// ranged-enemy ram-bounce. dirX/dirY (optional) is the projectile's travel direction at impact, so
+// knockback shoves along the shot's path — a bounced enemy gets pushed away from the enemy the shot
+// just ricocheted off (which can send it sideways). Lightning (no projectile) omits it and falls
+// back to away-from-hero.
+export function applyHit(state: State, e: Enemy, baseDmg: number, stats: Stats, rng?: Rng, dirX?: number, dirY?: number): number {
   if (rng && stats && stats.rendChance && rng.next() < stats.rendChance) {
     e.rend = Math.min(MAX_REND, (e.rend || 0) + 1);
     e.rendT = REND_DECAY;
@@ -86,7 +89,7 @@ export function applyHit(state: State, e: Enemy, baseDmg: number, stats: Stats, 
   e.hitFlash = 0.12;
   e.hitDmg = Math.round(dealt);
   if (stats && stats.lifesteal && state.hero) state.hero.hp = Math.min(state.hero.hpMax, state.hero.hp + dealt * stats.lifesteal);
-  applyKnockback(state, e, stats, rng);
+  applyKnockback(state, e, stats, rng, dirX, dirY);
   if (e.behavior === 'bounce') e.kb = Math.max(e.kb, 0.25);
   return dealt;
 }
@@ -94,18 +97,27 @@ export function applyHit(state: State, e: Enemy, baseDmg: number, stats: Stats, 
 // Knockback: on a chance proc, FORCE fights the enemy's MASS. force > mass → shove the enemy back
 // (up to KNOCKBACK_MAX_M metres, scaled by 1 − mass/force). Otherwise it's too heavy to move, so it
 // is slowed instead (speed × force/mass — e.g. mass = 2·force ⇒ ×0.5). No minimum: heavier = slower.
-function applyKnockback(state: State, e: Enemy, stats: Stats, rng?: Rng): void {
+function applyKnockback(state: State, e: Enemy, stats: Stats, rng?: Rng, dirX?: number, dirY?: number): void {
+  if (e.type === 'boss') return; // bosses are immovable — they shrug off every knockback (but still collide)
   const force = (stats && stats.knockbackForce) || 0;
   if (!rng || !stats || !stats.knockbackChance || force <= 0) return;
   if (rng.next() >= stats.knockbackChance) return;
   const mass = e.mass || 1;
   if (force > mass) {
     const pushM = KNOCKBACK_MAX_M * (1 - mass / force); // 0 at force=mass → 5m as force≫mass
-    const hx = state.hero ? state.hero.x : e.x,
-      hy = state.hero ? state.hero.y : e.y;
-    const dx = e.x - hx,
-      dy = e.y - hy,
-      d = Math.hypot(dx, dy) || 1;
+    // Push along the shot's travel direction when we have it (bounced shots send enemies sideways);
+    // lightning/no-direction falls back to straight away from the hero.
+    let dx: number, dy: number;
+    if (dirX !== undefined && dirY !== undefined && (dirX || dirY)) {
+      dx = dirX;
+      dy = dirY;
+    } else {
+      const hx = state.hero ? state.hero.x : e.x,
+        hy = state.hero ? state.hero.y : e.y;
+      dx = e.x - hx;
+      dy = e.y - hy;
+    }
+    const d = Math.hypot(dx, dy) || 1;
     e.x += (dx / d) * pushM * PX_PER_METER;
     e.y += (dy / d) * pushM * PX_PER_METER;
   } else {
@@ -167,7 +179,7 @@ export function tickProjectiles(state: State, dt: number, stats: Stats, rng?: Rn
       p.traveled += BULLET_SPEED * sdt;
       const e = hitEnemy(state, p);
       if (e) {
-        applyHit(state, e, p.dmg, stats, rng);
+        applyHit(state, e, p.dmg, stats, rng, p.vx, p.vy); // p.vx/vy still the incoming dir (re-aim happens below)
         // Bounce Shot: ricochet to the nearest un-hit enemy within range instead of despawning.
         if ((p.bounces || 0) > 0) {
           p.hitIds!.push(e.id);

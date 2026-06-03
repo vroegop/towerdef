@@ -175,6 +175,16 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     const { m, group } = bigGroup(n);
     return (m < 10 ? m.toFixed(3) : m < 100 ? m.toFixed(2) : m.toFixed(1)) + bigSuffix(group);
   };
+  // Compact CURRENCY display, e.g. "1.034m" / "12.3k": always suffixed from 1000 up (no dotted-digit
+  // band) and lowercased for the everyday tiers (k/m/b/t = 1e3..1e12). Tiers past T keep the shared
+  // ladder's case so the distinct q≠Q / s≠S suffixes never collide on huge banked totals.
+  const cur = (n: number): string => {
+    n = Math.floor(n || 0);
+    if (n < 1000) return String(n);
+    const { m, group } = bigGroup(n);
+    const suf = bigSuffix(group);
+    return (m < 10 ? m.toFixed(3) : m < 100 ? m.toFixed(2) : m.toFixed(1)) + (group <= 4 ? suf.toLowerCase() : suf);
+  };
   const sumPerm = (meta: Meta): number => Object.values((meta && meta.perm) || {}).reduce((a, b) => a + b, 0);
   // An upgrade's DISPLAYED value as the EFFECTIVE number the sim runs on: base curve × labs × active
   // cards × cosmetics (so a Damage row reflects every multiplier, not just the raw per-level number).
@@ -829,10 +839,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     uel.speedval.textContent = fmtSpeed(gameSpeed(s.meta));
     uel.wave.textContent = String(s.wave.n);
     // currency strip: in-run gold + banked meta currencies.
-    uel.gold.textContent = abbr(s.econ.gold);
-    uel.coins.textContent = abbr(s.meta.coins || 0);
-    uel.gems.textContent = abbr(s.meta.gems || 0);
-    uel.vials.textContent = abbr(s.meta.vials || 0);
+    uel.gold.textContent = cur(s.econ.gold);
+    uel.coins.textContent = cur(s.meta.coins || 0);
+    uel.gems.textContent = cur(s.meta.gems || 0);
+    uel.vials.textContent = cur(s.meta.vials || 0);
     // our live stats (damage / regen / coin multiplier) from computeStats; the baseline enemy's HP/dmg
     // from the wave-strength curve at this (tier-scaled) wave.
     const st = computeStats(s);
@@ -905,8 +915,9 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   }
   // Which stats modal is open (so the per-frame refresh updates the right live values).
   let statsView: 'player' | 'enemy' | null = null;
-  const strow = (l: string, v: string, id?: string): string =>
-    '<div class="strow"><span>' + l + '</span><b' + (id ? ' id="st-' + id + '"' : '') + '>' + v + '</b></div>';
+  const strow = (l: string, v: string, id?: string, ic?: string): string =>
+    '<div class="strow"><span>' + (ic ? icon(ic, 14) + ' ' : '') + l + '</span><b' +
+    (id ? ' id="st-' + id + '"' : '') + '>' + v + '</b></div>';
   // Live values that tick while a modal is open (re-render would drop handlers, so we patch by id).
   function refreshStats(s: State): void {
     const set = (id: string, v: string): void => { const e = $('#st-' + id); if (e) e.textContent = v; };
@@ -916,7 +927,9 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       set('dt', abbr(Math.round(s.econ.dmgTaken)));
       set('dd', abbr(Math.round(s.econ.dmgDealt)));
       set('rd', abbr(Math.round(s.econ.reflectDealt)));
-      set('run', fmt(s.firstRun ? FIRST_PERM_COST : coinsForRun(s, s.meta.tier || 1)));
+      set('skip', fmt(s.econ.wavesSkipped || 0));
+      set('gold', cur(s.econ.goldEarned));
+      set('run', cur(s.firstRun ? FIRST_PERM_COST : coinsForRun(s, s.meta.tier || 1)));
     } else if (statsView === 'enemy') {
       set('active', String(s.enemies.length));
     }
@@ -931,12 +944,14 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     $('#h-statscard').innerHTML =
       '<div class="statshead"><h2>Your Stats</h2><button class="iconclose" id="h-stats-close" title="Close">' + icon('close', 18) + '</button></div>' +
       '<div class="statsbody">' +
-      strow('Kills by damage', fmt(s.econ.killsByDamage), 'kd') +
-      strow('Kills by reflect', fmt(s.econ.killsByReflect), 'kr') +
-      strow('Damage taken', abbr(Math.round(s.econ.dmgTaken)), 'dt') +
-      strow('Hit damage dealt', abbr(Math.round(s.econ.dmgDealt)), 'dd') +
-      strow('Reflection damage dealt', abbr(Math.round(s.econ.reflectDealt)), 'rd') +
-      strow('Coins this run', fmt(coinsForRun(s, tier)), 'run') +
+      strow('Kills by damage', fmt(s.econ.killsByDamage), 'kd', 'sword') +
+      strow('Kills by reflect', fmt(s.econ.killsByReflect), 'kr', 'shield') +
+      strow('Damage taken', abbr(Math.round(s.econ.dmgTaken)), 'dt', 'heart') +
+      strow('Hit damage dealt', abbr(Math.round(s.econ.dmgDealt)), 'dd', 'bow') +
+      strow('Reflection damage dealt', abbr(Math.round(s.econ.reflectDealt)), 'rd', 'burst') +
+      strow('Waves skipped', fmt(s.econ.wavesSkipped || 0), 'skip', 'ffwd') +
+      strow('Gold this run', cur(s.econ.goldEarned), 'gold', 'coin') +
+      strow('Coins this run', cur(s.firstRun ? FIRST_PERM_COST : coinsForRun(s, tier)), 'run', 'coinstar') +
       '</div>';
     $('#h-stats-close').addEventListener('click', () => $('#h-stats').classList.add('hide'));
     $('#h-stats').classList.remove('hide');

@@ -123,6 +123,7 @@ export class Sim {
     const coins = Math.round(n * waveStepCoins * (st.coinsPerKill || 1) * 1.1);
     // Gold mirrors the coin basis (same linear wave-step) so a skipped wave's gold tracks its coins.
     const gold = Math.round(n * waveStepCoins * (st.goldFind || 1) * (st.cashMult || 1) * (st.enemyBalance || 1) * 1.1);
+    s.econ.wavesSkipped = (s.econ.wavesSkipped || 0) + 1;
     if (coins > 0) s.econ.bonusCoins += coins;
     if (gold > 0) {
       s.econ.gold += gold;
