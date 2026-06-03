@@ -1835,9 +1835,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         can = reached && !claimed && !special;
       const cls = 'msrow' + (reached ? ' reached' : '') + (isTower ? ' tower' : '') + (isLab ? ' lab' : '') +
         (special ? (reached ? ' unlocked' : ' locked') : claimed ? ' claimed' : can ? ' can' : ' locked');
-      // The lab-unlock rung lists EXACTLY which labs open at this wave (every lab gated here) — shown as
-      // an info subtitle so the player knows what they're unlocking.
-      const labNames = isLab ? LABS.filter((L) => (L.gate && L.gate.wave) === w).map((L) => L.label).join(', ') : '';
+      // The lab-unlock rung is intentionally bare — just the flask dot, the wave number, and a short
+      // "Unlocks labs" chip (no per-lab list, which overflowed into the neighbouring rungs).
       let cta: string;
       if (isTower) {
         cta = rewardHtml(reward);
@@ -1853,9 +1852,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       }
       rows += '<div class="' + cls + '">' +
         '<div class="msrail"><span class="msdot">' + (isLab ? icon('flask', 14) : isTower ? icon('best', 15) : short(w)) + '</span></div>' +
-        '<div class="mscard"><div class="mn-info"><b>Wave ' + short(w) + '</b>' +
-        (isLab ? '<span class="mn-sub">Unlocks all labs: ' + labNames + '</span>' : '') +
-        '</div>' + cta + '</div></div>';
+        '<div class="mscard"><div class="mn-info"><b>Wave ' + short(w) + '</b></div>' + cta + '</div></div>';
     });
     modalInner.innerHTML =
       '<button class="close" id="h-ms-close" title="Close">' + icon('close', 18) + '</button>' +
