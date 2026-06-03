@@ -80,7 +80,10 @@ export function concurrentCap(n: number): number {
 // earns exactly this many kills/sec (the anti-farm bound); a struggling player fills to the alive
 // cap and spawning self-throttles to their kill rate. Step ladder keyed on the real wave number.
 export function spawnRate(n: number): number {
-  if (n <= 100) return 5;
+  // Waves 1–100 ramp linearly from a gentle 0.8/sec (new-player friendly) up to 5/sec, so the
+  // early game eases players in instead of opening at full pressure. Hits exactly 5 at wave 100,
+  // dovetailing into the step ladder below.
+  if (n <= 100) return 0.8 + (5 - 0.8) * ((Math.max(1, n) - 1) / 99);
   if (n <= 500) return 6;
   if (n <= 1000) return 7;
   if (n <= 2000) return 9;
