@@ -2,7 +2,7 @@
    (5 bottom tabs), a spotlight tutorial, a milestones modal, and a settings modal.
    Handlers: onBuyRun, onBuyPerm, onClaimMilestone, onStartRun, onDev, onFF. */
 import type { BulkQty, CardDef, CardDrawResult, CardInstance, Hud as HudInstance, HudFactory, HudHandlers, MenuOpts, Meta, OfflineReward, Settings, State, ThemeDef, EarnSummary, UpgradeDef } from '../types';
-import { WAVE, waveCount, tierMult, coinMult, coinsForRun, waveHp, waveDmg, waveSpeed, MAX_TIER, TIER_UNLOCK_WAVE, tierUnlocked } from '../sim/waves';
+import { WAVE, spawnRate, tierMult, coinMult, coinsForRun, waveHp, waveDmg, waveSpeed, MAX_TIER, TIER_UNLOCK_WAVE, tierUnlocked } from '../sim/waves';
 import { TYPES } from '../sim/registries';
 import { spawnChances } from '../sim/enemies';
 import {
@@ -987,7 +987,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       ch = spawnChances(s.wave.n, (s.meta && s.meta.tier) || 1),
       st = computeStats(s);
     const waveTime = (WAVE.interval * (1 - (st.waveAccel || 0))).toFixed(1) + 's';
-    const spawnRate = (waveCount(s.wave.n) / WAVE.spawnWindow).toFixed(1) + '/s';
+    const spawnRateLabel = spawnRate(s.wave.n).toFixed(1) + '/s';
     let rows = '';
     for (const t of ['melee', 'ranged', 'fast', 'tank', 'splitter', 'boss']) {
       const d = TYPES[t];
@@ -1002,7 +1002,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       '<div class="statsbody">' +
       strow('Wave time', waveTime) +
       strow('Active enemies', String(s.enemies.length), 'active') +
-      strow('Spawn rate', spawnRate) +
+      strow('Spawn rate', spawnRateLabel) +
       '<table class="enemytbl"><thead><tr><th>Type</th><th>Spawn</th><th>HP</th><th>ATK</th><th>Spd</th><th>Mass</th></tr></thead><tbody>' +
       rows + '</tbody></table>' +
       '</div>';

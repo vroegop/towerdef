@@ -1,18 +1,20 @@
 /* src/sim/waves.ts — wave scheduling & difficulty curves (pure functions of wave number).
-   A wave starts every WAVE.interval seconds; its enemies spawn over the first spawnWindow
-   seconds. screenCap limits CONCURRENT enemies, so a bigger wave only adds pressure when
-   the arena isn't already full. Strength/speed baselines rise with wave number. */
+   A wave starts every WAVE.interval seconds. Spawning is CONTINUOUS TOP-UP: enemies are
+   released at spawnRate(n) per second whenever fewer than concurrentCap(n) are alive, so a
+   kill immediately makes room for the next spawn. The final WAVE.lull seconds of each wave
+   are a no-spawn breather (shortened by the Overrun card). Strength/speed baselines rise
+   with wave number. */
 import type { Meta, Rng, State } from '../types';
 import { cosmeticBuffMult } from './cosmetics';
 import { labTierCoinMult } from './labs';
 
 export const WAVE = {
   interval: 30, // seconds between wave starts
-  spawnWindow: 25, // a wave's enemies all spawn within this many seconds of its start
-  screenCap: 200, // max concurrent enemies alive (the "screen cap" — stays fixed)
-  baseCount: 8, // enemies in wave 1
-  perWave: 5, // added per wave...
-  maxCount: 140, // ...up to this ceiling (the upgradable "spawn cap")
+  lull: 5, // no-spawn breather at the END of each wave (shrunk by the Overrun card)
+  lullFloor: 0.5, // the lull can never drop below this, even with a maxed Overrun card
+  baseCount: 8, // concurrent-alive cap at wave 1
+  perWave: 5, // added to the alive cap per wave...
+  maxCount: 140, // ...up to this ceiling (the hard concurrent "screen cap")
   strPerWave: 0.08, // +8% baseline strength per wave (the LINEAR term)
   expBase: 1.015, // gentle EXPONENTIAL term blended on top so a "wall" emerges at depth
   speedPerWave: 0.0029, // linear ramp tuned so enemies reach the cap (×30) right around wave 10k: 1 + 0.0029·(n-1)
@@ -20,14 +22,14 @@ export const WAVE = {
   coinStep: 10, // base coins/kill = ceil(wave / coinStep): +1 coin every this many waves
 };
 
-// ── Spawn composition (the one place to tweak who shows up, when, and how many) ────────────────
-// A wave is mostly "normal" (melee) bodies, with a capped pool of randomly-typed "specials", and
-// at most one boss on every Nth wave. Each special type only joins the pool once its unlock wave is
-// reached — UNLESS the run's tier is high enough, where everything unlocks from wave 1. Boss waves
-// are kept clean: a single boss leading a column of normals, no specials.
+// ── Spawn composition (the one place to tweak who shows up and in what mix) ─────────────────────
+// Each spawn is rolled independently (continuous top-up has no fixed roster): SPECIAL_FRAC of
+// bodies are randomly-typed "specials", the rest are "normal" melee. SPECIAL_FRAC = 1/7 preserves
+// the legacy 120:20 normals:specials ratio. Each special type only joins the pool once its unlock
+// wave is reached — UNLESS the run's tier is high enough, where everything unlocks from wave 1.
+// A boss wave spawns exactly ONE boss (see core's bossSpawned flag); specials still join it.
 export const SPAWN = {
-  normalCap: 120, // max "normal" (melee) bodies in a wave
-  specialCap: 20, // max specials (fast/ranged/tank) in a wave, randomly typed among the unlocked ones
+  specialFrac: 1 / 7, // per-spawn chance a body is a special (≈ legacy 20/140 ratio)
   specials: ['tank', 'fast', 'ranged'] as const, // the special pool (splitter is intentionally not spawned)
   unlock: { tank: 10, fast: 100, ranged: 150 } as Record<string, number>, // tier-1 unlock wave per special
   allFromTier: 2, // at this tier and above, every special is available from wave 1
@@ -35,7 +37,7 @@ export const SPAWN = {
   bossUnlockWave: 10, // …starting at this wave
 };
 
-// A boss wave: one boss leads, no specials join it.
+// A boss wave carries exactly one boss (force-spawned first); normals + specials fill the rest.
 export function isBossWave(n: number): boolean {
   return n >= SPAWN.bossUnlockWave && n % SPAWN.bossEveryWaves === 0;
 }
@@ -46,31 +48,19 @@ export function allowedSpecials(n: number, tier: number): string[] {
   return SPAWN.specials.filter((t) => open || n >= SPAWN.unlock[t]);
 }
 
-// Build the ordered list of enemy types for a wave. Deterministic given the rng + (n, tier, count),
-// so it replays identically offline. Caps are hard limits, so the wave never exceeds normalCap +
-// specialCap (+1 boss).
-export function waveRoster(rng: Rng, n: number, tier: number, count: number): string[] {
-  const roster: string[] = [];
-  if (count <= 0) return roster;
-  if (isBossWave(n)) {
-    roster.push('boss'); // the boss leads the column…
-    const normals = Math.min(SPAWN.normalCap, count - 1);
-    for (let i = 0; i < normals; i++) roster.push('melee'); // …followed by normals, no specials
-    return roster;
-  }
+// Roll ONE enemy's type. Deterministic and replay-safe via a FIXED rng-draw protocol:
+//   • bossPending → 'boss', consuming ZERO rng draws (the boss bypasses the normal roll).
+//   • otherwise   → draw EXACTLY ONE rng for the normal-vs-special decision; if it lands on
+//     "special" AND at least one special is unlocked, draw EXACTLY ONE more to pick the type.
+//     A "special" roll with nothing unlocked falls back to melee and does NOT take the 2nd draw.
+// Draw count is fully determined by (bossPending, first-draw outcome, specials-unlocked), all of
+// which are deterministic — so the spawn stream is reconstructable live vs. offline catch-up.
+export function rollEnemyType(rng: Rng, n: number, tier: number, bossPending: boolean): string {
+  if (bossPending) return 'boss';
+  if (rng.next() >= SPAWN.specialFrac) return 'melee';
   const specials = allowedSpecials(n, tier);
-  const specialN = specials.length ? Math.min(SPAWN.specialCap, count) : 0;
-  const normalN = Math.min(SPAWN.normalCap, count - specialN);
-  for (let i = 0; i < normalN; i++) roster.push('melee');
-  for (let i = 0; i < specialN; i++) roster.push(specials[(rng.next() * specials.length) | 0]);
-  // Deterministic shuffle so specials are sprinkled through the wave instead of clumping at the end.
-  for (let i = roster.length - 1; i > 0; i--) {
-    const j = (rng.next() * (i + 1)) | 0;
-    const tmp = roster[i];
-    roster[i] = roster[j];
-    roster[j] = tmp;
-  }
-  return roster;
+  if (!specials.length) return 'melee';
+  return specials[(rng.next() * specials.length) | 0];
 }
 
 // First-run script: spawn a cluster on a fixed-radius ring so they converge together and a
@@ -80,8 +70,29 @@ export const FIRST_RUN = { count: 10, gap: 0.05, speed: 42, radius: 500 };
 export const COIN_DECAY_WAVES = 3; // a survivor older than this many waves...
 export const COIN_DECAY_FACTOR = 0.5; // ...pays only this share of its coin value (anti-kite rule)
 
-export function waveCount(n: number): number {
+// Max enemies ALIVE at once at wave n. Keeps the gentle early ramp (8 at wave 1, +5/wave) up to
+// the hard 140 cap (reached at wave 28). Continuous top-up refills toward this as enemies die.
+export function concurrentCap(n: number): number {
   return Math.min(WAVE.maxCount, WAVE.baseCount + WAVE.perWave * (n - 1));
+}
+
+// Max enemies SPAWNED per second at wave n — the income/pressure throttle. A one-shotting player
+// earns exactly this many kills/sec (the anti-farm bound); a struggling player fills to the alive
+// cap and spawning self-throttles to their kill rate. Step ladder keyed on the real wave number.
+export function spawnRate(n: number): number {
+  if (n <= 100) return 5;
+  if (n <= 500) return 6;
+  if (n <= 1000) return 7;
+  if (n <= 2000) return 9;
+  if (n <= 5000) return 12;
+  if (n <= 10000) return 20;
+  return 25;
+}
+
+// Length of the end-of-wave no-spawn breather, given the Overrun card's accumulated `reduce`
+// seconds (stats.lullReduce, 0 when the card isn't active). Floored at WAVE.lullFloor.
+export function lullDuration(reduce: number): number {
+  return Math.max(WAVE.lullFloor, WAVE.lull - (reduce || 0));
 }
 // Economy/XP strength: a GENTLE linear×exponential curve (the legacy "wave strength"). It is NO
 // LONGER used for enemy HP/damage — those follow the anchored Tower curves below. It survives only

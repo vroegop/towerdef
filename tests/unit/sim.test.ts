@@ -9,7 +9,7 @@ import { createState, ARENA_W, ARENA_H } from '../../src/sim/state';
 import { makeEnemy } from '../../src/sim/enemies';
 import { migrateMeta, availableSpeeds, gameSpeed, setGameSpeed, SPEED_STEPS, LAB_BY_ID, labInterestCap } from '../../src/sim/labs';
 import { buyPerm, permCost, computeStats, waveStrSafe } from './helpers';
-import { waveCount, econStr, waveHp, waveDmg, tierMult, MAX_TIER, tierUnlocked, coinMult, waveRoster, allowedSpecials, isBossWave } from '../../src/sim/waves';
+import { concurrentCap, spawnRate, lullDuration, econStr, waveHp, waveDmg, tierMult, MAX_TIER, tierUnlocked, coinMult, rollEnemyType, allowedSpecials, isBossWave } from '../../src/sim/waves';
 import { buyCard, buyCardCost, MAX_STARS, CARD_ORDER, evalCurve, UP_BY_ID, PX_PER_METER, isUnlocked, unlockGroup, nextUnlockGroup, skillGroup, bigSuffix, bigGroup } from '../../src/sim/skills';
 import { applyHit } from '../../src/sim/projectiles';
 import type { Meta } from '../../src/types';
@@ -89,24 +89,40 @@ describe('sim determinism', () => {
   });
 });
 
-describe('wave spawn composition', () => {
-  const roster = (n: number, tier: number, count = 200): string[] => waveRoster(makeRng(n * 7 + tier), n, tier, count);
-  const kinds = (r: string[]): Set<string> => new Set(r);
-  it('waves 1–9 (tier 1) are normal-only — no specials, no boss', () => {
+describe('wave spawn composition (per-spawn roll)', () => {
+  // Roll a large deterministic sample of NON-boss spawns at (n, tier) and tally the types.
+  const sample = (n: number, tier: number, count = 20000): Record<string, number> => {
+    const rng = makeRng(n * 7 + tier);
+    const out: Record<string, number> = {};
+    for (let i = 0; i < count; i++) {
+      const t = rollEnemyType(rng, n, tier, false);
+      out[t] = (out[t] || 0) + 1;
+    }
+    return out;
+  };
+  it('waves 1–9 (tier 1) are normal-only — no specials unlocked yet', () => {
     for (let n = 1; n <= 9; n++) {
-      expect([...kinds(roster(n, 1))]).toEqual(['melee']);
+      expect(Object.keys(sample(n, 1, 500)).sort()).toEqual(['melee']);
     }
   });
-  it('wave 10 is a boss wave: exactly one boss leading normals, no specials', () => {
-    const r = roster(10, 1);
-    expect(r.filter((t) => t === 'boss').length).toBe(1);
-    expect([...kinds(r)].sort()).toEqual(['boss', 'melee']);
+  it('a pending boss always rolls a boss, consuming no rng draws', () => {
+    const rng = makeRng(123);
+    const before = rng.next();
+    const rng2 = makeRng(123);
+    expect(rollEnemyType(rng2, 10, 1, true)).toBe('boss');
+    expect(rng2.next()).toBe(before); // boss took zero draws — stream untouched
   });
-  it('non-boss waves 11–99 (tier 1) add tank, but not fast/ranged', () => {
-    const k = kinds(roster(11, 1));
-    expect(k.has('tank')).toBe(true);
-    expect(k.has('fast')).toBe(false);
-    expect(k.has('ranged')).toBe(false);
+  it('non-boss waves 11–99 (tier 1) mix in tank, but not fast/ranged', () => {
+    const s = sample(11, 1);
+    expect(s.tank).toBeGreaterThan(0);
+    expect(s.fast || 0).toBe(0);
+    expect(s.ranged || 0).toBe(0);
+  });
+  it('holds the ~6:1 normal:special ratio when specials are unlocked', () => {
+    const s = sample(151, 1); // all specials unlocked
+    const specials = (s.tank || 0) + (s.fast || 0) + (s.ranged || 0);
+    const specialFrac = specials / (specials + (s.melee || 0));
+    expect(specialFrac).toBeCloseTo(1 / 7, 1); // ≈ 0.143
   });
   it('fast unlocks past wave 100, ranged past wave 150 (tier 1)', () => {
     expect(allowedSpecials(101, 1).sort()).toEqual(['fast', 'tank']);
@@ -118,14 +134,28 @@ describe('wave spawn composition', () => {
     expect(isBossWave(1)).toBe(false);
     expect(isBossWave(10)).toBe(true);
   });
-  it('respects the caps: ≤120 normal + ≤20 special, and ≤1 boss', () => {
-    const r = roster(151, 1, 500); // way over any real wave size, all specials unlocked
-    expect(r.filter((t) => t === 'melee').length).toBeLessThanOrEqual(120);
-    expect(r.filter((t) => t !== 'melee' && t !== 'boss').length).toBeLessThanOrEqual(20);
-    expect(r.filter((t) => t === 'boss').length).toBe(0); // 151 isn't a boss wave
-    const b = roster(150, 1, 500); // boss wave
-    expect(b.filter((t) => t === 'boss').length).toBe(1);
-    expect(b.filter((t) => t === 'melee').length).toBeLessThanOrEqual(120);
+});
+
+describe('spawn throttles', () => {
+  it('concurrent cap ramps 8 → 140 (reaching the cap at wave 28)', () => {
+    expect(concurrentCap(1)).toBe(8);
+    expect(concurrentCap(27)).toBe(138);
+    expect(concurrentCap(28)).toBe(140);
+    expect(concurrentCap(10000)).toBe(140);
+  });
+  it('spawn-rate ladder steps at the documented wave boundaries', () => {
+    expect([spawnRate(100), spawnRate(101)]).toEqual([5, 6]);
+    expect([spawnRate(500), spawnRate(501)]).toEqual([6, 7]);
+    expect([spawnRate(1000), spawnRate(1001)]).toEqual([7, 9]);
+    expect([spawnRate(2000), spawnRate(2001)]).toEqual([9, 12]);
+    expect([spawnRate(5000), spawnRate(5001)]).toEqual([12, 20]);
+    expect([spawnRate(10000), spawnRate(10001)]).toEqual([20, 25]);
+  });
+  it('lull shrinks 0.3s per reduction-second and floors at 0.5s', () => {
+    expect(lullDuration(0)).toBe(5);
+    expect(lullDuration(0.3)).toBeCloseTo(4.7, 10);
+    expect(lullDuration(4.5)).toBeCloseTo(0.5, 10);
+    expect(lullDuration(10)).toBe(0.5); // can't go below the floor
   });
 });
 
@@ -164,7 +194,7 @@ describe('enemy collision (_separate)', () => {
 describe('wave curves', () => {
   it('econStr wave 1 is exactly the baseline (×1)', () => {
     expect(econStr(1)).toBeCloseTo(1, 10);
-    expect(waveCount(1)).toBe(8);
+    expect(concurrentCap(1)).toBe(8);
   });
   it('enemy HP and damage rise monotonically with wave', () => {
     let prevHp = 0,
@@ -187,8 +217,8 @@ describe('wave curves', () => {
   it('past wave 10000 stats climb at +0.05%/wave', () => {
     expect(waveHp(10100) / waveHp(10000)).toBeCloseTo(Math.pow(1.0005, 100), 6);
   });
-  it('enemy count caps at maxCount', () => {
-    expect(waveCount(10000)).toBe(140);
+  it('alive cap maxes at maxCount', () => {
+    expect(concurrentCap(10000)).toBe(140);
   });
 });
 

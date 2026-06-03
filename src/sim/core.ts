@@ -4,7 +4,7 @@ import type { Enemy, Rng, State, Stats } from '../types';
 import { makeRng } from './rng';
 import { ageSurvivors, makeEnemy } from './enemies';
 import { TYPES } from './registries';
-import { FIRST_RUN, COIN_DECAY_FACTOR, COIN_DECAY_WAVES, WAVE, waveCount, waveRoster } from './waves';
+import { FIRST_RUN, COIN_DECAY_FACTOR, COIN_DECAY_WAVES, WAVE, concurrentCap, spawnRate, lullDuration, rollEnemyType, isBossWave } from './waves';
 import { applyHit, fireProjectile, tickProjectiles } from './projectiles';
 import { computeStats, PX_PER_METER, RAPID_CHECK, RAPID_MULT } from './skills';
 import { tickActiveCards, trySecondWind, heroInvuln } from './cards-active';
@@ -66,8 +66,12 @@ export class Sim {
     this._cleanup();
   }
 
+  // Max enemies alive at once: the wave's ramp cap, scaled by the Enemy Balance card (which lets
+  // more bodies coexist), still hard-clamped at WAVE.maxCount. This is what continuous top-up fills
+  // toward and what bounds splitter offspring.
   private _screenCap(): number {
-    return WAVE.screenCap; // concurrent cap stays fixed; wave SIZE is what upgrades grow
+    const eb = this.stats.enemyBalance > 1 ? this.stats.enemyBalance : 1;
+    return Math.min(WAVE.maxCount, Math.round(concurrentCap(this.s.wave.n) * eb));
   }
 
 
@@ -95,18 +99,11 @@ export class Sim {
         if (this.s.fx.length > 32) this.s.fx.shift();
       }
     }
-    // Enemy Balance card: more enemies per wave (cash/kill ×mult applied on kill in _cleanup).
-    const eb = this.stats.enemyBalance > 1 ? this.stats.enemyBalance : 1;
-    // Wave SIZE and composition both key off the REAL wave number now — the tier is a flat HP/damage
-    // multiplier (Tower-style), so it no longer inflates how many enemies a wave spawns. The roster
-    // (an ordered type list) is the deterministic, resume-safe source of truth for what spawns.
-    const want = Math.round(waveCount(n) * eb);
-    const tier = (this.s.meta && this.s.meta.tier) || 1;
-    w.queue = waveRoster(this.rng, n, tier, want);
-    w.count = w.queue.length;
-    w.toSpawn = w.count;
-    w.releaseGap = WAVE.spawnWindow / Math.max(1, w.count);
-    w.releaseTimer = 0;
+    // Continuous top-up: no roster is built. The wave is a difficulty/composition window — its
+    // size emerges from concurrentCap(n) (alive cap) × spawnRate(n) (release rate) over time.
+    // Reset the per-wave spawn pacing and the boss-once flag; the first spawn fires immediately.
+    w.spawnTimer = 0;
+    w.bossSpawned = false;
     ageSurvivors(this.s, n); // survivors get stronger as the new wave begins (reads tier mult itself)
   }
 
@@ -116,9 +113,12 @@ export class Sim {
     const s = this.s,
       w = s.wave,
       st = this.stats;
-    const n = w.toSpawn; // enemies that would have spawned this wave
-    w.toSpawn = 0; // skip the spawns
-    if (w.queue) w.queue.length = 0;
+    // No fixed batch any more: estimate the wave's kills as spawnRate × the active spawning window
+    // (interval minus the end-of-wave lull). `w.n` is already the just-started wave here.
+    const accel = Math.max(0.1, 1 - (st.waveAccel || 0));
+    const effInt = WAVE.interval * accel;
+    const effLull = Math.min(lullDuration(st.lullReduce || 0), effInt);
+    const n = Math.round(spawnRate(w.n) * Math.max(0, effInt - effLull));
     const waveStepCoins = Math.ceil(w.n / Math.max(1, WAVE.coinStep));
     const coins = Math.round(n * waveStepCoins * (st.coinsPerKill || 1) * 1.1);
     // Gold mirrors the coin basis (same linear wave-step) so a skipped wave's gold tracks its coins.
@@ -133,11 +133,16 @@ export class Sim {
   }
 
   private _spawnOne(): void {
-    const s = this.s;
-    // Pop the next planned type from the wave roster; stats scale with the REAL wave × the tier's
-    // flat HP/damage multiplier (s.difficultyMult).
-    const type = (s.wave.queue && s.wave.queue.shift()) || 'melee';
-    s.enemies.push(makeEnemy(s.nextId++, type, s.wave.n, this.rng, s.arena, s.hero.x, s.hero.y, s.difficultyMult || 1));
+    const s = this.s,
+      w = s.wave;
+    const tier = (s.meta && s.meta.tier) || 1;
+    // Boss priority: while a boss wave hasn't placed its boss yet, the next spawn IS the boss
+    // (bypassing the normal roll), so it can never be starved out by a short or accelerated wave.
+    const bossPending = isBossWave(w.n) && !w.bossSpawned;
+    const type = rollEnemyType(this.rng, w.n, tier, bossPending);
+    if (type === 'boss') w.bossSpawned = true;
+    // Stats scale with the REAL wave × the tier's flat HP/damage multiplier (s.difficultyMult).
+    s.enemies.push(makeEnemy(s.nextId++, type, w.n, this.rng, s.arena, s.hero.x, s.hero.y, s.difficultyMult || 1));
   }
 
   // First run only: a scripted, deliberately lethal trickle of weak melee.
@@ -179,18 +184,22 @@ export class Sim {
       // equal to the just-passed wave's spoils ×1.10 (coins + cash), skipping its spawns.
       if (this.stats.waveSkip > 0 && this.rng.next() < this.stats.waveSkip) this._skipWave();
     }
-    if (w.toSpawn > 0 && w.clock <= WAVE.spawnWindow) {
-      w.releaseTimer -= dt;
+    // Continuous top-up: spawn at spawnRate(n)/sec while the arena isn't at the alive cap, EXCEPT
+    // during the end-of-wave lull (the last effLull seconds before the next wave starts).
+    const effLull = Math.min(lullDuration(this.stats.lullReduce || 0), effInt);
+    const spawning = w.clock < effInt - effLull;
+    if (spawning) {
+      const gap = 1 / spawnRate(w.n);
+      w.spawnTimer -= dt;
       let guard = 0;
-      while (w.releaseTimer <= 0 && w.toSpawn > 0 && guard++ < 64) {
+      while (w.spawnTimer <= 0 && guard++ < 64) {
         if (s.enemies.length < this._screenCap()) {
           this._spawnOne();
-          w.toSpawn--;
-          w.releaseTimer += w.releaseGap;
+          w.spawnTimer += gap;
         } else {
-          w.releaseTimer = 0.1;
+          w.spawnTimer = 0.1;
           break;
-        } // arena full: retry shortly
+        } // arena full: retry shortly — a kill frees a slot
       }
     }
   }
@@ -480,7 +489,7 @@ export class Sim {
         // line stops after 4 splits. Capped so a mass-death can't explode the arena. Gate on the
         // ALIVE count (keep), not s.enemies.length — the latter still includes corpses being
         // processed this tick, which would suppress splits before the real cap.
-        if (e.splits > 0 && keep.length + spawned.length < WAVE.screenCap) {
+        if (e.splits > 0 && keep.length + spawned.length < this._screenCap()) {
           for (let i = 0; i < 2; i++) {
             const c = makeEnemy(s.nextId++, e.type, e.bornWave, this.rng, s.arena);
             const a = this.rng.next() * Math.PI * 2;

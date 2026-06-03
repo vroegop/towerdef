@@ -636,6 +636,10 @@ const CARD_SPECS: Record<string, CardSpec> = {
     effects: [{ stat: 'armor', kind: 'mult' }],
     curve: tbl([[1, 1.30], [3, 1.45], [5, 1.60], [7, 1.75], [9, 1.90], [11, 2.05], [13, 2.20], [15, 2.35]]),
     fmt: xMul, desc: (v) => xMul(v) + ' armor' },
+  overrun: { id: 'overrun', name: 'Overrun', art: 'rate', tint: '#e64cff', rarity: 'common',
+    effects: [{ stat: 'lullReduce', kind: 'mechanic' }],
+    curve: tbl([[1, 0.3], [15, 4.5]]), // linear: 0.3s of lull cut per star (5s base → 0.5s floor at ★15)
+    fmt: (v) => '-' + v.toFixed(1) + 's', desc: (v) => '-' + v.toFixed(1) + 's between-wave lull' },
 
   // ---------------- RARE ----------------
   freeUpgrades: { id: 'freeUpgrades', name: 'Free Upgrades', art: 'coins', tint: '#3ddc84', rarity: 'rare',
@@ -683,7 +687,7 @@ for (const id of Object.keys(CARD_SPECS)) {
 // Display order, grouped by rarity (common → rare → epic).
 export const CARD_ORDER = [
   'damage', 'attackSpeed', 'health', 'healthRegen', 'range', 'cash', 'coins', 'slowAura',
-  'critChance', 'enemyBalance', 'extraDefense', 'fortress',
+  'critChance', 'enemyBalance', 'extraDefense', 'fortress', 'overrun',
   'freeUpgrades', 'plasmaCanon', 'criticalCoin', 'waveSkip',
   'superTower', 'waveAccelerator', 'secondWind', 'demonMode',
 ];
@@ -703,9 +707,10 @@ export const CARD_INFO: Record<string, string> = {
   coins: 'Multiplies all coins earned.',
   slowAura: 'Enemies within range move slower.',
   critChance: 'Raises your chance to critically strike.',
-  enemyBalance: 'More enemies per wave, but more cash per kill.',
+  enemyBalance: 'More enemies on screen at once, and more cash per kill.',
   extraDefense: 'Adds percentage damage reduction.',
   fortress: 'Multiplies your flat armor.',
+  overrun: 'Shortens the no-spawn lull between waves, keeping pressure up.',
   freeUpgrades: 'Raises the chance an in-run upgrade is free.',
   plasmaCanon: 'When a boss appears, hurls a plasma orb that strikes it once for a share of its max HP.',
   criticalCoin: 'Critical kills can drop bonus coins (base × crit damage).',
@@ -900,7 +905,8 @@ const STAT2SIM: Record<string, string> = {
 const CARD_PASSTHROUGH: Record<string, string> = {
   coins: 'cardCoinMult',       // ×multiplier on coins earned
   slowAura: 'slowAura',        // enemy speed reduction in range (fraction)
-  enemyBalance: 'enemyBalance',// cash/kill ×mult (and a spawn-count hook)
+  enemyBalance: 'enemyBalance',// cash/kill ×mult (and a higher alive-cap hook)
+  lullReduce: 'lullReduce',    // seconds shaved off the end-of-wave no-spawn lull
   criticalCoin: 'criticalCoin',// crit-kill bonus-coin chance
   waveSkip: 'waveSkip',        // chance to skip a wave
   waveAccel: 'waveAccel',      // wave-cooldown reduction (fraction)
@@ -953,6 +959,7 @@ export function computeStats(state: State): Stats {
     cardCoinMult: 1,   // ×coins from the Coins card
     slowAura: 0,       // enemy speed reduction within range (fraction)
     enemyBalance: 1,   // cash/kill ×mult from Enemy Balance
+    lullReduce: 0,     // seconds shaved off the between-wave lull (Overrun card)
     criticalCoin: 0,   // crit-kill bonus-coin chance
     waveSkip: 0,       // chance to skip a wave
     waveAccel: 0,      // wave-cooldown reduction (fraction)

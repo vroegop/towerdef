@@ -5,27 +5,24 @@
    current baseline — hoarding a ball of enemies becomes lethal over time. */
 import type { Arena, Enemy, Rng, State } from '../types';
 import { TYPES } from './registries';
-import { SPAWN, allowedSpecials, isBossWave, waveCount, waveSpeed, waveHp, waveDmg } from './waves';
+import { SPAWN, allowedSpecials, isBossWave, concurrentCap, waveSpeed, waveHp, waveDmg } from './waves';
 
-// Expected per-type share of a wave at (real) wave n in `tier`, for the HUD enemy panel. Mirrors
-// waveRoster's composition (caps + unlocks + boss rule) using a representative wave size, with the
-// special pool split evenly among the unlocked specials.
+// Expected per-type share of spawns at (real) wave n in `tier`, for the HUD enemy panel. Mirrors
+// rollEnemyType's per-spawn distribution: SPECIAL_FRAC of bodies are specials (split evenly among
+// the unlocked ones), the rest melee. On a boss wave the single boss is folded in as 1/size of a
+// representative wave (concurrentCap(n)), with the body mix — specials included — filling the rest.
 export function spawnChances(n: number, tier: number): Record<string, number> {
-  const count = Math.max(1, waveCount(n));
   const out: Record<string, number> = {};
+  const size = Math.max(1, concurrentCap(n)); // representative wave size for the HUD estimate
+  let bodyFrac = 1;
   if (isBossWave(n)) {
-    const normals = Math.min(SPAWN.normalCap, count - 1);
-    const total = 1 + normals;
-    out.boss = 1 / total;
-    out.melee = normals / total;
-    return out;
+    out.boss = 1 / size;
+    bodyFrac = 1 - 1 / size;
   }
   const specials = allowedSpecials(n, tier);
-  const specialN = specials.length ? Math.min(SPAWN.specialCap, count) : 0;
-  const normalN = Math.min(SPAWN.normalCap, count - specialN);
-  const total = normalN + specialN || 1;
-  out.melee = normalN / total;
-  for (const t of specials) out[t] = specialN / specials.length / total;
+  const specialFrac = specials.length ? SPAWN.specialFrac : 0;
+  out.melee = bodyFrac * (1 - specialFrac);
+  for (const t of specials) out[t] = (bodyFrac * specialFrac) / specials.length;
   return out;
 }
 

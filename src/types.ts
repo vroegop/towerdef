@@ -145,12 +145,9 @@ export interface FxEvent {
 export interface Wave {
   n: number;
   clock: number;
-  toSpawn: number;
-  releaseTimer: number;
-  releaseGap: number;
-  count: number;
+  spawnTimer: number; // counts down to the next top-up spawn (continuous spawning)
+  bossSpawned: boolean; // a boss wave force-spawns its single boss once, tracked here
   maxWave: number;
-  queue: string[]; // ordered enemy types still to spawn this wave (resume-safe; see waveRoster)
 }
 export interface Econ {
   gold: number;
