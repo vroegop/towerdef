@@ -242,7 +242,7 @@ export function runProgression(opts: {
     return true;
   };
   const emit = (kind: ProgressEvent['kind']): void => {
-    opts.onProgress && opts.onProgress({
+    if (opts.onProgress) opts.onProgress({
       kind, day: (clock - START_MS) / DAY, tier, curWave: tierBest, tierBest, totalRuns: runIdx,
       coins: meta.coins || 0, gems: meta.gems || 0, vials: meta.vials || 0, speed: gameSpeed(meta), rows,
     });

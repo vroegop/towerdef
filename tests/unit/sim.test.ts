@@ -264,8 +264,8 @@ describe('permanent upgrades', () => {
     expect(isUnlocked(meta, 'dmgPerMeter')).toBe(true);
     expect(buyPerm(meta, 'range')).toBe(true);
     // within the attack tab, a pricier group stays gated until the next-cheapest one is bought.
-    expect(unlockGroup(meta, 'burst')).toBe(false); // Multishot (400) comes first in attack
-    expect(nextUnlockGroup(meta, 'attack')!.id).toBe('multishot');
+    expect(unlockGroup(meta, 'multishot')).toBe(false); // Burst (400) comes first in attack
+    expect(nextUnlockGroup(meta, 'attack')!.id).toBe('burst');
     // a DIFFERENT category is unaffected by attack's progress — Gold is still freely unlockable.
     expect(unlockGroup(meta, 'gold')).toBe(true);
     expect(isUnlocked(meta, 'cashBonus')).toBe(true);
