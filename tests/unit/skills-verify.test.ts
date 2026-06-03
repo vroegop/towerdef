@@ -375,14 +375,15 @@ describe('lifesteal', () => {
 // --- Crit ---
 
 describe('crit', () => {
-  it('critChance = 0 → no crits (normal damage)', () => {
-    // Run a sim with no crit and verify kills happen at expected DPS.
+  it('no purchased crit → just the free level-1 baseline', () => {
+    // critChance/critDamage are unlocked, so each gets the free level-1 on top of 0 purchased:
+    // critChance = base 0 + per 0.01 = 0.01; critMult = base 1.2 + per 0.1 = 1.3.
     const meta = freshMeta({ perm: { rangedDamage: 10, critChance: 0, critDamage: 0 } });
     const s = createState(1, meta, false);
     const sim = new Sim(s);
     sim.refreshStats();
-    expect(sim.stats.critChance).toBe(0);
-    expect(sim.stats.critMult).toBeCloseTo(1.2); // base crit multiplier (×1.2)
+    expect(sim.stats.critChance).toBeCloseTo(0.01);
+    expect(sim.stats.critMult).toBeCloseTo(1.3);
   });
 
   it('critChance is capped at 0.8 (the upgrade cap)', () => {
