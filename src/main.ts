@@ -71,6 +71,7 @@ function loadMeta(): Meta {
     cosmetics: m.cosmetics && typeof m.cosmetics === 'object' ? m.cosmetics : {},
     cosmeticsOwned: m.cosmeticsOwned && typeof m.cosmeticsOwned === 'object' ? m.cosmeticsOwned : {},
     gameSpeed: m.gameSpeed ?? 1,
+    inRunTutDone: !!m.inRunTutDone,
     ver: m.ver || 0,
   };
   return migrateMeta(meta);
@@ -97,6 +98,7 @@ const renderer = Canvas2DRenderer(canvas, settings);
 const handlers: HudHandlers = {
   settings,
   onSaveSettings: saveSettings,
+  onSaveMeta: () => saveMeta(),
   onBuyRun: (stat, qty = 1) => {
     if (sim) buyRunUpgradeBulk(sim.s, stat, qty, sim.rng);
   },

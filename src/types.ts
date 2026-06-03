@@ -63,6 +63,7 @@ export interface Meta {
   cosmetics?: Record<string, string>;
   cosmeticsOwned?: Record<string, boolean>; // gem-bought cosmetics (tier-gated ones derive from progress)
   gameSpeed?: number; // player-chosen battle speed (0.5/1 free; higher tiers unlocked by the Game Speed lab)
+  inRunTutDone?: boolean; // the "run upgrades are temporary" in-run tutorial has been shown once
   ver: number;
 }
 
@@ -306,6 +307,7 @@ export interface Settings {
 export interface HudHandlers {
   settings?: Settings;
   onSaveSettings?: () => void;
+  onSaveMeta?: () => void; // persist meta after the HUD mutates it directly (e.g. tutorial flags)
   onBuyRun?: (stat: string, qty?: BulkQty) => void;
   onBuyPerm?: (id: string, qty?: BulkQty) => boolean;
   onUnlockGroup?: (groupId: string) => boolean;
