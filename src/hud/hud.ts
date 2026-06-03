@@ -1643,15 +1643,20 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     spot.style.height = r.height - pad * 2 + 'px';
     spot.classList.remove('hide');
     thought.innerHTML = text || '';
-    thought.style.top = r.top - 10 + 'px';
     thought.classList.remove('hide');
     const margin = 8,
       w = thought.offsetWidth,
+      h = thought.offsetHeight,
       center = r.left + r.width / 2;
     const left = Math.max(margin, Math.min(center - w / 2, window.innerWidth - margin - w));
     thought.style.left = left + 'px';
-    thought.style.transform = 'translateY(-100%)';
     thought.style.setProperty('--arrow-x', center - left + 'px');
+    // Default above the target; flip BELOW when there isn't room above (top-anchored targets like the
+    // menu button or the Labs rail icon would otherwise push the bubble off the top of the viewport).
+    const below = r.top - 10 - h < margin;
+    thought.classList.toggle('below', below);
+    thought.style.top = (below ? r.bottom + 10 : r.top - 10) + 'px';
+    thought.style.transform = below ? 'translateY(0)' : 'translateY(-100%)';
   }
 
   const lktip = $('#h-lktip');
