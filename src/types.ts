@@ -303,6 +303,14 @@ export interface Settings {
   coinOnKill: boolean;
   enemyHp: boolean;
   damageNumbers: boolean;
+  showTutorials: boolean;     // play the in-run guided tutorials (also re-enables them after a skip)
+  showOfflineReward: boolean; // show the "while you were away" summary modal when a run survives offline
+}
+// Spoils accrued while a survived run was simulated offline — shown in the offline-reward modal.
+export interface OfflineReward {
+  gold: number;
+  kills: number;
+  waves: number;
 }
 export interface HudHandlers {
   settings?: Settings;
@@ -342,6 +350,7 @@ export interface Hud {
   hideOverview(): void;
   showHint(html: string): void;
   hideHint(): void;
+  showOfflineReward(reward: OfflineReward): void;
   setMeta(meta: Meta): void;
   root: HTMLElement;
   destroy?: () => void;

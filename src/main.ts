@@ -35,6 +35,8 @@ function loadSettings(): Settings {
     coinOnKill: s.coinOnKill !== false,
     enemyHp: s.enemyHp !== false,
     damageNumbers: s.damageNumbers !== false,
+    showTutorials: s.showTutorials !== false,
+    showOfflineReward: s.showOfflineReward !== false,
   };
 }
 function saveSettings(): void {
@@ -482,10 +484,7 @@ document.addEventListener('visibilitychange', () => {
         enterOverview(bankRun(), true);
         return;
       }
-      if (el > 20) {
-        hud.showHint('While away: +' + r.gold + ' gold / +' + r.kills + ' kills');
-        setTimeout(() => hud.hideHint(), 2500);
-      }
+      if (el > 20 && settings.showOfflineReward) hud.showOfflineReward(r);
     }
     last = performance.now();
     running = true;
@@ -512,10 +511,7 @@ if (saved && saved.state) {
   const elapsed = (Date.now() - saved.savedAt) / 1000;
   if (elapsed > 2) {
     const r = gsCatchUp(elapsed, OFFLINE_CAP);
-    if (elapsed > 20 && sim.s.alive) {
-      hud.showHint('While away: +' + r.gold + ' gold / +' + r.kills + ' kills');
-      setTimeout(() => hud.hideHint(), 2500);
-    }
+    if (elapsed > 20 && sim.s.alive && settings.showOfflineReward) hud.showOfflineReward(r);
   }
   if (!sim.s.alive) enterOverview(bankRun(), true);
   else {
