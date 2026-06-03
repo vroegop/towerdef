@@ -13,3 +13,5 @@ test-results/
 # agent / tooling scratch
 .claude/scheduled_tasks.lock
 .superpowers/
+
+.worktrees/

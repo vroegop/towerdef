@@ -58,6 +58,12 @@ export interface Meta {
   labSlots: number;
   vials: number;
   lastCheckIn: number;
+  // ---- Superpowers (Prestige tab): Energy currency + per-power unlock/level/enable state ----
+  // Optional so existing save literals / tests stay valid; migrateMeta + loadMeta always seed them.
+  energy?: number;                          // earned +1 per boss kill (+ moat/crystal bonuses)
+  superUnlocked?: Record<string, boolean>;  // which superpowers are unlocked (cost = purchase order)
+  superLevels?: Record<string, number>;     // key `${spId}.${trackId}` → completed level
+  superEnabled?: Record<string, boolean>;   // per-power pause toggle (defaults true on unlock)
   // selected cosmetic id per category (tower / hud / background). Unlock + passive buffs are derived
   // live from src/sim/cosmetics.ts; only the chosen id is persisted here.
   cosmetics?: Record<string, string>;
@@ -114,7 +120,7 @@ export interface Enemy {
   veteran: boolean;
   agedWaves: number;
   heat: number; // landed-hit count; outgoing dmg is scaled by 1.04^heat (compounding heat-up)
-  lastHurt?: 'dmg' | 'reflect'; // source of the most recent HP loss; read at death for kill attribution
+  lastHurt?: 'dmg' | 'reflect' | 'crystal'; // source of the most recent HP loss; read at death for kill attribution
 }
 export interface Projectile {
   id: number;
@@ -142,6 +148,8 @@ export interface FxEvent {
   gold?: number;
   coin?: number;
 }
+// A transient superpower render event (shatter burst at x,y with a payout currency tag for floats).
+export interface SuperFxEvent { seq: number; x: number; y: number; kind: 'shatter' | 'gem' | 'energy'; }
 export interface Wave {
   n: number;
   clock: number;
@@ -175,7 +183,16 @@ export interface Run {
   invuln?: number;          // seconds the hero is invincible (Demon Mode / Second Wind shield)
   dmgBoost?: number;        // transient outgoing-damage multiplier from active abilities (1 = none)
   plasmaDone?: number[];    // boss ids already struck by Plasma Cannon (one shot per boss, ever)
+  // ---- Superpowers (per-run timers, reset each run) ----
+  superCd?: Record<string, number>;     // seconds until each power may fire again
+  superActive?: Record<string, number>; // seconds the power's window is currently live
+  goldenMult?: number;                   // transient ×gold/coins from Golden Lightning this tick (1 = none)
 }
+// A Crystal Circle crystal: orbits the tower; on enemy contact it instakills + shatters. `ang` is its
+// current orbit angle (advances each tick); position is derived from ang + the live orbit radius.
+export interface Crystal { ang: number; alive: boolean; }
+// A shard flung when a surviving crystal explodes; flies straight, kills on contact, dies in the fog.
+export interface CrystalFrag { x: number; y: number; vx: number; vy: number; }
 export interface State {
   seed: number;
   rng: number;
@@ -196,6 +213,11 @@ export interface State {
   econ: Econ;
   run: Run;
   meta: Meta;
+  // ---- Crystal Circle entities (per-run; serialized so offline replay is identical) ----
+  crystals?: Crystal[];        // orbiting crystals (present only while the ring is up)
+  crystalFrags?: CrystalFrag[]; // shards in flight after a shatter
+  superFx?: SuperFxEvent[];     // transient superpower events the renderer consumes (shatter bursts)
+  superFxSeq?: number;
   // first-run scripted-intro scratch fields (set by core._firstRunWaves)
   firstSpawned?: number;
   firstTimer?: number;
@@ -278,6 +300,26 @@ export interface CardDef {
   active?: { cooldown?: number; duration?: number };
 }
 export type CardSpec = Omit<CardDef, 'value'>;
+// ---- Superpowers registry (Prestige tab) ----
+// A superpower is a "group"; its tracks are individually Energy-leveled "skills". Each track's
+// per-level effect value comes from its `curve` via evalCurve (the shared balance evaluator).
+export interface SuperTrack {
+  id: string;
+  label: string;
+  max: number;
+  curve: Curve;               // level → effect value (e.g. cooldown seconds, ×mult, count, metres)
+  fmt: (v: number) => string; // formats a computed value for the HUD
+  costBase?: number;          // Energy cost of level 1 (default 200)
+  costPer?: number;           // added Energy per subsequent level (default 300)
+}
+export interface SuperpowerDef {
+  id: string;
+  name: string;
+  cat: 'offense' | 'defense' | 'utility';
+  icon: string;
+  blurb: string;
+  tracks: SuperTrack[];
+}
 export interface LabCurve {
   base: number;
   grow: number;

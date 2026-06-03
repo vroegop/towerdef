@@ -8,6 +8,7 @@ import { FIRST_RUN, COIN_DECAY_FACTOR, COIN_DECAY_WAVES, WAVE, concurrentCap, sp
 import { applyHit, fireProjectile, tickProjectiles } from './projectiles';
 import { computeStats, PX_PER_METER, RAPID_CHECK, RAPID_MULT } from './skills';
 import { tickActiveCards, trySecondWind, heroInvuln } from './cards-active';
+import { tickSuperpowers, moatSlowFactor, bossEnergy, crystalKillMult } from './superpowers';
 import { ARENA_W, ARENA_H } from './state';
 
 export class Sim {
@@ -58,6 +59,7 @@ export class Sim {
     s.arena.w = Math.max(ARENA_W, Math.round(this.stats.range * 4));
     s.arena.h = Math.max(ARENA_H, Math.round(this.stats.range * 3));
     tickActiveCards(s, dt, this.stats, this.rng); // active-card timers; sets run.dmgBoost / run.invuln
+    tickSuperpowers(s, dt, this.rng); // superpower timers: golden window, moat water, crystal orbit/shatter
     this._waves(dt);
     this._hero(dt);
     this._enemies(dt);
@@ -316,7 +318,7 @@ export class Sim {
         d = Math.hypot(dx, dy) || 1;
       // Slow Aura card: enemies within the hero's range crawl at ×(1 − aura%).
       const aura = this.stats.slowAura > 0 && d <= h.range ? 1 - this.stats.slowAura : 1;
-      const spd = e.speed * (e.slowT > 0 ? e.slow : 1) * aura;
+      const spd = e.speed * (e.slowT > 0 ? e.slow : 1) * aura * moatSlowFactor(this.s, e);
       e.facing = Math.atan2(dy, dx);
       const touch = h.r + e.r;
       // damage now comes ONLY from bullets/lightning — no contact aura
@@ -475,11 +477,16 @@ export class Sim {
         // explode past coins. The gold-only bonuses (Gold/Kill via goldFind, Gold Bonus, Enemy Balance,
         // and the Gold card folded into goldFind) are what let gold still outpace coins.
         const ebMult = this.stats.enemyBalance || 1;
-        const g = Math.round(rewardBase * this.stats.goldFind * (this.stats.cashMult || 1) * ebMult);
+        // Superpower reward ×: Golden Lightning window (all kills) × Crystal gold track (crystal kills
+        // only). Both gold AND coins ride it, so "all numbers multiply" holds end-to-end.
+        const superMult = (s.run.goldenMult || 1) * (e.lastHurt === 'crystal' ? crystalKillMult(s.meta) : 1);
+        const g = Math.round(rewardBase * this.stats.goldFind * (this.stats.cashMult || 1) * ebMult * superMult);
         s.econ.gold += g;
         s.econ.goldEarned += g;
         const coinMult = this.stats.coinsPerKill || 1; // Coins/Kill upgrade is a global ×multiplier
-        let killCoins = Math.round(rewardBase * coinMult);
+        let killCoins = Math.round(rewardBase * coinMult * superMult);
+        // Energy income: +1 per boss kill (× the Moat boss-Energy track if it died in the water).
+        if (e.type === 'boss') s.meta.energy = (s.meta.energy || 0) + bossEnergy(s, e);
         // Critical Coin card: a chance per kill to drop bonus coins = base coins × crit damage mult.
         if (this.stats.criticalCoin > 0 && this.rng.next() < this.stats.criticalCoin) {
           killCoins += Math.round(killCoins * (this.stats.critMult || 1));

@@ -351,6 +351,11 @@ export function migrateMeta(meta: Meta): Meta {
   if (meta.cosmetics == null || typeof meta.cosmetics !== 'object') meta.cosmetics = {};
   if (meta.cosmeticsOwned == null || typeof meta.cosmeticsOwned !== 'object') meta.cosmeticsOwned = {};
   if (meta.gameSpeed == null) meta.gameSpeed = 1; // default battle speed (0.5x/1x are always available)
+  // Superpowers (Prestige tab): Energy currency + per-power state. Additive, never destructive.
+  if (meta.energy == null) meta.energy = 0;
+  if (meta.superUnlocked == null || typeof meta.superUnlocked !== 'object') meta.superUnlocked = {};
+  if (meta.superLevels == null || typeof meta.superLevels !== 'object') meta.superLevels = {};
+  if (meta.superEnabled == null || typeof meta.superEnabled !== 'object') meta.superEnabled = {};
   meta.ver = META_VER;
   return meta;
 }
