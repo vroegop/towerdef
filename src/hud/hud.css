@@ -1068,3 +1068,5 @@
 .hud .spt-buy.cant { opacity: .45; cursor: default; }
 .hud .spt-buy.max { border-color: transparent; color: #3ad07a; cursor: default; }
 .hud .sp-unlock { margin-top: 0; }
+.hud .spt-label { display: inline-flex; align-items: center; gap: 3px; }
+.hud .spt-plus { color: #8b93a7; font-weight: 700; margin: 0 1px; }

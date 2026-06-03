@@ -75,6 +75,9 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     gear: '<circle cx="12" cy="12" r="3.2"/><path d="M19.4 13a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.7 8.6a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
     eye: '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/>',
+    // refresh = cooldown; stopwatch = duration (both feather-style, 24×24 stroked)
+    refresh: '<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3.5v5h-5"/>',
+    stopwatch: '<circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9"/><path d="M9.5 2h5"/><path d="M12 2v3.5"/><path d="M18.8 6.8l1.4-1.4"/>',
   };
   function icon(name: string, size?: number, cls?: string): string {
     size = size || 16;
@@ -582,6 +585,13 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   // Energy chip + one panel per power: unlock button (Energy, by purchase order) when locked, else a
   // pause toggle and a row per upgrade track (live value, level, Energy cost).
   function eIc(sz = 13): string { return icon('prestige', sz); }
+  // Track labels as icons: cooldown → refresh, duration → stopwatch, any "Gold/Coin ×" → gold + coin.
+  function superTrackLabel(trackId: string, label: string): string {
+    if (trackId === 'cooldown') return icon('refresh', 15);
+    if (trackId === 'duration') return icon('stopwatch', 15);
+    if (label === 'Gold/Coin ×') return icon('coin', 14, 'gold') + '<span class="spt-plus">+</span>' + icon('coinstar', 14, 'coin');
+    return label;
+  }
   function superPaneHtml(meta: Meta): string {
     const e = meta.energy || 0;
     const nextCost = nextUnlockCost(meta);
@@ -603,7 +613,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
           const lvl = superLevel(meta, sp.id, tr.id), val = trackValue(meta, sp.id, tr.id);
           const max = trackAtMax(meta, sp.id, tr.id), cost = trackCost(meta, sp.id, tr.id);
           html += '<div class="sp-track">' +
-            '<span class="spt-label">' + tr.label + '</span>' +
+            '<span class="spt-label">' + superTrackLabel(tr.id, tr.label) + '</span>' +
             '<span class="spt-val">' + tr.fmt(val) + '</span>' +
             '<span class="spt-lvl">' + lvl + '/' + tr.max + '</span>' +
             (max
