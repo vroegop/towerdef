@@ -15,7 +15,8 @@ export const WAVE = {
   maxCount: 140, // ...up to this ceiling (the upgradable "spawn cap")
   strPerWave: 0.08, // +8% baseline strength per wave (the LINEAR term)
   expBase: 1.015, // gentle EXPONENTIAL term blended on top so a "wall" emerges at depth
-  speedPerWave: 0.02,
+  speedPerWave: 0.0029, // linear ramp tuned so enemies reach the cap (×30) right around wave 10k: 1 + 0.0029·(n-1)
+  speedCap: 30, // enemy wave-speed multiplier saturates here, so deep waves can't run away to infinity
   coinStep: 10, // base coins/kill = ceil(wave / coinStep): +1 coin every this many waves
 };
 
@@ -90,7 +91,7 @@ export function econStr(n: number): number {
   return (1 + WAVE.strPerWave * (n - 1)) * Math.pow(WAVE.expBase, n - 1);
 }
 export function waveSpeed(n: number): number {
-  return 1 + WAVE.speedPerWave * (n - 1);
+  return Math.min(1 + WAVE.speedPerWave * (n - 1), WAVE.speedCap);
 }
 
 /* ── Enemy HP / DAMAGE curves (modelled on "The Tower", tower-enemy-stats.netlify.app) ────────────
