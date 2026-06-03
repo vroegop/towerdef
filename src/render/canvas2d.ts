@@ -102,7 +102,7 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
       pts.push({ x: x1 + dx * t + px * j, y: y1 + dy * t + py * j });
     }
     pts.push({ x: x2, y: y2 });
-    bolts.push({ pts, life: 0.1, max: 0.1 });
+    bolts.push({ pts, life: 0.2, max: 0.2 });
   }
 
   function capture(s: State): Map<number, Pos> {
@@ -379,13 +379,13 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
       ctx.beginPath();
       ctx.moveTo(b.pts[0].x, b.pts[0].y);
       for (let i = 1; i < b.pts.length; i++) ctx.lineTo(b.pts[i].x, b.pts[i].y);
-      ctx.shadowColor = '#ffd24a';
-      ctx.shadowBlur = 9;
-      ctx.strokeStyle = '#ffe066';
+      ctx.shadowColor = 'rgba(255,255,255,0.6)';
+      ctx.shadowBlur = 4;
+      ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 3;
       ctx.stroke();
       ctx.shadowBlur = 0;
-      ctx.strokeStyle = '#fffbe6';
+      ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 1;
       ctx.stroke();
     }

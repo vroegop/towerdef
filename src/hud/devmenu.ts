@@ -57,7 +57,6 @@ export function createDevMenu(cfg: { handlers?: HudHandlers; hudHost?: HudHost }
     {
       title: 'Combat',
       rows: [
-        { dev: 'lightning', label: 'Lightning', toggle: true },
         { dev: 'pause', label: 'Pause', toggle: true },
         { dev: 'testbullet', label: 'Test bullet' },
       ],

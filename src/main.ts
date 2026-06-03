@@ -243,11 +243,6 @@ const handlers: HudHandlers = {
       meta.activeCards = CARD_ORDER.slice(0, MAX_CARD_SLOTS);
       saveMeta();
       hud.refreshMenu(meta);
-    } else if (kind === 'lightning') {
-      if (sim) {
-        sim.s.atkMode = sim.s.atkMode === 'lightning' ? 'bullet' : 'lightning';
-        hud.setDevToggle('lightning', sim.s.atkMode === 'lightning');
-      }
     } else if (kind === 'pause') {
       togglePause();
     } else if (kind === 'turbo') {

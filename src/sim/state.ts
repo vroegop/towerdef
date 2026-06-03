@@ -16,7 +16,7 @@ export function createState(seed: number, meta: Meta, firstRun?: boolean): State
     t: 0,
     alive: true,
     nextId: 1,
-    atkMode: 'bullet', // 'bullet' (travelling projectile) | 'lightning' (instant beam, dev toggle)
+    atkMode: 'bullet', // 'bullet' (travelling projectile) | 'lightning' (instant beam); derived from the Lightning unlock in computeStats
     firstRun: !!firstRun, // scripted lethal intro run
     difficultyMult: tierMult((meta && meta.tier) || 1), // flat HP/dmg tier multiplier, set once per run
     arena: { w: ARENA_W, h: ARENA_H },

@@ -156,7 +156,7 @@ export function createHudHost(root: HTMLElement, handlers: HudHandlers, opts?: {
     getActiveName() {
       return currentName;
     },
-    // routed to the host-level dev menu (lightning/pause toggles), NOT the swappable HUD
+    // routed to the host-level dev menu (pause/turbo toggles), NOT the swappable HUD
     setDevToggle(kind: string, on: boolean) {
       if (devMenu && devMenu.setToggle) devMenu.setToggle(kind, on);
     },

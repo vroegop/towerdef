@@ -216,7 +216,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     thorns: 'shield', msChance: 'bow', bounceChance: 'arrow', rendMult: 'burst', range: 'range', interest: 'coin' };
   const STAT_LABEL: Record<string, string> = { rangedDamage: 'Damage', attackSpeed: 'Speed', health: 'HP', regen: 'Regen',
     critChance: 'Crit', critDamage: 'Crit Dmg', gold: 'Gold',
-    thorns: 'Reflect', msChance: 'Multishot', bounceChance: 'Bounce', rendMult: 'Amp', range: 'Range', interest: 'Interest' };
+    thorns: 'Reflect', msChance: 'Lightning', bounceChance: 'Lightning Arc', rendMult: 'Amp', range: 'Range', interest: 'Interest' };
   // currencies shown on the Hero screen
   const CURRENCIES: { key: 'coins' | 'gems' | 'vials'; icon: string; cls: string }[] = [{ key: 'coins', icon: 'coinstar', cls: 'coin' }, { key: 'gems', icon: 'gem', cls: 'gem' }, { key: 'vials', icon: 'vial', cls: 'vial' }];
   function starSvg(kind: string): string {
