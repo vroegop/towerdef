@@ -143,7 +143,7 @@ export class Sim {
     const type = rollEnemyType(this.rng, w.n, tier, bossPending);
     if (type === 'boss') w.bossSpawned = true;
     // Stats scale with the REAL wave × the tier's flat HP/damage multiplier (s.difficultyMult).
-    s.enemies.push(makeEnemy(s.nextId++, type, w.n, this.rng, s.arena, s.hero.x, s.hero.y, s.difficultyMult || 1));
+    s.enemies.push(makeEnemy(s.nextId++, type, w.n, this.rng, s.arena, s.hero.x, s.hero.y, s.difficultyMult || 1, this.stats.range * 1.4));
   }
 
   // First run only: a scripted, deliberately lethal trickle of weak melee.

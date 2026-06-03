@@ -439,41 +439,41 @@ describe('arena scales with range', () => {
   });
 });
 
-describe('makeEnemy spawn box', () => {
-  it('centers the spawn box on the given point, not the arena origin', () => {
+describe('makeEnemy spawn ring', () => {
+  it('spawns on a circle of radius spawnR centered on the given point (the hero)', () => {
     const rng = makeRng(1);
     const arena = { w: 4000, h: 3000 };
     const cx = 480,
-      cy = 320; // a stationary hero, far from the big box's [0,0] corner
+      cy = 320; // a stationary hero, far from the box's [0,0] corner
+    const spawnR = 700;
     let minX = Infinity,
       maxX = -Infinity,
       minY = Infinity,
       maxY = -Infinity;
     for (let i = 0; i < 800; i++) {
-      const e = makeEnemy(i + 1, 'melee', 1, rng, arena, cx, cy);
+      const e = makeEnemy(i + 1, 'melee', 1, rng, arena, cx, cy, 1, spawnR);
+      // every body sits exactly spawnR from the hero — a ring, not a box
+      expect(Math.hypot(e.x - cx, e.y - cy)).toBeCloseTo(spawnR, 6);
       minX = Math.min(minX, e.x);
       maxX = Math.max(maxX, e.x);
       minY = Math.min(minY, e.y);
       maxY = Math.max(maxY, e.y);
     }
-    expect((minX + maxX) / 2).toBeCloseTo(cx, 0); // box centered on the hero, not on w/2
+    expect((minX + maxX) / 2).toBeCloseTo(cx, 0); // ring centered on the hero
     expect((minY + maxY) / 2).toBeCloseTo(cy, 0);
-    expect(maxX - minX).toBeGreaterThan(arena.w * 0.9); // really spans the whole box
-    expect(maxY - minY).toBeGreaterThan(arena.h * 0.9);
+    expect(maxX - minX).toBeCloseTo(2 * spawnR, -1); // spans the full diameter (angles cover the circle)
+    expect(maxY - minY).toBeCloseTo(2 * spawnR, -1);
   });
 
-  it('defaults to the legacy origin-anchored box (hero at w/2, h/2)', () => {
+  it('defaults spawnR to 0.35× arena.w when not given', () => {
     const rng = makeRng(2);
     const arena = { w: ARENA_W, h: ARENA_H };
-    let minX = Infinity,
-      maxX = -Infinity;
-    for (let i = 0; i < 800; i++) {
+    const cx = arena.w / 2,
+      cy = arena.h / 2;
+    for (let i = 0; i < 200; i++) {
       const e = makeEnemy(i + 1, 'melee', 1, rng, arena);
-      minX = Math.min(minX, e.x);
-      maxX = Math.max(maxX, e.x);
+      expect(Math.hypot(e.x - cx, e.y - cy)).toBeCloseTo(arena.w * 0.35, 6);
     }
-    expect(minX).toBeLessThan(40); // left edge ≈ 0 (− margin)
-    expect(maxX).toBeGreaterThan(ARENA_W - 40); // right edge ≈ w (+ margin)
   });
 });
 

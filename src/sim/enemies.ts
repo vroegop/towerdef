@@ -31,31 +31,18 @@ const ihp = (base: number, mult: number): number => Math.max(1, Math.round(base 
 // `diff` is the tier's flat HP/damage multiplier (state.difficultyMult = tierMult(tier)); 1 = tier 1.
 // HP and damage follow SEPARATE wave curves, each ×diff. strMult/dmgMult are the resolved per-enemy
 // multipliers, kept on the enemy so ageSurvivors can compound them independently.
-export function makeEnemy(id: number, type: string, waveN: number, rng: Rng, arena: Arena, cx = arena.w / 2, cy = arena.h / 2, diff = 1): Enemy {
+export function makeEnemy(id: number, type: string, waveN: number, rng: Rng, arena: Arena, cx = arena.w / 2, cy = arena.h / 2, diff = 1, spawnR = arena.w * 0.35): Enemy {
   const def = TYPES[type];
   const strMult = waveHp(waveN) * diff, // HP multiplier (also the "strength" proxy for splits)
     dmgMult = waveDmg(waveN) * diff; // damage multiplier (grows slower than HP)
   const speed = def.speed * waveSpeed(waveN); // tier does NOT change speed (Tower-style)
-  const m = 30;
-  // Spawn just outside one edge of the arena box, which is centered on (cx, cy) — the stationary
-  // hero. (Default center = w/2,h/2 reproduces the legacy origin-anchored box exactly.)
-  const left = cx - arena.w / 2,
-    top = cy - arena.h / 2;
-  let x: number, y: number;
-  const edge = (rng.next() * 4) | 0;
-  if (edge === 0) {
-    x = left + rng.next() * arena.w;
-    y = top - m;
-  } else if (edge === 1) {
-    x = left + arena.w + m;
-    y = top + rng.next() * arena.h;
-  } else if (edge === 2) {
-    x = left + rng.next() * arena.w;
-    y = top + arena.h + m;
-  } else {
-    x = left - m;
-    y = top + rng.next() * arena.h;
-  }
+  // Spawn on a CIRCLE of radius `spawnR` (default 1.4× tower range, passed by the sim) around the
+  // stationary hero at (cx, cy), at a uniformly random angle. The old rectangular arena-box edge
+  // spawn is gone — the arena field is now vestigial and read by nothing for placement. Fog of war
+  // (render-only) hides this ring: enemies spawn beyond the 1.2× vision edge and fade in as they near.
+  const a = rng.next() * Math.PI * 2;
+  const x = cx + Math.cos(a) * spawnR,
+    y = cy + Math.sin(a) * spawnR;
   const hp = ihp(def.hp, strMult),
     dmg = ihp(def.dmg, dmgMult);
   return {

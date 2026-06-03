@@ -9,7 +9,10 @@ import { selectedCosmeticId } from '../sim/cosmetics';
 import { drawTowerSkin } from './towers';
 import { drawEnemy } from './enemies';
 
-const RANGE_PAD = 0.1; // fraction of range kept as padding outside the ring so bounced enemies stay visible
+const RANGE_PAD = 0.25; // frame out to 1.25× range so the fog edge (1.2×) and its dim silhouettes are on-screen
+const FOG_VISION = 1.2; // vision edge as a multiple of range: inside = clear, outside = fog (enemies spawn at 1.4×)
+const FOG_FADE = 0.2;   // over how many ×range past the vision edge an enemy fades from clear to full silhouette
+const FOG_COLOR = '12,10,22'; // rgb of the fog overlay (deep cold blue-black), alpha applied per-stop below
 const BOTTOM_MARGIN = 0.4; // bottom 40% of the screen is reserved (upgrade menus) — tower stays in the top 60%
 const TRAIL_LIFE = 0.32; // seconds a slime-trail dab lingers behind a moving enemy before it fully fades
 const PLASMA_ARC_H = 48; // world-px peak height of a lobbed plasma orb (render-only; sim travels flat)
@@ -222,6 +225,7 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     ctx.globalAlpha = 1;
     for (const id of trails.keys()) if (!curPos.has(id)) trails.delete(id);
 
+    const fogVisionWR = range * FOG_VISION; // world-px radius of the vision edge (clear inside, fog outside)
     for (const e of s.enemies) {
       const col = e.color;
       const ep = ipos(e.id, e.x, e.y),
@@ -230,15 +234,35 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
       const er = e.r * scale;
       // Floor the body a touch so the wet detail stays legible once tokens get tiny when far-zoomed.
       const bodyR = Math.max(er, 6);
+      // Fog of war: enemies beyond the vision edge are dim, blurred silhouettes that sharpen as they
+      // cross inward; the spawn ring (1.4× range) sits out in fog so new enemies fade in rather than pop.
+      const dw = Math.hypot(ep.x - hp.x, ep.y - hp.y); // world distance from the hero
+      const fog = dw > fogVisionWR ? Math.min(1, (dw - fogVisionWR) / (range * FOG_FADE)) : 0;
+      // Skip bodies clearly off the viewport (the spawn ring mostly sits outside the 1.25× frame) so a
+      // big fogged crowd costs nothing — and avoid the per-body blur filter on things you can't see.
+      const margin = bodyR + 40;
+      if (esx < -margin || esx > W + margin || esy < -margin || esy > H + margin) {
+        seen.set(e.id, e.hitFlash);
+        continue;
+      }
+      const fogged = fog > 0.02;
+      if (fogged) {
+        ctx.save();
+        ctx.globalAlpha = 1 - 0.65 * fog; // silhouettes hold ~0.35 alpha at full fog
+        ctx.filter = 'blur(' + (2.6 * fog).toFixed(2) + 'px)';
+      }
       drawEnemy(ctx, e.type, esx, esy, bodyR, col, animClock, e.hitFlash, e.facing);
+      if (fogged) ctx.restore();
       const prev = seen.get(e.id) || 0;
-      if (e.hitFlash > 0 && prev <= 0) {
+      // Combat detail (sparks, bolts, damage numbers, rend pips, HP bars) only renders in the clear —
+      // anything out in the fog stays a featureless shadow.
+      if (!fogged && e.hitFlash > 0 && prev <= 0) {
         spawnSparks(esx, esy, col);
         if (s.atkMode === 'lightning') spawnBolt(hsx, hsy, esx, esy);
         if (cfg.damageNumbers && e.hitDmg) spawnFloat(esx, esy - bodyR - 4, '' + e.hitDmg, '#ffffff', 13);
       }
       seen.set(e.id, e.hitFlash);
-      if (e.rend > 0) {
+      if (!fogged && e.rend > 0) {
         ctx.fillStyle = '#e64cff';
         const py = esy - bodyR - 9;
         for (let i = 0; i < e.rend; i++) {
@@ -247,12 +271,30 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
           ctx.fill();
         }
       }
-      if (cfg.enemyHp && e.hp < e.hpMax && e.hp > 0) {
+      if (!fogged && cfg.enemyHp && e.hp < e.hpMax && e.hp > 0) {
         const bh = 3,
           bw = Math.max(30, bodyR * 2 + 8),
           by = esy - bodyR - bh - 5;
         drawHealthBar(ctx, esx, by, bw, bh, e.hp / e.hpMax);
       }
+    }
+    // Fog overlay: darken the world beyond the vision edge with a soft radial gradient. Drawn AFTER the
+    // enemies (so silhouettes sit under it) but BEFORE the projectiles, tower and range ring (so those
+    // always stay crisp and readable). Inside the vision edge it's fully transparent.
+    {
+      const inner = fogVisionWR * scale;       // screen-px where fog begins
+      const outer = range * 1.45 * scale;       // screen-px where fog reaches full density
+      const fgrad = ctx.createRadialGradient(hsx, hsy, inner, hsx, hsy, outer);
+      fgrad.addColorStop(0, 'rgba(' + FOG_COLOR + ',0)');
+      fgrad.addColorStop(1, 'rgba(' + FOG_COLOR + ',0.9)');
+      ctx.fillStyle = fgrad;
+      ctx.fillRect(0, 0, W, H);
+      // a faint cool rim right at the vision edge so the boundary reads as a deliberate horizon
+      ctx.strokeStyle = 'rgba(150,180,220,0.18)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(hsx, hsy, inner, 0, Math.PI * 2);
+      ctx.stroke();
     }
     // drop hit-flash memory for enemies that no longer exist, so `seen` can't grow over a run
     for (const id of seen.keys()) if (!curPos.has(id)) seen.delete(id);
