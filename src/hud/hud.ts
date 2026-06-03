@@ -911,8 +911,11 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   function refreshStats(s: State): void {
     const set = (id: string, v: string): void => { const e = $('#st-' + id); if (e) e.textContent = v; };
     if (statsView === 'player') {
-      set('kills', fmt(s.econ.kills));
-      set('coins', fmt((boundMeta || s.meta).coins || 0));
+      set('kd', fmt(s.econ.killsByDamage));
+      set('kr', fmt(s.econ.killsByReflect));
+      set('dt', abbr(Math.round(s.econ.dmgTaken)));
+      set('dd', abbr(Math.round(s.econ.dmgDealt)));
+      set('rd', abbr(Math.round(s.econ.reflectDealt)));
       set('run', fmt(s.firstRun ? FIRST_PERM_COST : coinsForRun(s, s.meta.tier || 1)));
     } else if (statsView === 'enemy') {
       set('active', String(s.enemies.length));
@@ -923,21 +926,16 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     const s = lastS;
     if (!s) return;
     const m = boundMeta || s.meta,
-      tier = m.tier || 1,
-      st = computeStats(s);
+      tier = m.tier || 1;
     statsView = 'player';
     $('#h-statscard').innerHTML =
       '<div class="statshead"><h2>Your Stats</h2><button class="iconclose" id="h-stats-close" title="Close">' + icon('close', 18) + '</button></div>' +
       '<div class="statsbody">' +
-      strow('Tier', String(tier)) +
-      strow('Difficulty', '×' + abbr(tierMult(tier))) +
-      strow('Coin multiplier', coinMultText(m, tier, '×')) +
-      strow('Damage', abbr(Math.round(st.rangedDamage))) +
-      strow('Attack speed', st.fireRate.toFixed(2) + '/s') +
-      strow('Max HP', abbr(Math.round(st.maxHp))) +
-      strow('HP regen', abbr(Math.round(st.regen)) + '/s') +
-      strow('Kills', fmt(s.econ.kills), 'kills') +
-      strow('Total coins', fmt(m.coins || 0), 'coins') +
+      strow('Kills by damage', fmt(s.econ.killsByDamage), 'kd') +
+      strow('Kills by reflect', fmt(s.econ.killsByReflect), 'kr') +
+      strow('Damage taken', abbr(Math.round(s.econ.dmgTaken)), 'dt') +
+      strow('Hit damage dealt', abbr(Math.round(s.econ.dmgDealt)), 'dd') +
+      strow('Reflection damage dealt', abbr(Math.round(s.econ.reflectDealt)), 'rd') +
       strow('Coins this run', fmt(coinsForRun(s, tier)), 'run') +
       '</div>';
     $('#h-stats-close').addEventListener('click', () => $('#h-stats').classList.add('hide'));

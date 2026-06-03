@@ -198,8 +198,11 @@ export class Sim {
       st = this.stats;
     // Reflect: send a share of the (landed) hit back at the attacker.
     if (st.thorns && attacker) {
-      attacker.hp -= amount * st.thorns;
+      const refl = amount * st.thorns;
+      attacker.hp -= refl;
+      attacker.lastHurt = 'reflect';
       attacker.hitFlash = 0.12;
+      this.s.econ.reflectDealt += refl;
     }
     // Demon Mode / Second Wind shield: ignore all incoming damage while invincible.
     if (heroInvuln(this.s)) return;
@@ -208,6 +211,7 @@ export class Sim {
     const amt = amount * (1 - (st.defPct || 0)) - (st.armor || 0);
     if (amt <= 0) return;
     this.s.econ.hitsTaken++; // instrumentation: a hit that actually dealt damage
+    this.s.econ.dmgTaken += amt;
     h.sinceHit = 0;
     h.hp -= amt;
     if (h.hp <= 0) {
@@ -447,6 +451,8 @@ export class Sim {
     for (const e of s.enemies) {
       if (e.hp <= 0) {
         s.econ.kills++;
+        if (e.lastHurt === 'reflect') s.econ.killsByReflect++;
+        else s.econ.killsByDamage++;
         const decay = (e.agedWaves || 0) >= COIN_DECAY_WAVES ? COIN_DECAY_FACTOR : 1; // anti-kite
         // Per-kill reward BASIS, shared by coins AND gold so the two currencies scale together: the
         // enemy's per-type coinValue (melee 1, fast/ranged 2, tank/splitter 4, boss 5), scaled by the

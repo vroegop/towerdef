@@ -12,6 +12,8 @@ import { drawEnemy } from './enemies';
 const RANGE_PAD = 0.1; // fraction of range kept as padding outside the ring so bounced enemies stay visible
 const BOTTOM_MARGIN = 0.4; // bottom 40% of the screen is reserved (upgrade menus) — tower stays in the top 60%
 const TRAIL_LIFE = 0.32; // seconds a slime-trail dab lingers behind a moving enemy before it fully fades
+const PLASMA_ARC_H = 48; // world-px peak height of a lobbed plasma orb (render-only; sim travels flat)
+const PLASMA_R_PX = 7;   // base on-screen radius of a plasma orb before its apex swell
 
 type Ctx = CanvasRenderingContext2D;
 interface Spark { x: number; y: number; vx: number; vy: number; life: number; color: string }
@@ -258,6 +260,7 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     ctx.fillStyle = '#fffbe6';
     ctx.strokeStyle = '#2a1c08';
     for (const p of s.projectiles) {
+      if (p.kind === 'plasma') continue; // plasma orbs draw in their own pass (with glow), below
       const pp = ipos(p.id, p.x, p.y);
       const r = Math.max(1.5, p.r * 0.42 * scale);
       ctx.lineWidth = Math.max(1, r * 0.4);
@@ -265,6 +268,40 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
       ctx.arc(tx(pp.x), ty(pp.y), r, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
+    }
+
+    // Plasma Cannon orbs: a glowing cyan ball LOBBED at a boss. The sim travels flat (top-down), so we
+    // fake the throw here — a parabolic height (sin over flight progress) lifts the orb on screen and
+    // swells it, so it reads as arcing up and over the crowd before dropping onto the boss.
+    for (const p of s.projectiles) {
+      if (p.kind !== 'plasma') continue;
+      const pp = ipos(p.id, p.x, p.y);
+      const tgt = p.targetId != null ? s.enemies.find((e) => e.id === p.targetId) : undefined;
+      const dist = tgt ? Math.hypot(tgt.x - p.x, tgt.y - p.y) : 0;
+      const prog = p.dist0 ? Math.max(0, Math.min(1, 1 - dist / p.dist0)) : 1; // 0 at launch → 1 at impact
+      const lift = Math.sin(prog * Math.PI); // 0 → 1 → 0 over the flight
+      const cx = tx(pp.x),
+        gy = ty(pp.y), // ground point (the orb's true world position)
+        cy = gy - lift * PLASMA_ARC_H * scale; // lifted toward the viewer at the apex
+      const r = PLASMA_R_PX * scale * (1 + 0.8 * lift); // swells near the apex (closer = bigger)
+      // faint ground shadow so the height reads as a throw, not a teleport
+      ctx.fillStyle = 'rgba(20,40,60,0.28)';
+      ctx.beginPath();
+      ctx.ellipse(cx, gy, r * 0.7, r * 0.32, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // glowing orb
+      ctx.save();
+      ctx.shadowColor = '#37d7ff';
+      ctx.shadowBlur = r * 2.2;
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      g.addColorStop(0, '#eafaff');
+      g.addColorStop(0.45, '#37d7ff');
+      g.addColorStop(1, 'rgba(55,160,255,0.15)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
 
     if (!resync) {

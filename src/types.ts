@@ -114,6 +114,7 @@ export interface Enemy {
   veteran: boolean;
   agedWaves: number;
   heat: number; // landed-hit count; outgoing dmg is scaled by 1.04^heat (compounding heat-up)
+  lastHurt?: 'dmg' | 'reflect'; // source of the most recent HP loss; read at death for kill attribution
 }
 export interface Projectile {
   id: number;
@@ -128,6 +129,10 @@ export interface Projectile {
   bounces?: number;
   hitIds?: number[] | null;
   bounceRange?: number;
+  // ---- Plasma Cannon: a homing boss-strike, distinct from bullets. ----
+  kind?: 'plasma';     // present only on plasma orbs; bullets leave it undefined
+  targetId?: number;   // boss this plasma homes onto; fizzles if that boss dies
+  dist0?: number;      // launch→target distance at fire time (renderer's arc progress basis)
 }
 // Transient per-kill UI events the renderer consumes (gold/coin drops).
 export interface FxEvent {
@@ -155,6 +160,11 @@ export interface Econ {
   goldEarned: number;
   bonusCoins: number;
   hitsTaken: number; // count of landed hits on the hero (instrumentation; also used by the dev dashboard)
+  killsByDamage: number; // enemies whose killing blow was the hero's hit/projectile damage
+  killsByReflect: number; // enemies whose killing blow was reflect/thorns damage
+  dmgTaken: number; // total damage the hero has actually taken this run (post defense/armor)
+  dmgDealt: number; // total hit damage the hero has dealt to enemies this run
+  reflectDealt: number; // total reflect/thorns damage dealt back to attackers this run
 }
 export interface Run {
   levels: Record<string, number>;
@@ -168,6 +178,7 @@ export interface Run {
   secondWindUsed?: boolean; // Second Wind auto-revive fires once per run
   invuln?: number;          // seconds the hero is invincible (Demon Mode / Second Wind shield)
   dmgBoost?: number;        // transient outgoing-damage multiplier from active abilities (1 = none)
+  plasmaDone?: number[];    // boss ids already struck by Plasma Cannon (one shot per boss, ever)
 }
 export interface State {
   seed: number;

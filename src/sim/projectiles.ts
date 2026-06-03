@@ -6,6 +6,8 @@ import { MAX_REND, REND_DECAY, PX_PER_METER } from './skills';
 
 export const BULLET_SPEED = 520; // px/s — well above enemy speeds, so only lateral movers slip past
 export const BULLET_R = 4;
+export const PLASMA_SPEED = 300; // px/s — slower than a bullet so the lobbed arc reads clearly
+export const PLASMA_R = 7;
 export const KNOCKBACK_MAX_M = 5; // a push can shove an enemy back at most this many metres
 export const KNOCKBACK_SLOW_DUR = 1.5; // seconds a too-heavy enemy stays slowed after a knockback proc
 
@@ -29,6 +31,29 @@ export function fireProjectile(state: State, hero: Hero, target: Enemy, stats: S
     bounces,
     hitIds: bounces ? [] : null,
     bounceRange: stats.bounceRange || 0,
+  });
+}
+
+// Plasma Cannon: lob a homing orb from the hero at a boss. Damage is snapshotted at fire time
+// (bossHpMax × frac) so offline catch-up replays identically — the orb only applies it on impact.
+// Ignores the hero's range gate; it always travels until it hits its boss or that boss dies.
+export function firePlasma(state: State, hero: Hero, boss: Enemy, frac: number): void {
+  const dx = boss.x - hero.x,
+    dy = boss.y - hero.y,
+    d = Math.hypot(dx, dy) || 1;
+  state.projectiles.push({
+    id: state.nextId++,
+    x: hero.x,
+    y: hero.y,
+    vx: (dx / d) * PLASMA_SPEED,
+    vy: (dy / d) * PLASMA_SPEED,
+    r: PLASMA_R,
+    dmg: boss.hpMax * frac,
+    traveled: 0,
+    maxDist: Infinity, // homing: no travel-distance expiry
+    kind: 'plasma',
+    targetId: boss.id,
+    dist0: d,
   });
 }
 
@@ -56,6 +81,8 @@ export function applyHit(state: State, e: Enemy, baseDmg: number, stats: Stats, 
   }
   const dealt = baseDmg * (1 + (e.rend || 0) * ((stats && stats.rendMult) || 0));
   e.hp -= dealt;
+  e.lastHurt = 'dmg';
+  state.econ.dmgDealt += dealt;
   e.hitFlash = 0.12;
   e.hitDmg = Math.round(dealt);
   if (stats && stats.lifesteal && state.hero) state.hero.hp = Math.min(state.hero.hpMax, state.hero.hp + dealt * stats.lifesteal);
@@ -97,10 +124,39 @@ function hitEnemy(state: State, p: Projectile): Enemy | null {
   return null;
 }
 
+// Advance a homing plasma orb one tick. Returns true when the orb is spent (impact or fizzle) and
+// should be dropped. Passes over every non-target enemy; only its boss takes the (pure %-HP) hit.
+function tickPlasma(state: State, p: Projectile, dt: number): boolean {
+  const target = state.enemies.find((e) => e.id === p.targetId && e.hp > 0);
+  if (!target) return true; // boss already dead → fizzle, no damage
+  const dx = target.x - p.x,
+    dy = target.y - p.y,
+    d = Math.hypot(dx, dy) || 1;
+  const step = PLASMA_SPEED * dt;
+  if (d <= target.r + p.r || step >= d) {
+    target.hp -= p.dmg; // pure % max-HP; no rend/lifesteal/knockback
+    target.lastHurt = 'dmg'; // plasma is the hero's damage → killing blows attribute to damage
+    state.econ.dmgDealt += p.dmg;
+    target.hitFlash = 0.18;
+    target.hitDmg = Math.round(p.dmg);
+    return true; // consumed on impact
+  }
+  p.vx = (dx / d) * PLASMA_SPEED; // re-aim toward the boss's current position
+  p.vy = (dy / d) * PLASMA_SPEED;
+  p.x += p.vx * dt;
+  p.y += p.vy * dt;
+  p.traveled += step;
+  return false;
+}
+
 export function tickProjectiles(state: State, dt: number, stats: Stats, rng?: Rng): void {
   if (!state.projectiles.length) return;
   const keep: Projectile[] = [];
   for (const p of state.projectiles) {
+    if (p.kind === 'plasma') {
+      if (!tickPlasma(state, p, dt)) keep.push(p); // false = still in flight
+      continue;
+    }
     const stepLen = BULLET_SPEED * dt;
     const subs = Math.max(1, Math.ceil(stepLen / 8)); // sub-step so fast bullets don't tunnel small enemies
     const sdt = dt / subs;

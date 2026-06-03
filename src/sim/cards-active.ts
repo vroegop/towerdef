@@ -10,25 +10,14 @@
    revive. Timers live in run.actCd / run.actActive (keyed by card id) and tick inside step(), so the
    sim stays deterministic (PRNG-driven, no wall clock). Run.dmgBoost is the transient outgoing-damage
    multiplier the hero applies; Run.invuln is the seconds the hero ignores damage. */
-import type { Enemy, Rng, State, Stats } from '../types';
+import type { Rng, State, Stats } from '../types';
+import { firePlasma } from './projectiles';
 
 // fixed cooldowns/durations not data-driven by the card value table (those values ARE the magnitude).
 export const SUPER_TOWER_DUR = 15;   // seconds Super Tower stays up
 export const SUPER_TOWER_CD = 30;    // seconds between Super Tower activations
 export const DEMON_MODE_CD = 310;    // seconds between Demon Mode activations
 export const DEMON_MODE_DMG = 3;     // Demon Mode multiplies outgoing damage by 3
-export const PLASMA_CD = 12;          // seconds between Plasma Canon shots
-
-// Find the strongest current enemy to treat as the "boss" (highest max HP). Deterministic: ties
-// broken by id. Returns null if no enemies.
-function currentBoss(s: State): Enemy | null {
-  let best: Enemy | null = null;
-  for (const e of s.enemies) {
-    if (e.hp <= 0) continue;
-    if (!best || e.hpMax > best.hpMax || (e.hpMax === best.hpMax && e.id < best.id)) best = e;
-  }
-  return best;
-}
 
 // Advance every active-card timer for one tick and apply their continuous effects. Must run BEFORE
 // the hero attacks so run.dmgBoost is current for this tick's shots. _rng_ is the seeded Sim PRNG.
@@ -68,18 +57,15 @@ export function tickActiveCards(s: State, dt: number, st: Stats, _rng: Rng): voi
     }
   }
 
-  // ---- Plasma Canon: every PLASMA_CD seconds, blast the current boss for a share of its MAX hp. ----
+  // ---- Plasma Canon: when a boss appears, lob ONE homing plasma orb at it for a share of its MAX
+  // hp. Each boss is struck exactly once in its lifetime (tracked in run.plasmaDone). ----
   if (st.plasmaCanon > 0) {
-    const cd = run.actCd.plasmaCanon || 0;
-    if (cd <= 0) {
-      const boss = currentBoss(s);
-      if (boss) {
-        boss.hp -= boss.hpMax * st.plasmaCanon;
-        boss.hitFlash = 0.18;
-        run.actCd.plasmaCanon = PLASMA_CD;
-      }
-      // if no boss yet, leave cd at 0 so it fires as soon as one appears
-    } else run.actCd.plasmaCanon = Math.max(0, cd - dt);
+    const done = run.plasmaDone || (run.plasmaDone = []);
+    for (const e of s.enemies) {
+      if (e.type !== 'boss' || e.hp <= 0 || done.indexOf(e.id) >= 0) continue;
+      firePlasma(s, s.hero, e, st.plasmaCanon);
+      done.push(e.id);
+    }
   }
 
   // Second Wind's own shield timer (started on revive) decays here; the revive itself is in onHeroLethal.
