@@ -817,8 +817,12 @@ export function buyCard(meta: Meta, rng?: () => number): CardDrawResult | null {
 }
 
 // ---- tier / milestones (rewards for furthest-wave progress, tracked PER TIER) ----
+// The wave a tier's first batch of labs unlocks at. Its milestone pays no currency — reaching it opens
+// the tier-1 lab ladder (the Game Speed lab is always available; everything else gates here). Later
+// this is where individual labs will be linked to their own milestone rungs.
+export const LAB_UNLOCK_WAVE = 30;
 export const MILESTONES: number[] = (() => {
-  const a = [10, 50, 100, 250, 500];
+  const a = [10, LAB_UNLOCK_WAVE, 50, 100, 250, 500];
   for (let w = 1000; w <= 10000; w += 1000) a.push(w);
   return a;
 })();
@@ -828,30 +832,42 @@ export const MILESTONES: number[] = (() => {
 //   • COINS on even rungs (wave × MS_COIN_MULT);
 //   • a "special" currency on odd rungs — GEMS in tier 1, and in tier 2+ alternating gems / vials
 //     (coins, gems, coins, vials, …). Gem/vial amounts escalate 10, 20, 30, … per slot of that kind.
-export interface MilestoneReward { coins: number; gems: number; vials: number; tower?: string }
+export interface MilestoneReward { coins: number; gems: number; vials: number; tower?: string; lab?: boolean }
 const MS_COIN_MULT = 20;
 const msKey = (tier: number, wave: number): string => (tier || 1) + ':' + wave;
 const msBest = (meta: Meta, tier: number): number => (meta.tierBest && meta.tierBest[tier]) || 0;
 const msTiers = (meta: Meta): number[] => Object.keys(meta.tierBest || {}).map(Number).filter((t) => t >= 1);
+// The currency rungs are indexed as if the special lab-unlock rung weren't in the ladder, so inserting
+// the wave-30 milestone never shifts the coins↔gems pattern (or amounts) of any rung above it.
+function currencyRungIndex(wave: number): number {
+  const i = MILESTONES.indexOf(wave);
+  let skipped = 0;
+  for (let k = 0; k < i; k++) if (MILESTONES[k] === LAB_UNLOCK_WAVE) skipped++;
+  return i - skipped;
+}
 export function milestoneReward(wave: number, tier = 1): MilestoneReward {
   const none: MilestoneReward = { coins: 0, gems: 0, vials: 0 };
   const i = MILESTONES.indexOf(wave);
   if (i < 0) return none;
+  // Wave 30: the lab-unlock milestone — reaching it opens this tier's labs (no currency reward; the
+  // HUD lists exactly which labs). Flagged `lab` so it's rendered/treated like the tower rung, not a claim.
+  if (wave === LAB_UNLOCK_WAVE) return { ...none, lab: true };
   // Wave 1000 in a tier that has a tower skin → the skin IS the reward (nothing else).
   if (wave === TOWER_UNLOCK_WAVE) {
     const t = towerForTier(tier || 1);
     if (t) return { ...none, tower: t.id };
   }
-  if (i % 2 === 0) return { ...none, coins: wave * MS_COIN_MULT }; // even rungs → coins
-  const oddSlot = (i - 1) / 2; // 0,1,2,… across the odd rungs
+  const ci = currencyRungIndex(wave);
+  if (ci % 2 === 0) return { ...none, coins: wave * MS_COIN_MULT }; // even rungs → coins
+  const oddSlot = (ci - 1) / 2; // 0,1,2,… across the odd rungs
   if ((tier || 1) === 1) return { ...none, gems: 10 * (oddSlot + 1) }; // tier 1: every odd rung pays gems
   // tier 2+: odd rungs alternate gems / vials, each escalating on its own slot of that kind
   return oddSlot % 2 === 0
     ? { ...none, gems: 10 * (oddSlot / 2 + 1) }
     : { ...none, vials: 10 * ((oddSlot - 1) / 2 + 1) };
 }
-// Whether a milestone is currency-claimable (tower skins unlock with progress — never "claimed").
-const isClaimable = (r: MilestoneReward): boolean => !r.tower && (r.coins > 0 || r.gems > 0 || r.vials > 0);
+// Whether a milestone is currency-claimable (tower skins + the lab unlock track progress, never "claimed").
+const isClaimable = (r: MilestoneReward): boolean => !r.tower && !r.lab && (r.coins > 0 || r.gems > 0 || r.vials > 0);
 // Claimable count for ONE tier (drives the hero-tab section badge).
 export function tierClaimableCount(meta: Meta, tier: number): number {
   const best = msBest(meta, tier),

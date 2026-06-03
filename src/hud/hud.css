@@ -508,6 +508,16 @@
 @keyframes ms-tower-glow { 0%,100% { filter: drop-shadow(0 0 5px rgba(255,210,74,.4)); } 50% { filter: drop-shadow(0 0 11px rgba(255,210,74,.75)); } }
 .hud .msrow.tower .msdot { background: linear-gradient(180deg, #e6c45a, #b07e1a); color: #2a1a06; }
 
+/* ---- lab-unlock rung (wave 30): no currency; lists the labs it opens ---- */
+.hud .mn-sub { font-size: 10px; color: #8b93a7; line-height: 1.35; white-space: normal; }
+.hud .msrow.lab.locked .mn-sub { color: #6b7488; }
+.hud .mn-reward.lab { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.hud .mn-reward.lab.unlocked { color: #6fe3c0; }
+.hud .mn-reward.lab.locked { color: #6b7488; }
+.hud .msrow.lab .msdot { background: linear-gradient(180deg, #5bd6c0, #2b8f9e); color: #04201c; }
+.hud .msrow.lab.locked .msdot { background: linear-gradient(180deg, #3a4456, #2a3242); color: #8b93a7; }
+.hud .msrow.lab.unlocked .mn-reward.lab { filter: drop-shadow(0 0 5px rgba(91,214,192,.45)); }
+
 /* ---- HUD visual polish: faceted hexagons, light-catching claim buttons, a flowing spine ----
    The hexagon nodes read as flat tiles; a couple of clipped pseudo-elements turn them into cut,
    polished stones. clip-path on .msdot clips its pseudos too, so both stay inside the hex outline. */

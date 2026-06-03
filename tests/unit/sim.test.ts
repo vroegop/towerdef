@@ -7,10 +7,10 @@ import { makeRng } from '../../src/sim/rng';
 import { Sim } from '../../src/sim/core';
 import { createState, ARENA_W, ARENA_H } from '../../src/sim/state';
 import { makeEnemy } from '../../src/sim/enemies';
-import { migrateMeta, availableSpeeds, gameSpeed, setGameSpeed, SPEED_STEPS, LAB_BY_ID, labInterestCap } from '../../src/sim/labs';
+import { migrateMeta, availableSpeeds, gameSpeed, setGameSpeed, SPEED_STEPS, LAB_BY_ID, LABS, labInterestCap, labUnlocked, labsTabUnlocked } from '../../src/sim/labs';
 import { buyPerm, permCost, computeStats, waveStrSafe } from './helpers';
 import { concurrentCap, spawnRate, lullDuration, econStr, waveHp, waveDmg, tierMult, MAX_TIER, tierUnlocked, coinMult, rollEnemyType, allowedSpecials, isBossWave } from '../../src/sim/waves';
-import { buyCard, buyCardCost, MAX_STARS, CARD_ORDER, evalCurve, UP_BY_ID, PX_PER_METER, isUnlocked, unlockGroup, nextUnlockGroup, skillGroup, bigSuffix, bigGroup } from '../../src/sim/skills';
+import { buyCard, buyCardCost, MAX_STARS, CARD_ORDER, evalCurve, UP_BY_ID, PX_PER_METER, isUnlocked, unlockGroup, nextUnlockGroup, skillGroup, bigSuffix, bigGroup, MILESTONES, milestoneReward, tierClaimableCount, LAB_UNLOCK_WAVE } from '../../src/sim/skills';
 import { applyHit } from '../../src/sim/projectiles';
 import type { Meta } from '../../src/types';
 
@@ -367,6 +367,60 @@ describe('game speed lab', () => {
     const maxed = computeStats(createState(1, freshMeta({ labs: { gameSpeed: 7 } }), false));
     expect(maxed.rangedDamage).toBeCloseTo(base.rangedDamage);
     expect(maxed.maxHp).toBeCloseTo(base.maxHp);
+  });
+
+  it('is available from wave 0 (gate 0) — the only lab open before wave 30', () => {
+    expect(LAB_BY_ID.gameSpeed.gate.wave).toBe(0);
+  });
+});
+
+describe('lab gating', () => {
+  it('the Labs tab/rail is always open (the Game Speed lab is researchable from the start)', () => {
+    expect(labsTabUnlocked(freshMeta())).toBe(true);
+    expect(labsTabUnlocked(freshMeta({ bestWave: 0 }))).toBe(true);
+  });
+
+  it('Game Speed unlocks at wave 0; every other lab stays locked until wave 30', () => {
+    const fresh = freshMeta({ bestWave: 0 });
+    expect(labUnlocked(fresh, 'gameSpeed')).toBe(true);
+    expect(labUnlocked(fresh, 'dmgLab')).toBe(false);
+    expect(labUnlocked(fresh, 'hpLab')).toBe(false);
+    const w29 = freshMeta({ bestWave: 29 });
+    expect(labUnlocked(w29, 'dmgLab')).toBe(false);
+    const w30 = freshMeta({ bestWave: 30 });
+    expect(labUnlocked(w30, 'dmgLab')).toBe(true);
+    expect(labUnlocked(w30, 'hpLab')).toBe(true);
+  });
+
+  it('every non-speed lab gates at wave 30 (the tier-1 milestone unlock)', () => {
+    for (const L of LABS) {
+      expect(L.gate.wave).toBe(L.id === 'gameSpeed' ? 0 : 30);
+    }
+  });
+});
+
+describe('milestones', () => {
+  it('includes a wave-30 lab-unlock rung that pays no currency and is not claimable', () => {
+    expect(MILESTONES).toContain(LAB_UNLOCK_WAVE);
+    const r = milestoneReward(LAB_UNLOCK_WAVE, 1);
+    expect(r.lab).toBe(true);
+    expect(r.coins).toBe(0);
+    expect(r.gems).toBe(0);
+    expect(r.vials).toBe(0);
+    // reaching wave 30 must NOT add a claimable reward (it's a progress unlock, like the tower):
+    // the claimable count is identical at best 29 (wave-10 coins only) and best 30 (+ the lab rung).
+    expect(tierClaimableCount(freshMeta({ tierBest: { 1: 29 } }), 1)).toBe(1);
+    expect(tierClaimableCount(freshMeta({ tierBest: { 1: 30 } }), 1)).toBe(1);
+  });
+
+  it('keeps the existing tier-1 currency rewards unchanged after inserting wave 30', () => {
+    expect(milestoneReward(10, 1)).toMatchObject({ coins: 200, gems: 0, vials: 0 });
+    expect(milestoneReward(50, 1)).toMatchObject({ coins: 0, gems: 10, vials: 0 });
+    expect(milestoneReward(100, 1)).toMatchObject({ coins: 2000, gems: 0, vials: 0 });
+    expect(milestoneReward(250, 1)).toMatchObject({ coins: 0, gems: 20, vials: 0 });
+    expect(milestoneReward(500, 1)).toMatchObject({ coins: 10000, gems: 0, vials: 0 });
+    expect(milestoneReward(2000, 1)).toMatchObject({ coins: 40000, gems: 0, vials: 0 });
+    expect(milestoneReward(3000, 1)).toMatchObject({ coins: 0, gems: 40, vials: 0 });
   });
 });
 

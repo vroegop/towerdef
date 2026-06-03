@@ -16,7 +16,7 @@ import {
 import {
   LABS, LAB_BY_ID, labLevel, labUnlocked, labsTabUnlocked, labCoinCost, labTimeSec, labAtMax, researchOf, researchRemaining,
   researchProgress, freeSlots, rushVialCost, labSlotCost, MAX_SLOTS, checkInPending, CHECKIN_VIALS, CHECKIN_GEMS,
-  availableSpeeds, gameSpeed, speedAtLevel,
+  availableSpeeds, gameSpeed, speedAtLevel, SPEED_LAB,
 } from '../sim/labs';
 import { cosmeticsOf, isCosmeticUnlocked, selectedCosmeticId, buffText, cosmeticById } from '../sim/cosmetics';
 import {
@@ -715,6 +715,11 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   // at any point. On completion a recap modal explains run-vs-Workshop permanence.
   type IrStep = 'damage' | 'health';
   let irStep: IrStep | null = null;
+  // ---- battle-speed → Game Speed lab tutorial (see runSpeedTut(), driven from update()) ----
+  // Fires once, the first time the player taps the battle-speed button. A spotlight walks them to the
+  // menu button → Labs rail icon → the Game Speed lab, deriving the current target purely from which
+  // panels are open (so backing out never gets stuck). Persisted via meta.speedTutDone.
+  let speedTut = false;
   const irTargetId = (): string | null => (irStep === 'damage' ? 'rangedDamage' : irStep === 'health' ? 'health' : null);
   const irTargetTab = (): string => (irStep === 'health' ? 'defense' : 'attack');
   const irLocked = (): boolean => irStep === 'damage' || irStep === 'health';
@@ -844,6 +849,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     const next = speeds[(i + 1) % speeds.length]; // wrap past the top back to 0x (pause)
     if (handlers.onSetGameSpeed) handlers.onSetGameSpeed(next);
     refreshSpeedBtn();
+    maybeStartSpeedTut(); // first tap → guide the player to the Game Speed lab
   });
 
   // top-bar elements are static chrome (built once); cache them instead of re-querying every frame
@@ -862,7 +868,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   const skipBtn = $('#h-tutskip');
   skipBtn.addEventListener('click', () => skipTut());
   function updateSkipBtn(): void {
-    skipBtn.classList.toggle('hide', !irLocked());
+    skipBtn.classList.toggle('hide', !irLocked() && !speedTut);
   }
   function irForceTab(tab: string): void {
     if (tabOpen && activeTab === tab) return;
@@ -882,6 +888,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     updateSkipBtn();
   }
   function skipTut(): void {
+    if (speedTut) { endSpeedTut(true); return; }
     if (!irStep) return;
     endTut(true);
   }
@@ -934,6 +941,56 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       : 'Now buy <b>Health</b> — these reset when the run ends');
   }
 
+  // Has the player already engaged with the Game Speed lab (a level done or one researching)? Then they
+  // understand the mechanic — the tutorial is pointless and is marked done so it never fires.
+  function speedLabEngaged(m: Meta): boolean {
+    return labLevel(m, SPEED_LAB) > 0 || !!researchOf(m, SPEED_LAB);
+  }
+  function endSpeedTut(done: boolean): void {
+    speedTut = false;
+    const m = curMeta();
+    if (done && m) { m.speedTutDone = true; handlers.onSaveMeta && handlers.onSaveMeta(); }
+    setSpotlight(false);
+    updateSkipBtn();
+  }
+  // Begin the tutorial the first time the speed button is tapped — unless tutorials are off, it's been
+  // shown, another tutorial is running, or the player already gets the Game Speed lab.
+  function maybeStartSpeedTut(): void {
+    if (speedTut || irStep) return;
+    if (settings.showTutorials === false) return;
+    if (menuEl.classList.contains('show')) return; // only in-run, where update() drives the spotlight
+    const m = curMeta();
+    if (!m || m.speedTutDone) return;
+    if (speedLabEngaged(m)) { m.speedTutDone = true; handlers.onSaveMeta && handlers.onSaveMeta(); return; }
+    speedTut = true;
+    updateSkipBtn();
+    runSpeedTut();
+  }
+  // Spotlight the NEXT thing to tap, derived purely from which panels are open: closed → the menu
+  // button; rail open → the Labs flask; Labs open → an empty research slot; picker open → the Game
+  // Speed row. Starting/owning the lab ends the lesson. Re-run every frame from update() so the
+  // highlight tracks layout and the player can never get wedged by backing out a step.
+  function runSpeedTut(): void {
+    if (!speedTut) return;
+    const m = curMeta();
+    if (!m) return;
+    if (speedLabEngaged(m)) { endSpeedTut(true); return; }
+    const pickerOpen = !updmodal.classList.contains('hide');
+    const labsOpen = !labsModal.classList.contains('hide');
+    const menuOpen = sidemenu.classList.contains('open');
+    if (pickerOpen) {
+      const el = updmodalInner.querySelector('[data-startlab="' + SPEED_LAB + '"]') as HTMLElement | null;
+      setSpotlight(!!el, el, 'Start <b>Game Speed</b> — research unlocks faster battle speeds');
+    } else if (labsOpen) {
+      const el = labsModalInner.querySelector('.labslot.empty') as HTMLElement | null;
+      setSpotlight(!!el, el, 'Tap a slot, then choose <b>Game Speed</b>');
+    } else if (menuOpen) {
+      setSpotlight(true, railLabs, 'Open <b>Labs</b> to research speed');
+    } else {
+      setSpotlight(true, $('#h-menu-btn'), 'Open the menu to find <b>Labs</b>');
+    }
+  }
+
   function update(s: State): void {
     lastS = s;
     if (!uel)
@@ -944,7 +1001,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         hpfill: $('#h-hpfill'), wavefill: $('#h-wavefill'), statline: $('#h-statline'),
         tabbar: $('#h-tabbar'), stats: $('#h-stats'), speedval: $('#h-speedval'),
       };
-    runTut(s);
+    if (speedTut) runSpeedTut();
+    else runTut(s);
     const tier = s.meta.tier || 1;
     uel.speedval.textContent = fmtSpeed(gameSpeed(s.meta));
     uel.wave.textContent = String(s.wave.n);
@@ -1308,8 +1366,9 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   $('#h-set').addEventListener('click', openSettings);
   $('#h-rail-cards').addEventListener('click', () => { renderCardsModal(); cardsModal.classList.remove('hide'); });
   railLabs.addEventListener('click', () => {
-    const meta = curMeta();
-    if (!meta || !labsTabUnlocked(meta)) { showUnlockTip(railLabs, 'Reach wave 30 to unlock Labs'); return; }
+    // Labs are always open now (the Game Speed lab is researchable from the start; the rest of the
+    // tier-1 ladder is gated per-lab inside the picker). So the rail always opens the modal.
+    if (!curMeta()) return;
     renderLabsModal();
     labsModal.classList.remove('hide');
   });
@@ -1464,6 +1523,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     $('#h-stats').classList.add('hide');
     // leaving gameplay: abandon any in-progress tutorial and drop its overlays / recap modal
     irStep = null;
+    speedTut = false;
     setSpotlight(false);
     skipBtn.classList.add('hide');
     infomodal.classList.add('hide');
@@ -1493,6 +1553,34 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   let menuTab = 'hero',
     menuUpTab = 'attack',
     lastMeta: Meta | null = null;
+
+  // ---- menu (Workshop) tutorial spotlight ----
+  // The first-purchase guide (sumPerm === 0): point the player to the Upgrades tab, then to the first
+  // permanent upgrade. Unlike the in-run tutorial — which update() repositions every frame — the menu
+  // has no per-frame loop, so a one-shot rAF snapshot would freeze the highlight at a stale rect
+  // (any reflow from the avatar canvas, scroll, or content shift left it mispositioned / invisible).
+  // A dedicated rAF ticker re-acquires + repositions the live target while the menu is shown.
+  let menuSpotTarget: HTMLElement | null = null,
+    menuSpotText = '',
+    menuSpotRaf = 0;
+  function tickMenuSpot(): void {
+    const shown = menuEl.classList.contains('show');
+    const tgt = shown && menuSpotTarget && menuSpotTarget.isConnected ? menuSpotTarget : null;
+    if (!tgt) { menuSpotRaf = 0; setSpotlight(false); return; } // nothing to track → stop (renderMenu restarts)
+    // Hide behind any open modal (detail / milestones / picker, all z-index > the spotlight) so the
+    // highlight never floats over a dialog; it re-appears the moment the modal closes — but keep
+    // ticking so it tracks the live rect the whole time the menu tutorial is active.
+    const clear = modal.classList.contains('hide') && updmodal.classList.contains('hide');
+    setSpotlight(clear, tgt, menuSpotText);
+    menuSpotRaf = requestAnimationFrame(tickMenuSpot);
+  }
+  function startMenuSpot(): void { if (!menuSpotRaf) menuSpotRaf = requestAnimationFrame(tickMenuSpot); }
+  function stopMenuSpot(): void {
+    if (menuSpotRaf) cancelAnimationFrame(menuSpotRaf);
+    menuSpotRaf = 0;
+    menuSpotTarget = null;
+    setSpotlight(false);
+  }
 
   MENU_TABS.forEach((t) => {
     const b = document.createElement('button');
@@ -1729,14 +1817,22 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     MILESTONES.forEach((w) => {
       const reward = milestoneReward(w, tier),
         isTower = !!reward.tower,
+        isLab = !!reward.lab,
+        special = isTower || isLab, // progress-tracked rungs (never "claimed")
         claimed = !!cl[tier + ':' + w],
         reached = best >= w,
-        can = reached && !claimed && !isTower;
-      const cls = 'msrow' + (reached ? ' reached' : '') + (isTower ? ' tower' : '') +
-        (isTower ? (reached ? ' unlocked' : ' locked') : claimed ? ' claimed' : can ? ' can' : ' locked');
+        can = reached && !claimed && !special;
+      const cls = 'msrow' + (reached ? ' reached' : '') + (isTower ? ' tower' : '') + (isLab ? ' lab' : '') +
+        (special ? (reached ? ' unlocked' : ' locked') : claimed ? ' claimed' : can ? ' can' : ' locked');
+      // The lab-unlock rung lists EXACTLY which labs open at this wave (every lab gated here) — shown as
+      // an info subtitle so the player knows what they're unlocking.
+      const labNames = isLab ? LABS.filter((L) => (L.gate && L.gate.wave) === w).map((L) => L.label).join(', ') : '';
       let cta: string;
       if (isTower) {
         cta = rewardHtml(reward);
+      } else if (isLab) {
+        cta = '<span class="mn-reward lab ' + (reached ? 'unlocked' : 'locked') + '">' +
+          icon(reached ? 'flask' : 'lock', 14) + ' ' + (reached ? 'Labs unlocked' : 'Unlocks labs') + '</span>';
       } else if (claimed) {
         cta = '<span class="mn-done">' + icon('check', 15) + ' Claimed</span>';
       } else if (can) {
@@ -1745,8 +1841,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         cta = '<span class="mn-reward locked">' + rewardHtml(reward) + '</span>';
       }
       rows += '<div class="' + cls + '">' +
-        '<div class="msrail"><span class="msdot">' + (isTower ? icon('best', 15) : short(w)) + '</span></div>' +
-        '<div class="mscard"><div class="mn-info"><b>Wave ' + short(w) + '</b></div>' + cta + '</div></div>';
+        '<div class="msrail"><span class="msdot">' + (isLab ? icon('flask', 14) : isTower ? icon('best', 15) : short(w)) + '</span></div>' +
+        '<div class="mscard"><div class="mn-info"><b>Wave ' + short(w) + '</b>' +
+        (isLab ? '<span class="mn-sub">Unlocks all labs: ' + labNames + '</span>' : '') +
+        '</div>' + cta + '</div></div>';
     });
     modalInner.innerHTML =
       '<button class="close" id="h-ms-close" title="Close">' + icon('close', 18) + '</button>' +
@@ -1963,19 +2061,20 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     } else if (menuTab === 'prestige') {
       wireSuperPane(menuContent, renderMenu);
     }
-    // tutorial spotlight
-    let spotTarget: HTMLElement | null = null,
-      spotText = '';
-    if (tutoring && modal.classList.contains('hide')) {
+    // Tutorial spotlight: record the live target; the menu-spot ticker repositions it every frame
+    // (and hides it behind any open modal). Cleared as soon as the player owns a permanent upgrade.
+    menuSpotTarget = null;
+    menuSpotText = '';
+    if (tutoring) {
       if (menuTab === 'hero') {
-        spotTarget = menuTabsEl.querySelector('[data-mtab="upgrades"]');
-        spotText = 'Spend your ' + coinsIc(15) + ' here';
+        menuSpotTarget = menuTabsEl.querySelector('[data-mtab="upgrades"]');
+        menuSpotText = 'Spend your ' + coinsIc(15) + ' here';
       } else if (menuTab === 'upgrades') {
-        spotTarget = menuContent.querySelector('.perm.tut');
-        spotText = 'Buy this to grow stronger, more unlock after';
+        menuSpotTarget = menuContent.querySelector('.perm.tut');
+        menuSpotText = 'Buy this to grow stronger — more unlock after';
       }
     }
-    requestAnimationFrame(() => setSpotlight(!!spotTarget, spotTarget, spotText));
+    startMenuSpot();
   }
 
   function showMenu(meta: Meta, opts: MenuOpts): void {
@@ -1997,7 +2096,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   function hideMenu(): void {
     menuEl.classList.remove('show');
     updmodal.classList.add('hide');
-    setSpotlight(false);
+    stopMenuSpot();
     tabbarEl.style.display = '';
     topEl.style.display = '';
   }
