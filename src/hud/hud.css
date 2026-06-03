@@ -977,6 +977,11 @@
 .hud .infomodal-card.im-gold .im-ok { background: linear-gradient(180deg, #ffeaa6, #ffc738); }
 .hud .im-ok:hover { filter: brightness(1.06); }
 .hud .im-ok:active { transform: translateY(1px); }
+/* subdued secondary action (e.g. "I paused on purpose") below the primary button */
+.hud .im-secondary { display: block; width: 100%; margin-top: 10px; padding: 10px; border-radius: 10px; cursor: pointer;
+  background: transparent; border: 1px solid #2f3854; color: #aab3c7; font: 700 13px 'Roboto', system-ui, sans-serif; }
+.hud .im-secondary:hover { color: #e6ebf5; border-color: #4a5570; }
+.hud .im-secondary:active { transform: translateY(1px); }
 
 /* ---- upgrade detail modal (click perm tile body → opens) ---- */
 .hud .updmodal { position: fixed; inset: 0; z-index: 70; display: flex; align-items: flex-start; justify-content: center;

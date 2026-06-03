@@ -6,7 +6,7 @@ import type { EarnSummary, HudHandlers, Meta, Settings, State } from './types';
 import { DT, catchUp } from './sim/offline';
 import { Sim, tickDying } from './sim/core';
 import { createState } from './sim/state';
-import { migrateMeta, reconcileResearch, claimCheckIn, startResearch, cancelResearch, rushResearch, buyLabSlot, gameSpeed, setGameSpeed, LABS, MAX_SLOTS } from './sim/labs';
+import { migrateMeta, reconcileResearch, claimCheckIn, startResearch, cancelResearch, rushResearch, buyLabSlot, gameSpeed, setGameSpeed, availableSpeeds, LABS, MAX_SLOTS } from './sim/labs';
 import { buyRunUpgradeBulk, buyPermBulk, unlockGroup, claimMilestone, claimAllMilestones, buyCard, buyCardSlot, setActiveCard, FIRST_PERM_COST, UPGRADES, SKILL_GROUPS, upgradeCap, CARD_ORDER, MAX_STARS, MAX_CARD_SLOTS } from './sim/skills';
 import { MAX_TIER, tierUnlocked, coinsForRun } from './sim/waves';
 import { selectCosmetic, buyCosmetic, type CosmeticKind } from './sim/cosmetics';
@@ -282,7 +282,8 @@ const handlers: HudHandlers = {
   },
   onFF: (sec) => {
     if (mode !== 'playing' || !sim || !sim.s.alive || paused) return;
-    const r = gsCatchUp(sec, 24 * 3600);
+    const gs = effSpeed();
+    const r = catchUp(sim, sec * gs, 24 * 3600 * gs);
     if (!sim.s.alive) {
       enterOverview(bankRun());
       return;
@@ -339,9 +340,40 @@ function reconcileLabs(): string[] {
   }
   return done;
 }
-function gsCatchUp(elapsedSec: number, capSec: number): ReturnType<typeof catchUp> {
-  const gs = effSpeed();
-  return catchUp(sim!, elapsedSec * gs, capSec * gs);
+const PAUSE_PROMPT_MIN = 20; // only ask about an unintended pause once the player was away this long
+
+// Highest battle speed the player has unlocked via the Game Speed lab (the last available step).
+function maxUnlockedSpeed(): number {
+  const sp = availableSpeeds(meta);
+  return sp[sp.length - 1];
+}
+
+// Replay the offline window at `speed`× and bank the result. If the hero died during the replay we
+// drop straight to the overview (returns true). Otherwise optionally surface the "while you were
+// away" spoils. A non-positive speed (paused) replays nothing.
+function applyOfflineCatchUp(elapsedSec: number, speed: number, surface: boolean): boolean {
+  if (speed <= 0 || elapsedSec <= 0) return false;
+  const r = catchUp(sim!, elapsedSec * speed, OFFLINE_CAP * speed);
+  if (!sim!.s.alive) {
+    enterOverview(bankRun(), true);
+    return true;
+  }
+  if (surface && elapsedSec > 20 && settings.showOfflineReward) hud.showOfflineReward(r);
+  return false;
+}
+
+// The run sat idle while PAUSED, so it earned nothing. Ask whether that was intentional; if not,
+// fast-forward the missed time at the player's fastest unlocked speed and resume the run there.
+function promptOfflinePause(elapsedSec: number): void {
+  const speed = maxUnlockedSpeed();
+  hud.showPausePrompt({ awaySec: Math.min(elapsedSec, OFFLINE_CAP), speed }, () => {
+    paused = false;
+    setGameSpeed(meta, speed);
+    hud.setDevToggle('pause', false);
+    if (applyOfflineCatchUp(elapsedSec, speed, true)) return; // hero died catching up → overview
+    saveMeta();
+    last = performance.now(); // the long real gap is consumed; don't feed it to the next frame
+  });
 }
 
 function togglePause(on?: boolean): void {
@@ -380,6 +412,10 @@ window.addEventListener('keydown', (e) => {
 function startRun(firstRun: boolean): void {
   const seed = (Math.random() * 4294967296) >>> 0;
   sim = new Sim(createState(seed, meta, firstRun));
+  // Always open a run at the fastest battle speed the player has unlocked (the last available step).
+  const sp = availableSpeeds(meta);
+  setGameSpeed(meta, sp[sp.length - 1]);
+  saveMeta();
   mode = 'playing';
   hud.hideMenu();
   hud.hideOverview();
@@ -497,17 +533,16 @@ document.addEventListener('visibilitychange', () => {
   } else if (mode === 'playing' && sim && sim.s.alive) {
     reconcileLabs();
     const el = hiddenAt ? (Date.now() - hiddenAt) / 1000 : 0;
-    if (el > 2 && !paused) {
-      const r = gsCatchUp(el, OFFLINE_CAP);
-      if (!sim.s.alive) {
-        enterOverview(bankRun(), true);
-        return;
-      }
-      if (el > 20 && settings.showOfflineReward) hud.showOfflineReward(r);
+    // A paused run (speed 0, or the dev/space pause) earns nothing while away — ask if that was
+    // intentional instead of silently dropping the time. Otherwise replay at the current speed.
+    const wasPaused = paused || gameSpeed(meta) === 0;
+    if (el > 2 && !wasPaused) {
+      if (applyOfflineCatchUp(el, effSpeed(), true)) return; // hero died catching up → overview
     }
     last = performance.now();
     running = true;
     requestAnimationFrame(frame);
+    if (el > PAUSE_PROMPT_MIN && wasPaused) promptOfflinePause(el);
   } else {
     reconcileLabs();
   }
@@ -528,16 +563,16 @@ if (saved && saved.state) {
   sim = new Sim(saved.state);
   mode = 'playing';
   const elapsed = (Date.now() - saved.savedAt) / 1000;
-  if (elapsed > 2) {
-    const r = gsCatchUp(elapsed, OFFLINE_CAP);
-    if (elapsed > 20 && sim.s.alive && settings.showOfflineReward) hud.showOfflineReward(r);
-  }
-  if (!sim.s.alive) enterOverview(bankRun(), true);
-  else {
+  // A run saved while paused (speed 0) earned nothing — we'll ask about it below rather than replay.
+  const wasPaused = gameSpeed(meta) === 0;
+  let ended = false;
+  if (elapsed > 2 && !wasPaused) ended = applyOfflineCatchUp(elapsed, effSpeed(), true);
+  if (!ended) {
     hud.hideMenu();
     last = performance.now();
     running = true;
     requestAnimationFrame(frame);
+    if (elapsed > PAUSE_PROMPT_MIN && wasPaused) promptOfflinePause(elapsed);
   }
 } else if (!meta.hasPlayed) {
   startRun(true);

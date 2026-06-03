@@ -405,6 +405,9 @@ export interface Hud {
   showHint(html: string): void;
   hideHint(): void;
   showOfflineReward(reward: OfflineReward): void;
+  // Returned-while-paused prompt: ask if the pause was intentional. onCollect fast-forwards the
+  // missed time at `speed`; onKeepPaused (optional) just dismisses.
+  showPausePrompt(info: { awaySec: number; speed: number }, onCollect: () => void, onKeepPaused?: () => void): void;
   setMeta(meta: Meta): void;
   root: HTMLElement;
   destroy?: () => void;
