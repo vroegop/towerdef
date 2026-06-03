@@ -13,6 +13,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "sim:progress": "vite-node tools/progress-sim.ts",
+    "sim:dashboard": "vite --open /tools/sim-dashboard/index.html",
     "test:watch": "vitest",
     "test:visual": "playwright test",
     "test:visual:update": "playwright test --update-snapshots",
