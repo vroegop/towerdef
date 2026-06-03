@@ -381,6 +381,9 @@ export interface HudHandlers {
   onCancelResearch?: (id: string) => boolean;
   onRushResearch?: (id: string) => boolean;
   onBuyLabSlot?: () => boolean;
+  onBuySuperpower?: (id: string) => boolean;          // unlock a superpower with Energy
+  onBuySuperTrack?: (spId: string, trackId: string) => boolean; // level a superpower track with Energy
+  onToggleSuperpower?: (id: string) => boolean;       // pause/resume an unlocked superpower
   onSetGameSpeed?: (speed: number) => number; // set the battle speed; returns the value now in effect
   onReconcileLabs?: () => string[] | void;
   onCheckIn?: () => unknown;

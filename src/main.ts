@@ -10,6 +10,7 @@ import { migrateMeta, reconcileResearch, claimCheckIn, startResearch, cancelRese
 import { buyRunUpgradeBulk, buyPermBulk, unlockGroup, claimMilestone, claimAllMilestones, buyCard, buyCardSlot, setActiveCard, FIRST_PERM_COST, UPGRADES, SKILL_GROUPS, upgradeCap, CARD_ORDER, MAX_STARS, MAX_CARD_SLOTS } from './sim/skills';
 import { MAX_TIER, tierUnlocked, coinsForRun } from './sim/waves';
 import { selectCosmetic, buyCosmetic, type CosmeticKind } from './sim/cosmetics';
+import { buySuperpower, buySuperTrack, toggleSuperpower } from './sim/superpowers';
 import { makeEnemy } from './sim/enemies';
 import { BULLET_SPEED, BULLET_R } from './sim/projectiles';
 import { Canvas2DRenderer } from './render/canvas2d';
@@ -185,6 +186,21 @@ const handlers: HudHandlers = {
     if (ok) saveMeta();
     return ok;
   },
+  onBuySuperpower: (id) => {
+    const ok = buySuperpower(meta, id);
+    if (ok) saveMeta();
+    return ok;
+  },
+  onBuySuperTrack: (spId, trackId) => {
+    const ok = buySuperTrack(meta, spId, trackId);
+    if (ok) saveMeta();
+    return ok;
+  },
+  onToggleSuperpower: (id) => {
+    const ok = toggleSuperpower(meta, id);
+    if (ok) saveMeta();
+    return ok;
+  },
   onSetGameSpeed: (speed) => {
     const v = setGameSpeed(meta, speed);
     saveMeta();
@@ -220,6 +236,10 @@ const handlers: HudHandlers = {
       hud.refreshMenu(meta);
     } else if (kind === 'vials') {
       meta.vials = 999999;
+      saveMeta();
+      hud.refreshMenu(meta);
+    } else if (kind === 'energy') {
+      meta.energy = 1e9; // 1b — dev top-up to test superpower unlocks/levels
       saveMeta();
       hud.refreshMenu(meta);
     } else if (kind === 'finishlabs') {

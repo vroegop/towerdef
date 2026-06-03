@@ -19,6 +19,9 @@ import {
   availableSpeeds, gameSpeed, speedAtLevel,
 } from '../sim/labs';
 import { cosmeticsOf, isCosmeticUnlocked, selectedCosmeticId, buffText, cosmeticById } from '../sim/cosmetics';
+import {
+  SUPERPOWERS, superUnlocked, superEnabled, superLevel, trackValue, trackCost, trackAtMax, nextUnlockCost,
+} from '../sim/superpowers';
 import { drawTowerSkin } from '../render/towers';
 
 // The HUD is a single themeable core: identical structure + wiring for every theme, restyled
@@ -94,6 +97,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     '    <span class="cur" title="Coins">' + icon('coinstar', 14, 'coin') + '<b id="h-coins">0</b></span>' +
     '    <span class="cur" title="Gems">' + icon('gem', 14, 'gem') + '<b id="h-gems">0</b></span>' +
     '    <span class="cur" title="Vials">' + icon('vial', 14, 'vial') + '<b id="h-vials">0</b></span>' +
+    '    <span class="cur" title="Energy (Superpowers)">' + icon('prestige', 14) + '<b id="h-energy">0</b></span>' +
     '  </div>' +
     // Battle-speed toggle: cycles the selectable speeds (0.5x/1x always; faster tiers via the Game Speed lab).
     '  <button class="iconbtn speedbtn" id="h-speed" title="Battle speed">' + icon('ffwd', 15) + '<b id="h-speedval">1x</b></button>' +
@@ -574,6 +578,68 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     });
   }
 
+  // ---------- shared SUPERPOWERS pane (the Prestige tab) ----------
+  // Energy chip + one panel per power: unlock button (Energy, by purchase order) when locked, else a
+  // pause toggle and a row per upgrade track (live value, level, Energy cost).
+  function eIc(sz = 13): string { return icon('prestige', sz); }
+  function superPaneHtml(meta: Meta): string {
+    const e = meta.energy || 0;
+    const nextCost = nextUnlockCost(meta);
+    let html = '<div class="coins-chip">' + eIc(15) + ' <b>' + abbr(e) + '</b> Energy</div>';
+    html += '<div class="superlist">';
+    for (const sp of SUPERPOWERS) {
+      const unlocked = superUnlocked(meta, sp.id);
+      html += '<div class="superpower' + (unlocked ? '' : ' locked') + '">';
+      html += '<div class="sp-head">' + icon(sp.icon, 20) + '<b>' + sp.name + '</b><span class="sp-cat">' + sp.cat + '</span></div>';
+      html += '<div class="sp-blurb">' + sp.blurb + '</div>';
+      if (!unlocked) {
+        const afford = nextCost > 0 && e >= nextCost;
+        html += '<button class="slotbtn sp-unlock' + (afford ? '' : ' cant') + '" data-superunlock="' + sp.id + '">Unlock · ' + abbr(nextCost) + ' ' + eIc(13) + '</button>';
+      } else {
+        const on = superEnabled(meta, sp.id);
+        html += '<button class="sp-toggle' + (on ? ' on' : '') + '" data-supertoggle="' + sp.id + '">' + (on ? 'Enabled' : 'Paused') + '</button>';
+        html += '<div class="sp-tracks">';
+        for (const tr of sp.tracks) {
+          const lvl = superLevel(meta, sp.id, tr.id), val = trackValue(meta, sp.id, tr.id);
+          const max = trackAtMax(meta, sp.id, tr.id), cost = trackCost(meta, sp.id, tr.id);
+          html += '<div class="sp-track">' +
+            '<span class="spt-label">' + tr.label + '</span>' +
+            '<span class="spt-val">' + tr.fmt(val) + '</span>' +
+            '<span class="spt-lvl">' + lvl + '/' + tr.max + '</span>' +
+            (max
+              ? '<span class="spt-buy max">MAX</span>'
+              : '<button class="spt-buy' + (e >= cost ? '' : ' cant') + '" data-supertrack="' + sp.id + '.' + tr.id + '">' + abbr(cost) + ' ' + eIc(11) + '</button>') +
+            '</div>';
+        }
+        html += '</div>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+  function wireSuperPane(scope: HTMLElement, rerender: () => void): void {
+    scope.querySelectorAll<HTMLElement>('[data-superunlock]').forEach((b) =>
+      b.addEventListener('click', () => {
+        if (handlers.onBuySuperpower && handlers.onBuySuperpower(b.dataset.superunlock!)) rerender();
+        else shake(scope.querySelector('.coins-chip'));
+      }),
+    );
+    scope.querySelectorAll<HTMLElement>('[data-supertoggle]').forEach((b) =>
+      b.addEventListener('click', () => {
+        if (handlers.onToggleSuperpower) handlers.onToggleSuperpower(b.dataset.supertoggle!);
+        rerender();
+      }),
+    );
+    scope.querySelectorAll<HTMLElement>('[data-supertrack]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const [sp, tr] = b.dataset.supertrack!.split('.');
+        if (handlers.onBuySuperTrack && handlers.onBuySuperTrack(sp, tr)) rerender();
+        else shake(scope.querySelector('.coins-chip'));
+      }),
+    );
+  }
+
   // ---------- in-game tab bar (3 icon subtabs: attack / defense / economic) ----------
   const tabsEl = $('#h-tabs'),
     contentEl = $('#h-tabcontent');
@@ -829,7 +895,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     if (!uel)
       uel = {
         wave: $('#h-wave'), hp: $('#h-hp'), gold: $('#h-gold'),
-        coins: $('#h-coins'), gems: $('#h-gems'), vials: $('#h-vials'),
+        coins: $('#h-coins'), gems: $('#h-gems'), vials: $('#h-vials'), energy: $('#h-energy'),
         dmg: $('#h-dmg'), regen: $('#h-regen'), coinmult: $('#h-coinmult'), fhp: $('#h-fhp'), fdmg: $('#h-fdmg'),
         hpfill: $('#h-hpfill'), wavefill: $('#h-wavefill'), statline: $('#h-statline'),
         tabbar: $('#h-tabbar'), stats: $('#h-stats'), speedval: $('#h-speedval'),
@@ -843,6 +909,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     uel.coins.textContent = cur(s.meta.coins || 0);
     uel.gems.textContent = cur(s.meta.gems || 0);
     uel.vials.textContent = cur(s.meta.vials || 0);
+    uel.energy.textContent = cur(s.meta.energy || 0);
     // our live stats (damage / regen / coin multiplier) from computeStats; the baseline enemy's HP/dmg
     // from the wave-strength curve at this (tier-scaled) wave.
     const st = computeStats(s);
@@ -1377,7 +1444,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     { id: 'upgrades', icon: 'upgrades' },
     { id: 'cards', icon: 'cards' },
     { id: 'labs', icon: 'flask', gated: true, unlockFn: (m) => labsTabUnlocked(m), unlock: 'Reach wave 30 to unlock Labs' },
-    { id: 'prestige', icon: 'prestige', locked: true, unlock: 'Prestige unlocks in Tier 3' },
+    { id: 'prestige', icon: 'prestige' }, // Superpowers: unlock + upgrade with Energy (earned per boss)
   ];
   let menuTab = 'hero',
     menuUpTab = 'attack',
@@ -1777,6 +1844,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     } else if (menuTab === 'labs') {
       // share the centered single-column layout used by the upgrades/cards tabs
       html += '<div class="cardspane">' + labsPaneHtml(meta) + '</div>';
+    } else if (menuTab === 'prestige') {
+      html += '<div class="cardspane">' + superPaneHtml(meta) + '</div>';
     } else {
       html += '<div class="locked-tab">' + icon('lock', 46) + '<div class="lockmsg">Unlocks later</div></div>';
     }
@@ -1848,6 +1917,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       wireCardsPane(menuContent, renderMenu);
     } else if (menuTab === 'labs') {
       wireLabsPane(menuContent, renderMenu);
+    } else if (menuTab === 'prestige') {
+      wireSuperPane(menuContent, renderMenu);
     }
     // tutorial spotlight
     let spotTarget: HTMLElement | null = null,

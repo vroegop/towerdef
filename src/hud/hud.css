@@ -1047,3 +1047,24 @@
   background: linear-gradient(180deg, #cdb8ff, #9a7cff); box-shadow: 0 2px 0 #5a3fae;
   display: inline-flex; align-items: center; gap: 4px; }
 .hud .twbuy:hover { filter: brightness(1.05); }
+
+/* ---------- Superpowers (Prestige tab) ---------- */
+.hud .superlist { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+.hud .superpower { background: rgba(21,24,35,.7); border: 1px solid #262c3d; border-radius: 8px; padding: 12px 14px; text-align: left; }
+.hud .superpower.locked { opacity: .92; }
+.hud .sp-head { display: flex; align-items: center; gap: 8px; color: #e8ecf5; font-size: 15px; }
+.hud .sp-head b { font-weight: 700; }
+.hud .sp-cat { margin-left: auto; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #8b93a7; border: 1px solid #2d3344; border-radius: 4px; padding: 1px 6px; }
+.hud .sp-blurb { color: #9aa3b6; font-size: 12px; line-height: 1.35; margin: 6px 0 10px; }
+.hud .sp-toggle { display: inline-block; background: #11151f; border: 1px solid #2d3344; border-radius: 6px; color: #8b93a7; font: inherit; font-size: 12px; padding: 4px 14px; cursor: pointer; margin-bottom: 10px; }
+.hud .sp-toggle.on { border-color: #3ad07a; color: #3ad07a; }
+.hud .sp-tracks { display: flex; flex-direction: column; gap: 6px; }
+.hud .sp-track { display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: 10px; font-size: 13px; color: #cdd4e4; }
+.hud .spt-label { color: #aab2c4; }
+.hud .spt-val { color: #ffd24a; font-weight: 700; min-width: 48px; text-align: right; }
+.hud .spt-lvl { color: #8b93a7; font-size: 11px; min-width: 38px; text-align: right; }
+.hud .spt-buy { background: #11151f; border: 1px solid #2d3344; border-radius: 6px; color: #cdd4e4; font: inherit; font-size: 12px; padding: 3px 9px; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; }
+.hud .spt-buy:hover:not(.cant) { border-color: #4aa8ff; }
+.hud .spt-buy.cant { opacity: .45; cursor: default; }
+.hud .spt-buy.max { border-color: transparent; color: #3ad07a; cursor: default; }
+.hud .sp-unlock { margin-top: 0; }
