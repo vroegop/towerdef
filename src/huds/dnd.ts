@@ -81,12 +81,15 @@ const CSS = `
 .hud.theme-dnd .over-card,
 .hud.theme-dnd .cardmodal-inner,
 .hud.theme-dnd .modal-inner,
+.hud.theme-dnd .mgmtmodal-inner,
 .hud.theme-dnd .updmodal-inner {
   background: var(--parch);
   background-image: radial-gradient(circle at 30% 8%, var(--parch-lt), #e3d3b0 70%);
   border: 1px solid #8a6a3a; box-shadow: inset 0 0 0 3px #8a6a3a, 0 12px 30px rgba(0,0,0,.5);
   color: var(--ink);
 }
+.hud.theme-dnd .mgmt-head { border-bottom: 1px solid var(--rule); }
+.hud.theme-dnd .mgmt-head h2 { color: var(--ink); font-family: 'Cinzel Decorative', serif; }
 .hud.theme-dnd .iconclose { color: var(--ink-dim); }
 .hud.theme-dnd .iconclose:hover { color: var(--ink); }
 /* upgrade detail modal on parchment */

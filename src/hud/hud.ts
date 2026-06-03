@@ -1761,7 +1761,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     } else if (menuTab === 'cards') {
       html += cardsPaneHtml(meta);
     } else if (menuTab === 'labs') {
-      html += labsPaneHtml(meta);
+      // share the centered single-column layout used by the upgrades/cards tabs
+      html += '<div class="cardspane">' + labsPaneHtml(meta) + '</div>';
     } else {
       html += '<div class="locked-tab">' + icon('lock', 46) + '<div class="lockmsg">Unlocks later</div></div>';
     }
