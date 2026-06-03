@@ -1,7 +1,7 @@
 /* src/hud/hud.ts — in-game HUD (top stats + 3-tab upgrade bar), the between-games MENU
    (5 bottom tabs), a spotlight tutorial, a milestones modal, and a settings modal.
    Handlers: onBuyRun, onBuyPerm, onClaimMilestone, onStartRun, onDev, onFF. */
-import type { BulkQty, CardDef, CardDrawResult, CardInstance, Hud as HudInstance, HudFactory, HudHandlers, MenuOpts, Meta, Settings, State, ThemeDef, EarnSummary, UpgradeDef } from '../types';
+import type { BulkQty, CardDef, CardDrawResult, CardInstance, Hud as HudInstance, HudFactory, HudHandlers, MenuOpts, Meta, OfflineReward, Settings, State, ThemeDef, EarnSummary, UpgradeDef } from '../types';
 import { WAVE, waveCount, tierDifficulty, coinMult, coinsForRun, waveStr, waveSpeed, MAX_TIER, TIER_UNLOCK_WAVE, tierUnlocked } from '../sim/waves';
 import { TYPES } from '../sim/registries';
 import { spawnChances } from '../sim/enemies';
@@ -154,6 +154,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     '</div></div>' +
     '<div class="over hide" id="h-over"><div class="over-card" id="h-over-card"></div></div>' +
     '<div class="tut-dim hide" id="h-spot"></div><div class="tut-thought hide" id="h-thought"></div>' +
+    // Floating "Skip tutorial" button, shown for the duration of the in-run guided tutorial.
+    '<button class="tut-skip hide" id="h-tutskip">' + icon('fwd', 14) + ' Skip tutorial</button>' +
+    // Generic centered info modal (tutorial recap, offline-reward summary) — never auto-dismisses.
+    '<div class="infomodal hide" id="h-infomodal"><div class="infomodal-card" id="h-infomodal-card"></div></div>' +
     '<div class="lk-tip hide" id="h-lktip"></div>';
 
   // A themed skin ships its OWN override stylesheet, injected here.
@@ -590,12 +594,13 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     taughtTabs = false;
   // ---- in-run "temporary upgrades" tutorial (see runTut(), driven from update()) ----
   // Step the player is on, or null when inactive. While active the tab bar is locked to the step's
-  // target tab and only the target upgrade is buyable, so the lesson can't be skipped.
-  type IrStep = 'damage' | 'health' | 'recap';
+  // target tab and only the target upgrade is buyable; a floating "Skip tutorial" button can bail out
+  // at any point. On completion a recap modal explains run-vs-Workshop permanence.
+  type IrStep = 'damage' | 'health';
   let irStep: IrStep | null = null;
   const irTargetId = (): string | null => (irStep === 'damage' ? 'rangedDamage' : irStep === 'health' ? 'health' : null);
   const irTargetTab = (): string => (irStep === 'health' ? 'defense' : 'attack');
-  const irLocked = (): boolean => irStep === 'damage' || irStep === 'health'; // recap leaves the bar free
+  const irLocked = (): boolean => irStep === 'damage' || irStep === 'health';
   // Does a tab have at least one buyable (unlocked) upgrade right now? Locked-only tabs (e.g. the
   // gated Utility/economic tab before it's bought in the Workshop) render empty, so we never open them.
   function tabHasContent(tab: string, meta: Meta | null): boolean {
@@ -736,7 +741,12 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   // Fires once, the first moment the player can afford one Damage + one Health upgrade. Forces buying
   // one of each, then explains run upgrades are temporary (the Workshop's are permanent). Persisted via
   // meta.inRunTutDone — set the instant both are bought, so a mid-run death can't make it repeat.
-  let irDmgBase = 0, irHpBase = 0, irRecapAt = 0, irLastState: State | null = null;
+  let irDmgBase = 0, irHpBase = 0, irLastState: State | null = null;
+  const skipBtn = $('#h-tutskip');
+  skipBtn.addEventListener('click', () => skipTut());
+  function updateSkipBtn(): void {
+    skipBtn.classList.toggle('hide', !irLocked());
+  }
   function irForceTab(tab: string): void {
     if (tabOpen && activeTab === tab) return;
     activeTab = tab;
@@ -744,22 +754,30 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     renderTabButtons();
     renderTabContent();
   }
-  function irReset(): void {
+  // Tear down the active lesson (spotlight + tab lock + skip button). `done` banks meta.inRunTutDone
+  // so a skipped/finished tutorial never returns; a fresh-run abandon leaves the flag untouched.
+  function endTut(done: boolean): void {
     irStep = null;
+    if (done && lastS) { lastS.meta.inRunTutDone = true; handlers.onSaveMeta && handlers.onSaveMeta(); }
     setSpotlight(false);
     renderTabButtons();
     renderTabContent();
+    updateSkipBtn();
+  }
+  function skipTut(): void {
+    if (!irStep) return;
+    endTut(true);
   }
   function runTut(s: State): void {
     const meta = s.meta;
     // A fresh run object means the player restarted; abandon a half-finished lesson so it can't get
-    // stuck spotlighting an unaffordable upgrade (the recap already banked the flag, so it won't repeat).
+    // stuck spotlighting an unaffordable upgrade. The flag stays unset, so it can fire again later.
     if (irLastState !== s) {
       irLastState = s;
-      if (irStep && irStep !== 'recap') irReset();
+      if (irStep) endTut(false);
     }
     if (!irStep) {
-      if (s.firstRun || meta.inRunTutDone) return;
+      if (s.firstRun || meta.inRunTutDone || settings.showTutorials === false) return;
       if (!isUnlocked(meta, 'rangedDamage') || !isUnlocked(meta, 'health')) return;
       if (runAtMax(s, 'rangedDamage') || runAtMax(s, 'health')) return;
       if (s.econ.gold < runUpgradeCost(s, 'rangedDamage') + runUpgradeCost(s, 'health')) return;
@@ -777,20 +795,20 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     if (irStep === 'health') {
       irForceTab('defense');
       if (boughtOf(s, 'health') > irHpBase) {
-        irStep = 'recap';
-        irRecapAt = performance.now();
-        meta.inRunTutDone = true; // mandatory part (buy one of each) is done — never show it again
-        handlers.onSaveMeta && handlers.onSaveMeta();
-        renderTabButtons(); // drop the tab lock — the player can roam again
-        renderTabContent();
-        setSpotlight(false);
-        showHint('<b>Run upgrades are temporary.</b><br>They reset every game. Buy upgrades in the <b>Workshop</b> to keep them <b>forever</b>.');
+        endTut(true); // mandatory part (buy one of each) is done — unlock, bank the flag, then recap
+        showInfoModal({
+          accent: 'amber',
+          iconName: 'prestige',
+          title: 'Run upgrades are temporary',
+          body: 'Upgrades you buy <b>during a run</b> vanish when it ends. To grow <b>permanently</b>, spend your ' +
+            coinsIc(14) + ' on upgrades in the <b>Workshop</b> between runs.',
+          primary: 'Got it',
+          dontShowAgain: { key: 'showTutorials', label: "Don't show tutorials again" },
+        });
+        return;
       }
     }
-    if (irStep === 'recap') {
-      if (performance.now() - irRecapAt > 6000) { irStep = null; hideHint(); }
-      return;
-    }
+    updateSkipBtn();
     // spotlight the step's target upgrade every frame (so it tracks any layout shift)
     const tgt = irTargetId();
     const btn = tgt && rowEls[tgt] ? rowEls[tgt].btn : null;
@@ -1024,6 +1042,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     { key: 'coinOnKill', label: 'Coins on kill', icon: 'coinstar', cls: 'coin' },
     { key: 'enemyHp', label: 'Enemy health bars', icon: 'heart', cls: 'hp' },
     { key: 'damageNumbers', label: 'Damage numbers', icon: 'burst' },
+    { key: 'showTutorials', label: 'Show tutorials', icon: 'upgrades' },
+    { key: 'showOfflineReward', label: 'Offline summary', icon: 'best' },
   ];
   const setmodal = $('#h-setmodal'),
     setmodalInner = $('#h-setmodal-inner');
@@ -1046,9 +1066,9 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       }),
     );
   function openSettings(): void {
-    // "Display" = on-screen visual indicators only (the renderer reads these); no sim/persisted state.
+    // On-screen indicators (read by the renderer) + which guided popups to play. No sim state.
     setmodalInner.innerHTML =
-      '<div class="statshead"><h2>Display</h2><button class="iconclose" id="h-set-close" title="Close">' +
+      '<div class="statshead"><h2>Settings</h2><button class="iconclose" id="h-set-close" title="Close">' +
       icon('close', 18) + '</button></div><div class="setbody">' + settingsRowsHtml() + '</div>';
     $('#h-set-close').addEventListener('click', () => setmodal.classList.add('hide'));
     wireSettingsRows(setmodalInner);
@@ -1057,6 +1077,72 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   setmodal.addEventListener('click', (e) => {
     if (e.target === setmodal) setmodal.classList.add('hide');
   });
+
+  // ---------- generic centered info modal (tutorial recap + offline-reward summary) ----------
+  // Never auto-dismisses — the player closes it with the primary button. The optional "don't show
+  // again" switch flips the matching Display setting, so each popup can be re-enabled from Settings.
+  const infomodal = $('#h-infomodal'),
+    infocard = $('#h-infomodal-card');
+  function hideInfoModal(): void {
+    infomodal.classList.add('hide');
+  }
+  // click the dimmed backdrop (not the card) to dismiss — same idiom as the other modals
+  infomodal.addEventListener('click', (e) => {
+    if (e.target === infomodal) hideInfoModal();
+  });
+  interface InfoModalOpts {
+    accent: string;     // tint class suffix for the glow/badge: 'amber' (tutorial) | 'gold' (reward)
+    iconName: string;
+    title: string;
+    body: string;       // inner HTML
+    rewards?: string;   // optional reward-chip HTML row
+    primary: string;    // primary button label
+    onPrimary?: () => void;
+    dontShowAgain?: { key: keyof Settings; label: string };
+  }
+  function showInfoModal(o: InfoModalOpts): void {
+    const dsa = o.dontShowAgain;
+    infocard.className = 'infomodal-card im-' + o.accent;
+    infocard.innerHTML =
+      '<div class="im-glow"></div>' +
+      '<div class="im-badge">' + icon(o.iconName, 30) + '</div>' +
+      '<h2 class="im-title">' + o.title + '</h2>' +
+      '<div class="im-body">' + o.body + '</div>' +
+      (o.rewards ? '<div class="im-rewards">' + o.rewards + '</div>' : '') +
+      (dsa ? '<button class="im-dsa" id="h-im-dsa"><span class="im-check"><i></i></span><span>' + dsa.label + '</span></button>' : '') +
+      '<button class="im-ok" id="h-im-ok">' + o.primary + '</button>';
+    if (dsa) {
+      const b = $('#h-im-dsa');
+      b.addEventListener('click', () => {
+        const off = !b.classList.contains('on'); // checked = "don't show" → the setting goes OFF
+        b.classList.toggle('on', off);
+        settings[dsa.key] = !off;
+        handlers.onSaveSettings && handlers.onSaveSettings();
+      });
+    }
+    $('#h-im-ok').addEventListener('click', () => {
+      hideInfoModal();
+      o.onPrimary && o.onPrimary();
+    });
+    infomodal.classList.remove('hide');
+  }
+  // Public: the "while you were away" summary, shown once on return when a run survived offline.
+  function showOfflineReward(reward: OfflineReward): void {
+    const chip = (ic: string, val: string, cls?: string): string =>
+      '<span class="im-chip">' + icon(ic, 18, cls) + '<b>' + val + '</b></span>';
+    showInfoModal({
+      accent: 'gold',
+      iconName: 'best',
+      title: 'While you were away',
+      body: 'Your hero kept fighting in your absence and banked these spoils:',
+      rewards:
+        chip('coin', '+' + abbr(reward.gold || 0), 'gold') +
+        chip('burst', '+' + abbr(reward.kills || 0)) +
+        chip('tier', '+' + abbr(reward.waves || 0)),
+      primary: 'Collect',
+      dontShowAgain: { key: 'showOfflineReward', label: "Don't show this again" },
+    });
+  }
 
   // ---------- side menu: a narrow icon rail, toggled by the header button; no auto-dismiss ----------
   // Each rail icon opens a self-dismissing modal (Settings) or panel (Run Stats), so the unintrusive
@@ -1255,6 +1341,11 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     cardsModal.classList.add('hide');
     labsModal.classList.add('hide');
     $('#h-stats').classList.add('hide');
+    // leaving gameplay: abandon any in-progress tutorial and drop its overlays / recap modal
+    irStep = null;
+    setSpotlight(false);
+    skipBtn.classList.add('hide');
+    infomodal.classList.add('hide');
   };
 
   // ---------- MENU ----------
@@ -1844,7 +1935,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     }
   }, 1000);
 
-  return { update, showMenu, refreshMenu, hideMenu, showOverview, hideOverview, showHint, hideHint, setMeta, root };
+  return { update, showMenu, refreshMenu, hideMenu, showOverview, hideOverview, showHint, hideHint, showOfflineReward, setMeta, root };
 }
 
 // Factory for a themed skin: same core + wiring, restyled by `theme = { cls, css }`.
