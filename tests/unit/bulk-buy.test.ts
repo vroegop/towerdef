@@ -43,7 +43,7 @@ describe('perm bulk plan + buy (coins)', () => {
     expect(permBulkPlan(meta, id, 1).canBuy).toBe(true);
     expect(permBulkPlan(meta, id, 5).canBuy).toBe(false); // can't afford all 5
     expect(buyPermBulk(meta, id, 5)).toBe(0); // atomic → nothing bought
-    expect(permBought(meta, id)).toBe(0);
+    expect(permBought(meta, id)).toBe(1); // 0 purchased + the free level-1 (unlocked skill)
   });
 
   it('buys exactly N when affordable and deducts the planned cost', () => {
@@ -52,7 +52,7 @@ describe('perm bulk plan + buy (coins)', () => {
     const plan = permBulkPlan(meta, id, 5);
     const before = meta.coins;
     expect(buyPermBulk(meta, id, 5)).toBe(5);
-    expect(permBought(meta, id)).toBe(5);
+    expect(permBought(meta, id)).toBe(6); // 5 purchased + the free level-1 (unlocked skill)
     expect(before - meta.coins).toBe(plan.cost);
   });
 

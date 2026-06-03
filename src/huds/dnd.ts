@@ -178,6 +178,14 @@ const CSS = `
 @media (prefers-reduced-motion: reduce) {
   .hud.theme-dnd .chip::after { animation: none; opacity: 0; }
 }
+/* Mobile: the gemstones are pointed on the left/right (tips at the 1%/99% midline) with empty
+   triangular space beside each body, so on narrow screens we overlap neighbours INTO that space
+   rather than shrink the stones — the points interlock and a full currency row fits before it wraps.
+   Centres land ~74px apart vs. the 44px-wide bodies, so the carved faces never touch. */
+@media (max-width: 480px) {
+  .hud.theme-dnd .chips { gap: 0; }
+  .hud.theme-dnd .chips .chip { margin-inline: -7px; }
+}
 
 /* in-run Tower-style HUD (currency strip, wave banner, You/Enemy stat lines) in parchment + ink. */
 .hud.theme-dnd .cur { color: var(--ink); }
