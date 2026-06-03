@@ -329,6 +329,7 @@ const CSS = `
 .hud.theme-dnd .cmhead .cm-title span, .hud.theme-dnd .cm-sub { color: var(--ink-dim); }
 .hud.theme-dnd .cardbtn .cb-t { color: var(--ink); }
 .hud.theme-dnd .cardbtn .cb-s { color: var(--ink-dim); }
+.hud.theme-dnd .cardbtn .cb-cost { color: var(--ink); }
 
 /* labs → spell research scrolls */
 .hud.theme-dnd .lab { background: var(--parch-lt); border: 1px solid var(--rule); }
@@ -366,8 +367,10 @@ const CSS = `
 .hud.theme-dnd .over-back .ic { color: var(--ink-dim); }
 .hud.theme-dnd .endbody { color: var(--ink-dim); }
 .hud.theme-dnd .setrow { color: var(--ink); border-bottom: 1px dotted var(--rule); }
-.hud.theme-dnd .setrow .switch { background: var(--parch-dk); }
+.hud.theme-dnd .setrow .switch { background: var(--parch-dk); border: 1px solid #8a6a3a; }
+.hud.theme-dnd .setrow .switch i { background: var(--ink-dim); }
 .hud.theme-dnd .setrow.on .switch { background: #6a8a3a; }
+.hud.theme-dnd .setrow.on .switch i { background: var(--parch-lt); }
 /* milestone trail on parchment: an inked spine, gilded to the furthest wave, a wax-seal "here" pin */
 .hud.theme-dnd .msrail::before { background: var(--rule); }
 .hud.theme-dnd .msrow.reached .msrail::before { background: linear-gradient(180deg, #d9a94a, var(--gold-ink)); }

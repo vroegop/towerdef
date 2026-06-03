@@ -248,7 +248,7 @@ const UPGRADE_SPECS: UpgradeSpec[] = [
   { id: 'dmgPerMeter', tab: 'attack', icon: 'ruler', label: 'DMG/m',
     name: 'Damage per Metre',
     tip: (up) => 'Damage multiplier per metre of distance to the target. Max: ' + up.fmt(up.value(up.max)) + '/m.',
-    max: 200, curve: { kind: 'linear', base: 0, per: 0.0005 }, fmt: (v) => '+' + v.toFixed(3) + '×/m',
+    max: 200, curve: { kind: 'linear', base: 0, per: 0.00005 }, fmt: (v) => '+' + v.toFixed(4) + '×/m',
     gold: curve(25, 1.55), coin: curve(6, 1.0018) },
   { id: 'range', stat: 'rangeM', tab: 'attack', icon: 'range', label: 'Range',
     name: 'Attack Range',
@@ -566,11 +566,13 @@ export const upgradeCap = (meta: Meta, id: string): number => capOf(meta, id);
 export function boughtOf(state: State, id: string): number {
   const perm = (state.meta && state.meta.perm && state.meta.perm[id]) || 0;
   const run = (state.run && state.run.levels && state.run.levels[id]) || 0;
-  return Math.min(capOf(state.meta, id), perm + run);
+  // every UNLOCKED upgrade starts at level 1 (a free first level on top of what's purchased).
+  const free = isUnlocked(state.meta, id) ? 1 : 0;
+  return Math.min(capOf(state.meta, id), perm + run + free);
 }
 // perm-only level (used by the between-runs menu, which has no live run state)
 export const permBought = (meta: Meta, id: string): number =>
-  Math.min(capOf(meta, id), (meta && meta.perm && meta.perm[id]) || 0);
+  Math.min(capOf(meta, id), ((meta && meta.perm && meta.perm[id]) || 0) + (isUnlocked(meta, id) ? 1 : 0));
 
 // ---- CARDS (collectable; bought/levelled with a separate active-play currency: GEMS) ----
 // Cards now have 3 RARITIES and up to 15 LEVELS. Only cards placed in an ACTIVE SLOT affect stats.
@@ -1065,7 +1067,8 @@ export function runUpgradeCost(state: State, id: string): number {
 }
 export function runAtMax(state: State, id: string): boolean {
   const perm = (state.meta.perm && state.meta.perm[id]) || 0;
-  return perm + (state.run.levels[id] || 0) >= capOf(state.meta, id);
+  const free = isUnlocked(state.meta, id) ? 1 : 0; // the free level 1 counts toward the cap
+  return perm + (state.run.levels[id] || 0) + free >= capOf(state.meta, id);
 }
 // `rng` (the live Sim PRNG) is optional; when present it drives the Free-Upgrades roll.
 export function buyRunUpgrade(state: State, id: string, rng?: { next(): number }): boolean {
@@ -1104,14 +1107,15 @@ export function permCost(meta: Meta, id: string): number {
   return up ? up.coin.cost(n) : 0;
 }
 export function permAtMax(meta: Meta, id: string): boolean {
-  return ((meta && meta.perm && meta.perm[id]) || 0) >= capOf(meta, id);
+  const free = isUnlocked(meta, id) ? 1 : 0; // the free level 1 counts toward the cap
+  return ((meta && meta.perm && meta.perm[id]) || 0) + free >= capOf(meta, id);
 }
 export function buyPerm(meta: Meta, id: string): boolean {
   const up = UP_BY_ID[id];
   if (!up) return false;
   if (!isUnlocked(meta, id)) return false; // gated: must be unlocked in the Workshop first
   const n = (meta.perm && meta.perm[id]) || 0;
-  if (n >= capOf(meta, id)) return false;
+  if (permAtMax(meta, id)) return false;
   const cost = up.coin.cost(n);
   if ((meta.coins || 0) < cost) return false;
   meta.coins -= cost;

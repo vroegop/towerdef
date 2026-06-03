@@ -1078,7 +1078,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   function openSettings(): void {
     // On-screen indicators (read by the renderer) + which guided popups to play. No sim state.
     setmodalInner.innerHTML =
-      '<div class="statshead"><h2>Settings</h2><button class="iconclose" id="h-set-close" title="Close">' +
+      '<div class="statshead"><h2>Show info</h2><button class="iconclose" id="h-set-close" title="Close">' +
       icon('close', 18) + '</button></div><div class="setbody">' + settingsRowsHtml() + '</div>';
     $('#h-set-close').addEventListener('click', () => setmodal.classList.add('hide'));
     wireSettingsRows(setmodalInner);
