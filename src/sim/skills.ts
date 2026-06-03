@@ -94,10 +94,11 @@ const stepCurve = (start: number, segs: [number, number, number][]): UpgradeCurv
   },
 });
 // Shared endgame curves for the four deep skills (rangedDamage, health, regen, armor).
-// Permanent COIN price (all four share it): 30 → ×1.01+1/level to 1k, ×1.005/level to 5k, ×1.05
-// beyond. In-run GOLD price keeps each skill's own start, then ramps gently: ×1.01+1/level to 100,
-// ×1.005 to 1k, ×1.0003 to 3k, ×1.0002 to 6k.
-const DEEP_COIN_SEGS: [number, number, number][] = [[1000, 1.01, 1], [5000, 1.005, 0], [Infinity, 1.05, 0]];
+// Permanent COIN price (all four share it): 30 → ×1.01+1/level to 1k, ×1.005/level to 5k, ×1.02
+// beyond (a sharp end-game ramp the player can't keep up with, but not as runaway as ×1.05). In-run
+// GOLD price keeps each skill's own start, then ramps gently: ×1.01+1/level to 100, ×1.005 to 1k,
+// ×1.0003 to 3k, ×1.0002 to 6k.
+const DEEP_COIN_SEGS: [number, number, number][] = [[1000, 1.01, 1], [5000, 1.005, 0], [Infinity, 1.02, 0]];
 const DEEP_GOLD_SEGS: [number, number, number][] = [[100, 1.01, 1], [1000, 1.005, 0], [3000, 1.0003, 0], [Infinity, 1.0002, 0]];
 const deepCoin = stepCurve(30, DEEP_COIN_SEGS);
 const deepGold = (start: number): UpgradeCurve => stepCurve(start, DEEP_GOLD_SEGS);
