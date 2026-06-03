@@ -23,6 +23,7 @@ import {
   SUPERPOWERS, superUnlocked, superEnabled, superLevel, trackValue, trackCost, trackAtMax, nextUnlockCost,
 } from '../sim/superpowers';
 import { drawTowerSkin } from '../render/towers';
+import { cardArt } from './card-art';
 
 // The HUD is a single themeable core: identical structure + wiring for every theme, restyled
 // by a scoping class (`theme.cls`) + an injected override stylesheet (`theme.css`).
@@ -47,16 +48,21 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     cardslot: '<rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M12 9.5v5M9.5 12h5"/>',
     // gold = two solid gold coins (currentColor, tinted by the 'gold' class). Each coin has a slight
     // shadow; the front coin's shadow is drawn after the back coin so it casts onto it at the overlap.
-    coin: '<circle cx="15.3" cy="10.6" r="6" fill="rgba(8,10,16,.4)" stroke="none"/><circle cx="14.5" cy="9.5" r="6" fill="currentColor" stroke="none"/><circle cx="10.3" cy="15.6" r="6" fill="rgba(8,10,16,.4)" stroke="none"/><circle cx="9.5" cy="14.5" r="6" fill="currentColor" stroke="none"/>',
+    coin: '<g class="ccspin"><circle cx="15.3" cy="10.6" r="6" fill="rgba(8,10,16,.4)" stroke="none"/><circle cx="14.5" cy="9.5" r="6" fill="currentColor" stroke="none"/><circle cx="10.3" cy="15.6" r="6" fill="rgba(8,10,16,.4)" stroke="none"/><circle cx="9.5" cy="14.5" r="6" fill="currentColor" stroke="none"/></g>',
     // out-run coins = a struck COPPER coin with a star. Explicit metallic palette (copper body, dark
     // rim, lighter star) + a slight offset shadow so it reads as a real coin, not a flat outline.
-    coinstar: '<circle cx="12.9" cy="12.9" r="8.5" fill="rgba(8,10,16,.28)" stroke="none"/>' +
+    coinstar: '<g class="ccspin"><circle cx="12.9" cy="12.9" r="8.5" fill="rgba(8,10,16,.28)" stroke="none"/>' +
       '<circle cx="12" cy="12" r="8.5" fill="#c47f3c" stroke="#6e3f12" stroke-width="1"/>' +
-      '<path transform="translate(12 12) scale(.46) translate(-11.8 -11.4)" fill="#e8b06a" stroke="none" d="M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6z"/>',
+      '<path transform="translate(12 12) scale(.46) translate(-11.8 -11.4)" fill="#e8b06a" stroke="none" d="M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6z"/></g>',
     // gems = faceted brilliant-cut gem (card currency)
-    gem: '<path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/>',
-    // vials = erlenmeyer flask with liquid level (lab currency)
-    vial: '<path d="M9 2h6"/><path d="M15 2v8l4 9q0 2-3 2H8q-3 0-3-2l4-9V2"/><path d="M7.5 16h9"/>',
+    // gems = faceted brilliant-cut gem + a sparkle that glimmers (see .ic .gemtw)
+    gem: '<path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/>' +
+      '<g class="gemtw"><path d="M18.4 2.4l.6 1.9 1.9.6-1.9.6-.6 1.9-.6-1.9-1.9-.6 1.9-.6Z" fill="currentColor" stroke="none"/></g>',
+    // vials = erlenmeyer flask with liquid level (lab currency) + carbonation bubbles rising (.ic .vb)
+    vial: '<path d="M9 2h6"/><path d="M15 2v8l4 9q0 2-3 2H8q-3 0-3-2l4-9V2"/><path d="M7.5 16h9"/>' +
+      '<g class="vbubs"><circle class="vb vb1" cx="11" cy="17.6" r="1" fill="currentColor" stroke="none"/>' +
+      '<circle class="vb vb2" cx="13.2" cy="18.2" r=".8" fill="currentColor" stroke="none"/>' +
+      '<circle class="vb vb3" cx="12" cy="16.6" r=".7" fill="currentColor" stroke="none"/></g>',
     burst: '<path d="M12 2v5M12 17v5M2 12h5M17 12h5M5.2 5.2l3.4 3.4M18.8 5.2l-3.4 3.4M5.2 18.8l3.4-3.4M18.8 18.8l-3.4-3.4"/>',
     bow: '<path d="M8 3a10 10 0 0 1 0 18"/><path d="M8 3v18"/><path d="M5 12h13"/><path d="M15 9l3 3-3 3"/><path d="M5 12l2.5-2M5 12l2.5 2"/>',
     bullseye: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.6"/>',
@@ -84,7 +90,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     stopwatch: '<circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9"/><path d="M9.5 2h5"/><path d="M12 2v3.5"/><path d="M18.8 6.8l1.4-1.4"/>',
     crystal: '<path d="M12 2l4 6-4 14-4-14z"/><path d="M8 8h8"/>', // a tall shard, matching the Crystal Circle art
     // atom = Energy. Nucleus (static) + 3 orbit ellipses in a group that slowly spins (see .ic.atom .orbits)
-    atom: '<circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/><g class="orbits"><ellipse cx="12" cy="12" rx="10" ry="4.2"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(120 12 12)"/></g>',
+    atom: '<circle class="nuc" cx="12" cy="12" r="2" fill="currentColor" stroke="none"/><g class="orbits"><ellipse cx="12" cy="12" rx="10" ry="4.2"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(120 12 12)"/></g>',
   };
   function icon(name: string, size?: number, cls?: string): string {
     size = size || 16;
@@ -297,7 +303,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       (active ? ' data-aslot="' + slot + '"' : '') + ' style="--tint:' + def.tint + '">' +
       '<div class="card-band"></div>' +
       '<div class="card-name">' + def.name + '</div>' +
-      '<div class="card-img">' + icon(def.art, 50) + '</div>' +
+      '<div class="card-img">' + cardArt(card.id, 50) + '</div>' +
       starsHtml(stars) +
       '<div class="card-desc">' + cardDescText(def, stars) + '</div></div>'
     );
@@ -375,7 +381,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       '<div class="rc-face rc-front">' +
       '<div class="card-band"></div>' +
       '<div class="rc-name">' + def.name + '</div>' +
-      '<div class="rc-img">' + icon(def.art, 84) + '</div>' +
+      '<div class="rc-img">' + cardArt(r.id, 84) + '</div>' +
       revealStarSlots(after, change) +
       '<div class="rc-desc">' + cardDescText(def, after) + '</div>' +
       '<div class="rc-info">' + (CARD_INFO[r.id] || '') + '</div>' +
@@ -436,7 +442,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     const info = CARD_INFO[id] || '';
     $('#h-cardmodal-inner').innerHTML =
       '<div class="cmhead" data-card="' + id + '" style="--tint:' + def.tint + '">' +
-      '<div class="cm-medal">' + icon(def.art, 30) + '</div>' +
+      '<div class="cm-medal">' + cardArt(id, 30) + '</div>' +
       '<div class="cm-title"><b>' + def.name + '</b><span class="cm-rarity ' + def.rarity + '">' + def.rarity + '</span>' +
       (info ? '<span>' + info + '</span>' : '') + '</div>' +
       '</div>' +
