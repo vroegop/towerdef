@@ -321,6 +321,24 @@ const CSS = `
 /* glass tube reads fine on parchment; nudge its rim to a warmer bronze to match the wood cork */
 .hud.theme-dnd .vial .vtube { border-color: rgba(90,60,20,.55); }
 
+/* ---- Superpowers (Prestige tab) parchment skin — mirrors the .perm / .labslot panels ---- */
+.hud.theme-dnd .superpower { background: var(--parch-lt); border: 1px solid var(--rule); }
+.hud.theme-dnd .superpower.locked { background: var(--parch-dk); }
+.hud.theme-dnd .sp-head { color: var(--ink); font-family: 'Cinzel', serif; }
+.hud.theme-dnd .sp-head b { color: var(--ink); }
+.hud.theme-dnd .sp-cat { color: var(--ink-dim); border-color: var(--rule); }
+.hud.theme-dnd .sp-blurb { color: var(--ink-dim); }
+.hud.theme-dnd .sp-toggle { background: rgba(154,106,26,.10); border-color: var(--rule); color: var(--ink-dim); }
+.hud.theme-dnd .sp-toggle.on { border-color: var(--accent); color: var(--accent); }
+.hud.theme-dnd .sp-track { color: var(--ink); }
+.hud.theme-dnd .spt-label { color: var(--ink-dim); }
+.hud.theme-dnd .spt-val { color: var(--gold-ink); }
+.hud.theme-dnd .spt-lvl { color: var(--ink-dim); }
+.hud.theme-dnd .spt-buy { background: rgba(154,106,26,.10); border-color: var(--rule); color: var(--gold-ink); }
+.hud.theme-dnd .spt-buy:hover:not(.cant) { border-color: var(--gold-ink); }
+.hud.theme-dnd .spt-buy.cant { color: var(--ink-dim); }
+.hud.theme-dnd .spt-buy.max { color: var(--accent); }
+
 .hud.theme-dnd .card-img { box-shadow: inset 0 0 0 1px rgba(122,74,26,.25); }
 .hud.theme-dnd .card-band { opacity: .22; }
 .hud.theme-dnd .card-name { font-family: 'Cinzel', serif; color: var(--ink); text-shadow: none; }
