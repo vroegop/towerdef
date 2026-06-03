@@ -493,7 +493,7 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
         f.y += f.vy * rdt;
         f.life -= rdt;
         ctx.globalAlpha = Math.max(0, f.life / f.max);
-        ctx.font = '700 ' + f.size + 'px system-ui, sans-serif';
+        ctx.font = '700 ' + f.size + 'px Roboto, system-ui, sans-serif';
         ctx.fillStyle = f.color;
         ctx.fillText(f.text, f.x, f.y);
       }

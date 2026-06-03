@@ -968,8 +968,9 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   }
   // Spotlight the NEXT thing to tap, derived purely from which panels are open: closed → the menu
   // button; rail open → the Labs flask; Labs open → an empty research slot; picker open → the Game
-  // Speed row. Starting/owning the lab ends the lesson. Re-run every frame from update() so the
-  // highlight tracks layout and the player can never get wedged by backing out a step.
+  // Speed row. Each bubble explains the WHY, not just the next tap, and the final step walks the
+  // player all the way to pressing Start. Starting/owning the lab ends the lesson. Re-run every frame
+  // from update() so the highlight tracks layout and the player can never get wedged by backing out.
   function runSpeedTut(): void {
     if (!speedTut) return;
     const m = curMeta();
@@ -980,14 +981,19 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     const menuOpen = sidemenu.classList.contains('open');
     if (pickerOpen) {
       const el = updmodalInner.querySelector('[data-startlab="' + SPEED_LAB + '"]') as HTMLElement | null;
-      setSpotlight(!!el, el, 'Start <b>Game Speed</b> — research unlocks faster battle speeds');
+      const cost = labCoinCost(m, SPEED_LAB);
+      const afford = (m.coins || 0) >= cost;
+      setSpotlight(!!el, el, '<b>Game Speed</b> permanently raises the battle speeds you can pick (2×, 3× …), so every run finishes faster. ' +
+        (afford
+          ? 'Tap <b>Start</b> (' + cost + ' ' + coinsIc(12) + ') to begin researching — it finishes on a timer, even while you\'re away.'
+          : 'It costs ' + cost + ' ' + coinsIc(12) + ' to start — earn a little more and come back to research it.'));
     } else if (labsOpen) {
       const el = labsModalInner.querySelector('.labslot.empty') as HTMLElement | null;
-      setSpotlight(!!el, el, 'Tap a slot, then choose <b>Game Speed</b>');
+      setSpotlight(!!el, el, 'Labs research one upgrade per slot over real time — they keep working between runs. Tap an empty slot to pick <b>Game Speed</b>.');
     } else if (menuOpen) {
-      setSpotlight(true, railLabs, 'Open <b>Labs</b> to research speed');
+      setSpotlight(true, railLabs, '<b>Labs</b> hold permanent upgrades, including faster battle speed. Open it to research them.');
     } else {
-      setSpotlight(true, $('#h-menu-btn'), 'Open the menu to find <b>Labs</b>');
+      setSpotlight(true, $('#h-menu-btn'), 'Faster battle speed isn\'t a button — it\'s unlocked in <b>Labs</b>. Open the menu to get there.');
     }
   }
 
@@ -2073,10 +2079,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     if (tutoring) {
       if (menuTab === 'hero') {
         menuSpotTarget = menuTabsEl.querySelector('[data-mtab="upgrades"]');
-        menuSpotText = 'Spend your ' + coinsIc(15) + ' here';
+        menuSpotText = 'Your ' + coinsIc(15) + ' buy <b>permanent</b> upgrades that carry into every future run. Open Upgrades to spend them.';
       } else if (menuTab === 'upgrades') {
         menuSpotTarget = menuContent.querySelector('.perm.tut');
-        menuSpotText = 'Buy this to grow stronger — more unlock after';
+        menuSpotText = 'Buy your first upgrade — unlike in-run boosts, these are <b>permanent</b>, and each purchase unlocks more to choose from.';
       }
     }
     startMenuSpot();
