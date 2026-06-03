@@ -113,8 +113,6 @@ export const LABS: LabDef[] = [
 ];
 export const LAB_BY_ID: Record<string, LabDef> = {};
 for (const L of LABS) LAB_BY_ID[L.id] = L;
-export const labsIn = (cat: string): LabDef[] => LABS.filter((L) => L.cat === cat);
-export const LAB_CATS = ['attack', 'defense', 'economic', 'speed'];
 
 // ---- internal cap effects: each pickable lab ALSO raises a WORKSHOP UPGRADE's max cap. These
 // share the lab's completed level, so the scale + cap halves always advance together. `target` here
@@ -283,11 +281,6 @@ export function checkInPending(meta: Meta, nowMs: number): number {
   const last = meta.lastCheckIn || nowMs;
   return Math.max(0, Math.min(CHECKIN_CAP, Math.floor((nowMs - last) / CHECKIN_MS)));
 }
-export function checkInNextMs(meta: Meta, nowMs: number): number {
-  const last = meta.lastCheckIn || nowMs;
-  if (checkInPending(meta, nowMs) >= CHECKIN_CAP) return 0;
-  return Math.max(0, CHECKIN_MS - ((nowMs - last) % CHECKIN_MS));
-}
 export function claimCheckIn(meta: Meta, nowMs: number): { claims: number; vials: number; gems: number } | null {
   const n = checkInPending(meta, nowMs);
   if (n <= 0) return null;
@@ -310,7 +303,6 @@ export function availableSpeeds(meta: Meta): number[] {
 }
 // Top selectable speed at a given completed level (level 0 → 1x; level L≥1 → SPEED_STEPS[L+1]).
 export const speedAtLevel = (level: number): number => SPEED_STEPS[Math.min(SPEED_STEPS.length - 1, level + 1)];
-export const maxGameSpeed = (meta: Meta): number => speedAtLevel(lvl(meta, SPEED_LAB));
 
 // The speed currently in effect: the saved selection if still unlockable, else the highest unlocked
 // speed not exceeding it (defends against a corrupt/edited save), else 1x.
@@ -327,9 +319,6 @@ export function setGameSpeed(meta: Meta, speed: number): number {
   if (availableSpeeds(meta).includes(speed)) meta.gameSpeed = speed;
   return gameSpeed(meta);
 }
-
-// special hook kept as a no-op for compatibility with callers (research-speed lab removed).
-export const labSpeedReduction = (_meta: Meta): number => 0;
 
 // ---- meta defaults / migration (idempotent; additive only, never destructive) ----
 const META_VER = 2;

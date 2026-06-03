@@ -46,7 +46,6 @@ const pctFmt = (v: number): string => (v * 100).toFixed(1) + '%';
 // pixel/metre scale: the literal range stat is in METRES; the sim runs in pixels.
 export const PX_PER_METER = 4;
 export const BASE_RANGE_M = 30; // default attack radius before any Range upgrade
-export const MAX_RANGE_M = 1000; // hard cap on range (metres)
 export const MAX_REND = 10; // cap on Rend stacks an enemy can carry
 export const REND_DECAY = 4; // seconds a Rend stack persists without a refresh
 export const RAPID_CHECK = 5; // seconds between Burst rolls
@@ -815,28 +814,6 @@ export function tierClaimableCount(meta: Meta, tier: number): number {
   let c = 0;
   for (const w of MILESTONES) if (best >= w && !cl[msKey(tier, w)] && isClaimable(milestoneReward(w, tier))) c++;
   return c;
-}
-// Claimable count ACROSS every reached tier (drives the floating claim-all badge).
-export function claimableCount(meta: Meta): number {
-  return msTiers(meta).reduce((sum, t) => sum + tierClaimableCount(meta, t), 0);
-}
-// Sum of all currently-claimable rewards across tiers (for the floating claim button's chips).
-export function claimableRewards(meta: Meta): MilestoneReward {
-  const cl = meta.claimedMilestones || {};
-  const out: MilestoneReward = { coins: 0, gems: 0, vials: 0 };
-  const gemMult = cosmeticBuffMult(meta, 'gemMult');
-  for (const t of msTiers(meta)) {
-    const best = msBest(meta, t);
-    for (const w of MILESTONES) {
-      const r = milestoneReward(w, t);
-      if (best >= w && !cl[msKey(t, w)] && isClaimable(r)) {
-        out.coins += r.coins;
-        out.gems += Math.round(r.gems * gemMult);
-        out.vials += r.vials;
-      }
-    }
-  }
-  return out;
 }
 export function claimMilestone(meta: Meta, tier: number, wave: number): MilestoneReward {
   const out: MilestoneReward = { coins: 0, gems: 0, vials: 0 };

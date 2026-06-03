@@ -19,7 +19,6 @@ npm run test           # vitest (unit: sim/balance)
 npm run test:visual    # playwright screenshot diffs of the HUD (browsers required locally)
 npm run test:visual:update   # re-bless HUD screenshot baselines after an intentional UI change
 npm run check          # typecheck + lint + unit tests
-npm run balance        # tsx tools/balance.ts — headless balance harness
 ```
 
 Deployment: `.github/workflows/pages.yml` builds on push to `main` and publishes `dist/` to GitHub

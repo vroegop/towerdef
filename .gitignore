@@ -13,7 +13,3 @@ test-results/
 # agent / tooling scratch
 .claude/scheduled_tasks.lock
 .superpowers/
-docs/superpowers/
-
-# throwaway balance-research notes
-dev/tower-data/
