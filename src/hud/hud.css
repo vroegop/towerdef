@@ -1070,3 +1070,5 @@
 .hud .sp-unlock { margin-top: 0; }
 .hud .spt-label { display: inline-flex; align-items: center; gap: 3px; }
 .hud .spt-plus { color: #8b93a7; font-weight: 700; margin: 0 1px; }
+/* coin glyphs get a circular backdrop-contrast lens so they pop off any background */
+.hud .ic.coinicon { border-radius: 50%; -webkit-backdrop-filter: contrast(0.8); backdrop-filter: contrast(0.8); }

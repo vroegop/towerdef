@@ -86,8 +86,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   };
   function icon(name: string, size?: number, cls?: string): string {
     size = size || 16;
+    // coin glyphs get a circular backdrop-contrast lens (see .ic.coinicon in hud.css)
+    const coinCls = name === 'coin' || name === 'coinstar' ? ' coinicon' : '';
     return (
-      '<svg class="ic' + (cls ? ' ' + cls : '') + '" width="' + size + '" height="' + size +
+      '<svg class="ic' + (cls ? ' ' + cls : '') + coinCls + '" width="' + size + '" height="' + size +
       '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
       PATHS[name] + '</svg>'
     );
