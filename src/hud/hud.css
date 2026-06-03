@@ -1074,3 +1074,11 @@
 .hud .ic.coinicon { border-radius: 50%; -webkit-backdrop-filter: contrast(0.8); backdrop-filter: contrast(0.8); }
 .hud .cur-with-slot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .hud .cur-with-slot .chips { margin: 0; }
+/* atom (Energy) icon — orbit group spins slowly */
+.hud .ic.atom .orbits { transform-box: fill-box; transform-origin: center; animation: atom-spin 9s linear infinite; }
+@keyframes atom-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .hud .ic.atom .orbits { animation: none; } }
+/* the cards-tab Draw button hugs its content so the cost sits next to the text, not pushed away */
+.hud .cards-top .cardbtn { flex: 0 0 auto; }
+.hud .cards-top .cardbtn .cb-tx { flex: 0 1 auto; }
+.hud .cards-top .cardbtn .cb-ic { width: 34px; height: 34px; }

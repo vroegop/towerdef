@@ -83,6 +83,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     refresh: '<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3.5v5h-5"/>',
     stopwatch: '<circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9"/><path d="M9.5 2h5"/><path d="M12 2v3.5"/><path d="M18.8 6.8l1.4-1.4"/>',
     crystal: '<path d="M12 2l4 6-4 14-4-14z"/><path d="M8 8h8"/>', // a tall shard, matching the Crystal Circle art
+    // atom = Energy. Nucleus (static) + 3 orbit ellipses in a group that slowly spins (see .ic.atom .orbits)
+    atom: '<circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/><g class="orbits"><ellipse cx="12" cy="12" rx="10" ry="4.2"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(120 12 12)"/></g>',
   };
   function icon(name: string, size?: number, cls?: string): string {
     size = size || 16;
@@ -107,7 +109,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     '    <span class="cur" title="Coins">' + icon('coinstar', 14, 'coin') + '<b id="h-coins">0</b></span>' +
     '    <span class="cur" title="Gems">' + icon('gem', 14, 'gem') + '<b id="h-gems">0</b></span>' +
     '    <span class="cur" title="Vials">' + icon('vial', 14, 'vial') + '<b id="h-vials">0</b></span>' +
-    '    <span class="cur" title="Energy (Superpowers)">' + icon('prestige', 14) + '<b id="h-energy">0</b></span>' +
+    '    <span class="cur" title="Energy (Superpowers)">' + icon('atom', 14) + '<b id="h-energy">0</b></span>' +
     '  </div>' +
     // Battle-speed toggle: cycles the selectable speeds (0.5x/1x always; faster tiers via the Game Speed lab).
     '  <button class="iconbtn speedbtn" id="h-speed" title="Battle speed">' + icon('ffwd', 15) + '<b id="h-speedval">1x</b></button>' +
@@ -246,7 +248,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     { key: 'coins', icon: 'coinstar', cls: 'coin' },
     { key: 'gems', icon: 'gem', cls: 'gem' },
     { key: 'vials', icon: 'vial', cls: 'vial' },
-    { key: 'energy', icon: 'prestige', cls: 'energy' },
+    { key: 'energy', icon: 'atom', cls: 'energy' },
   ];
   const CUR_BY_KEY: Record<string, { icon: string; cls: string }> = {};
   for (const c of CURRENCIES) CUR_BY_KEY[c.key] = { icon: c.icon, cls: c.cls };
@@ -507,8 +509,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     let html = '<div class="cardspane">';
     // Top row: gem balance + slot count on the left, the Draw Card action sized to its content on the right.
     html += '<div class="cards-top">' +
-      '<div class="cur-with-slot">' + curChips(meta, ['gems']) +
-      '<span class="slotchip">' + icon('cards', 13) + ' ' + activeCardIds(meta).length + '/' + slots + '</span></div>' +
+      '<div class="chips">' +
+        '<span class="chip cur-gems">' + icon('gem', 13, 'gem') + ' <b>' + abbr(meta.gems || 0) + '</b></span>' +
+        '<span class="chip cur-slot">' + icon('cards', 13) + ' <b>' + activeCardIds(meta).length + '/' + slots + '</b></span>' +
+      '</div>' +
       '<button class="cardbtn draw' + ((meta.gems || 0) < bc || allMaxed ? ' cant' : '') + '" id="h-buycard"' + (allMaxed ? ' disabled' : '') + '>' +
       '<span class="cb-ic">' + icon('cards', 24) + '</span>' +
       '<span class="cb-tx"><span class="cb-t">Draw Card</span><span class="cb-s">' + (allMaxed ? 'All maxed!' : 'New card or +1 level') + '</span></span>' +
@@ -607,7 +611,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   // ---------- shared SUPERPOWERS pane (the Prestige tab) ----------
   // Energy chip + one panel per power: unlock button (Energy, by purchase order) when locked, else a
   // pause toggle and a row per upgrade track (live value, level, Energy cost).
-  function eIc(sz = 13): string { return icon('prestige', sz); }
+  function eIc(sz = 13): string { return icon('atom', sz); }
   // Every track label rendered as an icon. "Gold/Coin ×" (ids mult/gold) → gold + coin with a +.
   function superTrackLabel(trackId: string, label: string): string {
     switch (trackId) {
@@ -617,7 +621,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       case 'count': return icon('crystal', 15);
       case 'gems': return icon('gem', 15, 'gem');
       case 'vials': return icon('vial', 15, 'vial');
-      case 'energy': return icon('prestige', 15);
+      case 'energy': return icon('atom', 15);
     }
     if (label === 'Gold/Coin ×') return icon('coin', 15, 'gold') + '<span class="spt-plus">+</span>' + icon('coinstar', 14);
     return label;

@@ -124,18 +124,18 @@ const CSS = `
    an occasional gleam across the polish. nth-child tracks the fixed CURRENCIES order: coins, gems, vials. */
 .hud.theme-dnd .chips { gap: 8px; }
 .hud.theme-dnd .chip {
-  position: relative; width: 76px; height: 84px; padding: 0; border: 0; border-radius: 0;
+  position: relative; width: 88px; height: 76px; padding: 0; border: 0; border-radius: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   color: var(--ink-dim); text-align: center;
   background: linear-gradient(150deg, #c19748 0%, #7a5a2a 46%, #4d3516 100%);
-  clip-path: polygon(50% 1%, 95% 25%, 95% 75%, 50% 99%, 5% 75%, 5% 25%);
+  clip-path: polygon(99% 50%, 75% 95%, 25% 95%, 1% 50%, 25% 5%, 75% 5%);
   filter: drop-shadow(0 3px 4px rgba(0,0,0,.4));
 }
 /* gem face: a parchment cabochon by default — a soft top gloss over a centre-lit dome that darkens to
    the rim, giving a polished curve. Per-currency tints below recolour the dome. */
 .hud.theme-dnd .chip::before {
   content: ''; position: absolute; inset: 3px; z-index: 0;
-  clip-path: polygon(50% 1%, 95% 25%, 95% 75%, 50% 99%, 5% 75%, 5% 25%);
+  clip-path: polygon(99% 50%, 75% 95%, 25% 95%, 1% 50%, 25% 5%, 75% 5%);
   background:
     radial-gradient(ellipse 58% 36% at 50% 19%, rgba(255,255,255,.6), rgba(255,255,255,0) 72%),
     radial-gradient(circle at 50% 44%, var(--parch-lt), #cbb88f 88%);
