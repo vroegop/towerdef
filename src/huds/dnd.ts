@@ -322,7 +322,7 @@ const CSS = `
 .hud.theme-dnd .vial .vtube { border-color: rgba(90,60,20,.55); }
 
 /* the bulk-multiplier toggle sits flush in the parchment theme (no offset/transform) */
-.hud.theme-dnd .bmult { left: 0; top: 0; bottom: 0; line-height: 2; transform: none; }
+.hud.theme-dnd .bmult { left: 0; top: 0; bottom: 0; line-height: 2; transform: none; border-radius: 0; }
 
 /* ---- Superpowers (Prestige tab) parchment skin — mirrors the .perm / .labslot panels ---- */
 .hud.theme-dnd .superpower { background: var(--parch-lt); border: 1px solid var(--rule); }
