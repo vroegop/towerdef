@@ -31,6 +31,25 @@ export function interpTable(points: [number, number][], n: number): number {
   }
   return points[points.length - 1][1];
 }
+// COST-curve interpolation: like interpTable, but ramps GEOMETRICALLY between samples instead of
+// linearly — y = y0·(y1/y0)^t. It hits the SAME curated sample points (e.g. L1=30, L100=80730) but
+// the per-level gap grows multiplicatively (~8%/lvl) instead of being a flat (y1−y0)/Δ jump. This
+// kills the "first step leaps 30→845 then crawls" artifact of linear interpolation on sparsely
+// sampled cost tables. Falls back to linear on any non-positive endpoint (geometric ratio undefined).
+export function interpTableGeom(points: [number, number][], n: number): number {
+  if (n <= points[0][0]) return points[0][1];
+  for (let i = 1; i < points.length; i++) {
+    if (n <= points[i][0]) {
+      const [x0, y0] = points[i - 1],
+        [x1, y1] = points[i];
+      if (x1 === x0) return y1;
+      const t = (n - x0) / (x1 - x0);
+      if (y0 <= 0 || y1 <= 0) return y0 + (y1 - y0) * t; // linear fallback
+      return y0 * Math.pow(y1 / y0, t);
+    }
+  }
+  return points[points.length - 1][1];
+}
 export function evalCurve(c: Curve, n: number): number {
   if (c.kind === 'geom') return n > 0 ? c.mul * Math.pow(c.ratio, n - 1) : 0;
   if (c.kind === 'exp') {
@@ -67,7 +86,7 @@ const tcurve = (points: [number, number][]): UpgradeCurve => ({
   grow: 0,
   points,
   cost(n: number) {
-    return Math.round(interpTable(this.points!, n));
+    return Math.round(interpTableGeom(this.points!, n));
   },
 });
 
@@ -389,7 +408,7 @@ export const UPGRADES: UpgradeDef[] = UPGRADE_SPECS.map((spec) => {
       base: goldTable[0][1],
       grow: 0,
       points: goldTable,
-      cost(n: number) { return Math.max(1, Math.round(interpTable(this.points!, n))); },
+      cost(n: number) { return Math.max(1, Math.round(interpTableGeom(this.points!, n))); },
     };
   } else {
     // Default: in-run gold tracks the permanent coin curve, a flat fraction cheaper.
