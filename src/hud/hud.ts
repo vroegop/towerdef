@@ -47,7 +47,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     cardslot: '<rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M12 9.5v5M9.5 12h5"/>',
     // gold = two solid gold coins (currentColor, tinted by the 'gold' class). Each coin has a slight
     // shadow; the front coin's shadow is drawn after the back coin so it casts onto it at the overlap.
-    coin: '<circle cx="15.3" cy="10.6" r="6" fill="rgba(8,10,16,.4)" stroke="none"/><circle cx="14.5" cy="9.5" r="6" fill="currentColor" stroke="none"/><circle cx="10.3" cy="15.6" r="6" fill="rgba(8,10,16,.4)" stroke="none"/><circle cx="9.5" cy="14.5" r="6" fill="currentColor" stroke="rgba(8,10,16,.55)" stroke-width="1.5"/>',
+    coin: '<circle cx="15.3" cy="10.6" r="6" fill="rgba(8,10,16,.4)" stroke="none"/><circle cx="14.5" cy="9.5" r="6" fill="currentColor" stroke="none"/><circle cx="10.3" cy="15.6" r="6" fill="rgba(8,10,16,.4)" stroke="none"/><circle cx="9.5" cy="14.5" r="6" fill="currentColor" stroke="none"/>',
     // out-run coins = a struck COPPER coin with a star. Explicit metallic palette (copper body, dark
     // rim, lighter star) + a slight offset shadow so it reads as a real coin, not a flat outline.
     coinstar: '<circle cx="12.9" cy="12.9" r="8.5" fill="rgba(8,10,16,.28)" stroke="none"/>' +
@@ -601,7 +601,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       case 'vials': return icon('vial', 15, 'vial');
       case 'energy': return icon('prestige', 15);
     }
-    if (label === 'Gold/Coin ×') return icon('coin', 12, 'gold') + '<span class="spt-plus">+</span>' + icon('coinstar', 13);
+    if (label === 'Gold/Coin ×') return icon('coin', 15, 'gold') + '<span class="spt-plus">+</span>' + icon('coinstar', 14);
     return label;
   }
   function superPaneHtml(meta: Meta): string {
