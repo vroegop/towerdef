@@ -140,18 +140,22 @@ const CSS = `
     radial-gradient(ellipse 58% 36% at 50% 19%, rgba(255,255,255,.6), rgba(255,255,255,0) 72%),
     radial-gradient(circle at 50% 44%, var(--parch-lt), #cbb88f 88%);
 }
-.hud.theme-dnd .chip:nth-child(1)::before { background:
+.hud.theme-dnd .chip.cur-coins::before { background:
   radial-gradient(ellipse 58% 36% at 50% 19%, rgba(255,255,255,.62), rgba(255,255,255,0) 72%),
   radial-gradient(circle at 50% 46%, #f7e8b4, #c79a3e 92%); }
-.hud.theme-dnd .chip:nth-child(2)::before { background:
+.hud.theme-dnd .chip.cur-gems::before { background:
   radial-gradient(ellipse 58% 36% at 50% 19%, rgba(255,255,255,.62), rgba(255,255,255,0) 72%),
   radial-gradient(circle at 50% 46%, #d3e4f7, #5b86b8 92%); }
-.hud.theme-dnd .chip:nth-child(3)::before { background:
+.hud.theme-dnd .chip.cur-vials::before { background:
   radial-gradient(ellipse 58% 36% at 50% 19%, rgba(255,255,255,.62), rgba(255,255,255,0) 72%),
   radial-gradient(circle at 50% 46%, #c9ede1, #3f9a82 92%); }
-.hud.theme-dnd .chip:nth-child(1) .ic { color: #6e4a12; }
-.hud.theme-dnd .chip:nth-child(2) .ic { color: #1f3f6a; }
-.hud.theme-dnd .chip:nth-child(3) .ic { color: #14564a; }
+.hud.theme-dnd .chip.cur-energy::before { background:
+  radial-gradient(ellipse 58% 36% at 50% 19%, rgba(255,255,255,.62), rgba(255,255,255,0) 72%),
+  radial-gradient(circle at 50% 46%, #ecdcf7, #7a4caa 92%); }
+.hud.theme-dnd .chip.cur-coins .ic { color: #6e4a12; }
+.hud.theme-dnd .chip.cur-gems .ic { color: #1f3f6a; }
+.hud.theme-dnd .chip.cur-vials .ic { color: #14564a; }
+.hud.theme-dnd .chip.cur-energy .ic { color: #5a2a8a; }
 .hud.theme-dnd .chip .ic { position: relative; z-index: 1; color: var(--accent); }
 .hud.theme-dnd .chip b { position: relative; z-index: 1; margin: 0; font-family: 'Cinzel', serif; font-size: 14px; line-height: 1.05; color: var(--ink); }
 /* a thin gleam sweeps across the polished face now and then; the three are staggered so they twinkle

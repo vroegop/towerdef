@@ -242,7 +242,24 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     critChance: 'Crit', critDamage: 'Crit Dmg', gold: 'Gold',
     thorns: 'Disintegrate', msChance: 'Lightning', bounceChance: 'Lightning Arc', rendMult: 'Amp', range: 'Range', interest: 'Interest' };
   // currencies shown on the Hero screen
-  const CURRENCIES: { key: 'coins' | 'gems' | 'vials'; icon: string; cls: string }[] = [{ key: 'coins', icon: 'coinstar', cls: 'coin' }, { key: 'gems', icon: 'gem', cls: 'gem' }, { key: 'vials', icon: 'vial', cls: 'vial' }];
+  const CURRENCIES: { key: 'coins' | 'gems' | 'vials' | 'energy'; icon: string; cls: string }[] = [
+    { key: 'coins', icon: 'coinstar', cls: 'coin' },
+    { key: 'gems', icon: 'gem', cls: 'gem' },
+    { key: 'vials', icon: 'vial', cls: 'vial' },
+    { key: 'energy', icon: 'prestige', cls: 'energy' },
+  ];
+  const CUR_BY_KEY: Record<string, { icon: string; cls: string }> = {};
+  for (const c of CURRENCIES) CUR_BY_KEY[c.key] = { icon: c.icon, cls: c.cls };
+  const curAmount = (meta: Meta, k: string): number =>
+    (k === 'coins' ? meta.coins : k === 'gems' ? meta.gems : k === 'vials' ? meta.vials : k === 'energy' ? meta.energy : 0) || 0;
+  // Hexagon currency chips (the home-screen gemstone style) for any set of currency keys. Each chip
+  // carries a cur-<key> class so the D&D skin tints it per currency (see dnd.ts).
+  function curChips(meta: Meta, keys: string[]): string {
+    return '<div class="chips">' + keys.map((k) => {
+      const d = CUR_BY_KEY[k];
+      return '<span class="chip cur-' + k + '">' + icon(d.icon, 13, d.cls) + ' <b>' + abbr(curAmount(meta, k)) + '</b></span>';
+    }).join('') + '</div>';
+  }
   function starSvg(kind: string): string {
     const fill = kind === 'white' ? '#eef2f8' : kind === 'gold' ? '#ffd24a' : 'url(#chroma)';
     return '<svg class="star ' + kind + '" width="16" height="16" viewBox="0 0 24 24"><path fill="' + fill + '" stroke="rgba(0,0,0,.3)" stroke-width="1" d="' + STARP + '"/></svg>';
@@ -490,7 +507,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     let html = '<div class="cardspane">';
     // Top row: gem balance + slot count on the left, the Draw Card action sized to its content on the right.
     html += '<div class="cards-top">' +
-      '<div class="coins-chip gem-chip">' + icon('gem', 15, 'gem') + ' <b>' + abbr(meta.gems || 0) + '</b>' +
+      '<div class="cur-with-slot">' + curChips(meta, ['gems']) +
       '<span class="slotchip">' + icon('cards', 13) + ' ' + activeCardIds(meta).length + '/' + slots + '</span></div>' +
       '<button class="cardbtn draw' + ((meta.gems || 0) < bc || allMaxed ? ' cant' : '') + '" id="h-buycard"' + (allMaxed ? ' disabled' : '') + '>' +
       '<span class="cb-ic">' + icon('cards', 24) + '</span>' +
@@ -549,8 +566,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   function labsPaneHtml(meta: Meta): string {
     const used = (meta.research || []).length,
       slots = meta.labSlots || 1;
-    let html = '<div class="coins-chip">' + coinsIc(15) + ' <b>' + abbr(meta.coins || 0) + '</b>' +
-      '<span class="slotchip">' + icon('gem', 13, 'gem') + ' ' + abbr(meta.gems || 0) + '</span>' +
+    let html = '<div class="cur-with-slot">' + curChips(meta, ['coins', 'gems', 'vials']) +
       '<span class="slotchip">' + icon('flask', 13) + ' ' + used + '/' + slots + '</span></div>';
     html += '<div class="labslots">' + labSlotsHtml(meta) + '</div>';
     const sc = labSlotCost(meta),
@@ -609,7 +625,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   function superPaneHtml(meta: Meta): string {
     const e = meta.energy || 0;
     const nextCost = nextUnlockCost(meta);
-    let html = '<div class="coins-chip">' + eIc(15) + ' <b>' + abbr(e) + '</b> Energy</div>';
+    let html = curChips(meta, ['energy']);
     html += '<div class="superlist">';
     for (const sp of SUPERPOWERS) {
       const unlocked = superUnlocked(meta, sp.id);
@@ -1464,7 +1480,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   const spot = $('#h-spot'),
     thought = $('#h-thought');
   const MENU_TABS: { id: string; icon: string; gated?: boolean; locked?: boolean; unlockFn?: (m: Meta) => boolean; unlock?: string }[] = [
-    { id: 'hero', icon: 'hero' },
+    { id: 'hero', icon: 'play' },
     { id: 'upgrades', icon: 'upgrades' },
     { id: 'cards', icon: 'cards' },
     { id: 'labs', icon: 'flask', gated: true, unlockFn: (m) => labsTabUnlocked(m), unlock: 'Reach wave 30 to unlock Labs' },
@@ -1822,8 +1838,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     menuContent.className = 'menu-content tab-' + menuTab + (tutoring && menuTab === 'hero' ? ' tut-block' : '');
     let html = '';
     if (menuTab === 'hero') {
-      const curChips = CURRENCIES.map((c) => '<span class="chip">' + icon(c.icon, 13, c.cls) + ' <b>' + abbr(meta[c.key] || 0) + '</b></span>').join('');
-      html += '<div class="chips">' + curChips + '</div>';
+      html += curChips(meta, CURRENCIES.map((c) => c.key));
       // The check-in is surfaced by the floating #h-checkin-float button (menu + in-game), shown only
       // when a reward is claimable — so there's no inline button or idle countdown here anymore.
       html += '<div class="avatar-frame"><canvas id="h-avatar" width="200" height="200"></canvas></div>';
@@ -1855,7 +1870,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     } else if (menuTab === 'upgrades') {
       // shared centered column so the coins chip, subtabs and list all share one left edge
       html += '<div class="cardspane">';
-      html += '<div class="coins-chip">' + coinsIc(15) + ' <b>' + abbr(meta.coins || 0) + '</b></div>';
+      html += curChips(meta, ['coins']);
       html += '<div class="subtabs" id="h-uptabs">';
       for (const t of TAB_DEFS) {
         html += '<button class="subtab' + (t.id === menuUpTab ? ' on' : '') + '" data-uptab="' + t.id + '" title="' + t.id + '">' + icon(t.icon, 22) + '</button>';
