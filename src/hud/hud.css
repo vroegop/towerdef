@@ -40,12 +40,12 @@
   border-radius: 8px; padding: 5px 8px; font-size: 11px; }
 .hud .sl:hover { border-color: #3a4256; }
 .hud .sl-grid { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
-.hud .sl.foe .sl-grid { justify-content: flex-end; }
+.hud .sl.enemy .sl-grid { justify-content: flex-end; }
 .hud .sl-row { display: inline-flex; align-items: center; gap: 3px; }
 .hud .sl-row .ic { color: #8b93a7; }
 .hud .sl b { color: #d8deea; font-variant-numeric: tabular-nums; }
 .hud .sl-wave { font-weight: 800; }
-.hud .sl.foe .sl-wave { color: #ff6b6b; }
+.hud .sl.enemy .sl-wave { color: #ff6b6b; }
 .hud .sl-bar { position: relative; height: 12px; border-radius: 4px; background: #2a3142; overflow: hidden;
   display: flex; align-items: center; justify-content: center; }
 .hud .sl-bar .slbarfill { position: absolute; inset: 0 auto 0 0; height: 100%; background: linear-gradient(90deg, #ff5d6c, #3ddc84); transition: width .15s linear; }

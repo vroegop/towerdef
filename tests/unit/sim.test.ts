@@ -9,8 +9,8 @@ import { createState, ARENA_W, ARENA_H } from '../../src/sim/state';
 import { makeEnemy } from '../../src/sim/enemies';
 import { migrateMeta, availableSpeeds, gameSpeed, setGameSpeed, SPEED_STEPS, LAB_BY_ID } from '../../src/sim/labs';
 import { buyPerm, permCost, computeStats, waveStrSafe } from './helpers';
-import { waveCount, waveStr, tierUnlocked, coinMult, waveRoster, allowedSpecials, isBossWave } from '../../src/sim/waves';
-import { buyCard, buyCardCost, MAX_STARS, CARD_ORDER, evalCurve, UP_BY_ID, PX_PER_METER, isUnlocked, unlockGroup, nextUnlockGroup, skillGroup } from '../../src/sim/skills';
+import { waveCount, econStr, waveHp, waveDmg, tierMult, MAX_TIER, tierUnlocked, coinMult, waveRoster, allowedSpecials, isBossWave } from '../../src/sim/waves';
+import { buyCard, buyCardCost, MAX_STARS, CARD_ORDER, evalCurve, UP_BY_ID, PX_PER_METER, isUnlocked, unlockGroup, nextUnlockGroup, skillGroup, bigSuffix, bigGroup } from '../../src/sim/skills';
 import { applyHit } from '../../src/sim/projectiles';
 import type { Meta } from '../../src/types';
 
@@ -162,20 +162,63 @@ describe('enemy collision (_separate)', () => {
 });
 
 describe('wave curves', () => {
-  it('wave 1 is exactly the baseline (×1 strength)', () => {
-    expect(waveStr(1)).toBeCloseTo(1, 10);
+  it('econStr wave 1 is exactly the baseline (×1)', () => {
+    expect(econStr(1)).toBeCloseTo(1, 10);
     expect(waveCount(1)).toBe(8);
   });
-  it('strength rises monotonically with wave', () => {
-    let prev = 0;
-    for (let n = 1; n <= 100; n++) {
-      const s = waveStr(n);
-      expect(s).toBeGreaterThan(prev);
-      prev = s;
+  it('enemy HP and damage rise monotonically with wave', () => {
+    let prevHp = 0,
+      prevDmg = 0;
+    for (let n = 1; n <= 12000; n += 7) {
+      const hp = waveHp(n),
+        dmg = waveDmg(n);
+      expect(hp).toBeGreaterThan(prevHp);
+      expect(dmg).toBeGreaterThan(prevDmg);
+      prevHp = hp;
+      prevDmg = dmg;
     }
+  });
+  it('HP/damage curves hit their authored anchors', () => {
+    expect(waveHp(100)).toBeCloseTo(4360, 0);
+    expect(waveHp(10000)).toBeCloseTo(1.121e34, -30);
+    expect(waveDmg(100)).toBeCloseTo(402.95, 0);
+    expect(waveDmg(1000)).toBeCloseTo(482950, -1);
+  });
+  it('past wave 10000 stats climb at +0.05%/wave', () => {
+    expect(waveHp(10100) / waveHp(10000)).toBeCloseTo(Math.pow(1.0005, 100), 6);
   });
   it('enemy count caps at maxCount', () => {
     expect(waveCount(10000)).toBe(140);
+  });
+});
+
+describe('big-number notation (matches the reference site)', () => {
+  it('maps each 1000-group to the right case-sensitive suffix', () => {
+    const expected = ['', 'K', 'M', 'B', 'T', 'q', 'Q', 's', 'S', 'O', 'N', 'D'];
+    expected.forEach((s, g) => expect(bigSuffix(g)).toBe(s));
+    expect(bigSuffix(12)).toBe('aa'); // 1e36
+    expect(bigSuffix(13)).toBe('ab'); // 1e39
+    expect(bigSuffix(14)).toBe('ac'); // 1e42
+    expect(bigSuffix(12 + 26)).toBe('ba'); // rolls the first letter after 'az'
+  });
+  it('buckets values without float mis-grouping at exact powers of 1000', () => {
+    expect(bigGroup(1e6)).toEqual({ m: 1, group: 2 }); // exactly "1.00M", never "1000.00K"
+    const big = bigGroup(1.121e34);
+    expect(big.group).toBe(11); // 'D'
+    expect(big.m).toBeCloseTo(11.21, 2);
+  });
+});
+
+describe('tier multiplier', () => {
+  it('tier 1 is ×1; low tiers match the reference ratios', () => {
+    expect(tierMult(1)).toBe(1);
+    expect(tierMult(2)).toBe(20);
+    expect(tierMult(3)).toBe(60);
+  });
+  it('rises monotonically across all 21 tiers and clamps out of range', () => {
+    for (let t = 2; t <= MAX_TIER; t++) expect(tierMult(t)).toBeGreaterThan(tierMult(t - 1));
+    expect(tierMult(0)).toBe(tierMult(1));
+    expect(tierMult(999)).toBe(tierMult(MAX_TIER));
   });
 });
 

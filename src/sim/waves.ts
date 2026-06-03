@@ -82,24 +82,84 @@ export const COIN_DECAY_FACTOR = 0.5; // ...pays only this share of its coin val
 export function waveCount(n: number): number {
   return Math.min(WAVE.maxCount, WAVE.baseCount + WAVE.perWave * (n - 1));
 }
-// Strength = linear ramp × gentle exponential. Wave 1 is exactly ×1 (both terms = 1), so the
-// scripted first run and early game are unchanged; the exponential only bites at depth, where it
-// races the player's compounding (multiplicative) power and creates the wall.
-export function waveStr(n: number): number {
+// Economy/XP strength: a GENTLE linear×exponential curve (the legacy "wave strength"). It is NO
+// LONGER used for enemy HP/damage — those follow the anchored Tower curves below. It survives only
+// as the per-kill XP basis, where a tame, tier-independent value keeps levelling from exploding once
+// combat stats run into the tens-of-decillions at high tiers.
+export function econStr(n: number): number {
   return (1 + WAVE.strPerWave * (n - 1)) * Math.pow(WAVE.expBase, n - 1);
 }
 export function waveSpeed(n: number): number {
   return 1 + WAVE.speedPerWave * (n - 1);
 }
 
-// Game tiers (distinct from enemy TIERS strength classes): each tier doubles the
-// *effective* wave number, so tier 2 wave 4 plays like wave 8, tier 3 like wave 16, etc.
-export const MAX_TIER = 10;
+/* ── Enemy HP / DAMAGE curves (modelled on "The Tower", tower-enemy-stats.netlify.app) ────────────
+   A baseline (Tier-1) enemy's HP and damage are read from anchor tables sampled from that game's
+   real stat blocks, then GEOMETRICALLY interpolated between anchors (interpGeom) — same method as
+   our gold/coin cost curves, so the per-wave gap ramps smoothly instead of leaping. HP and damage
+   grow at different rates, so they get SEPARATE curves. Past STAT_CAP_WAVE the published data ends,
+   so stats keep climbing at a flat +0.05%/wave (POST_CAP_RATE) — an endless soft wall that
+   eventually forces a tier change. A tier is a FLAT multiplier on both HP and damage (also Tower-
+   style: tier-2 is ×20 at every wave, tier-3 ×60, …), NOT a wave-number shift. */
+const STAT_CAP_WAVE = 10000; // last wave with authored anchors; beyond here, the +0.05%/wave tail
+const POST_CAP_RATE = 1.0005; // +0.05% per wave, compounding, above STAT_CAP_WAVE
+
+// Tier-1 melee HP per wave (×TYPES.melee.hp = ×1). Anchored from the reference stat blocks.
+const BASE_HP: [number, number][] = [
+  [1, 2.35], [100, 4360], [150, 17190], [200, 54840], [250, 142350], [300, 323610],
+  [500, 4.53e6], [1000, 7.421e8], [2000, 1.71e12], [5000, 6.1826e20], [10000, 1.121e34],
+];
+// Tier-1 melee DAMAGE per wave (×TYPES.melee.dmg = ×1). Grows slower than HP.
+const BASE_DMG: [number, number][] = [
+  [1, 1.18], [100, 402.95], [150, 1100], [200, 2420], [250, 4620], [300, 7740],
+  [500, 38940], [1000, 482950], [2000, 1.064e7], [5000, 3.86e9], [10000, 6.63e12],
+];
+// Geometric piecewise interpolation (mirrors interpTableGeom in skills.ts; kept local to avoid a
+// circular import, as labs.ts does with its own `interp`). Clamps below first / above last anchor.
+function interpGeom(points: [number, number][], n: number): number {
+  if (n <= points[0][0]) return points[0][1];
+  for (let i = 1; i < points.length; i++) {
+    if (n <= points[i][0]) {
+      const [x0, y0] = points[i - 1],
+        [x1, y1] = points[i];
+      if (x1 === x0) return y1;
+      const t = (n - x0) / (x1 - x0);
+      return y0 * Math.pow(y1 / y0, t); // all anchors are positive, so geometric is always defined
+    }
+  }
+  return points[points.length - 1][1];
+}
+function statAt(points: [number, number][], n: number): number {
+  if (n <= STAT_CAP_WAVE) return interpGeom(points, n);
+  const cap = points[points.length - 1][1]; // value at STAT_CAP_WAVE
+  return cap * Math.pow(POST_CAP_RATE, n - STAT_CAP_WAVE);
+}
+// Baseline (Tier-1) enemy HP / damage multiplier at a real wave number. makeEnemy multiplies the
+// per-type base (TYPES[t].hp / .dmg) by this and by the tier multiplier.
+export function waveHp(n: number): number {
+  return statAt(BASE_HP, Math.max(1, n));
+}
+export function waveDmg(n: number): number {
+  return statAt(BASE_DMG, Math.max(1, n));
+}
+
+// Game tiers (distinct from enemy TYPES strength classes). A tier is a FLAT multiplier applied to
+// every enemy's HP and damage — shared by both, Tower-style. TIER_MULT[t-1] is that multiplier;
+// tier 1 = ×1. Values 1–10 are the reference game's clean tier ratios; 11–21 continue its (much
+// steeper) escalation, so high tiers become brutal walls. Cosmetic rewards for tiers 11–21 are
+// intentionally left empty (milestoneReward falls through to gems/vials when a tier has no tower).
+export const MAX_TIER = 21;
 export const TIER_UNLOCK_WAVE = 300; // reach this wave in a tier to unlock the next one
-export function tierDifficulty(tier: number): number {
-  return Math.pow(2, (tier || 1) - 1);
+const TIER_MULT: number[] = [
+  1, 20, 60, 120, 240, 480, 960, 1920, 5760, 40320,
+  2.62e6, 1.57e9, 7.87e11, 2.36e14, 7.08e16, 3.54e18, 1.06e20, 2.66e21, 3.45e24, 4.14e27, 4.97e30,
+];
+export function tierMult(tier: number): number {
+  const t = Math.max(1, Math.min(MAX_TIER, tier || 1));
+  return TIER_MULT[t - 1];
 }
 // Coin reward multiplier per tier: tier 1 is the 1x baseline; each higher tier adds +0.8x.
+// (Reward balance for the new tiers is intentionally left for a later pass.)
 export function coinMult(tier: number): number {
   return 1 + 0.8 * ((tier || 1) - 1);
 }

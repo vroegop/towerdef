@@ -14,7 +14,7 @@ import type { EnemyTypeDef } from '../types';
 //   split = 2× hp,               coin 4   (halves 4 generations on death — see core._cleanup)
 //   melee = baseline,            coin 1
 // Radius drives the body for rendering AND for sim collision, hero-contact distance, and the bullet
-// hit window (e.r + bullet.r) — so a foe's hitbox always matches the size it draws at. Per-category
+// hit window (e.r + bullet.r) — so an enemy's hitbox always matches the size it draws at. Per-category
 // body-size bump over the original baseline: most enemies ×1.25, tanks ×2, bosses ×3.
 // Speeds are expressed relative to the "normal" (melee) baseline of 46 px/s:
 //   normal ×1 = 46 · fast ×2 = 92 · ranged ×1 = 46 · tank ×0.5 = 23 · boss ×0.4 = 18.4

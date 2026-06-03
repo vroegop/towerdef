@@ -22,7 +22,7 @@ function freshMeta(over: Partial<Meta> = {}): Meta {
 function enemy(id: number, x: number, y: number): Enemy {
   return {
     id, type: 'melee', shape: 'circle', behavior: 'stick', color: '#fff',
-    r: 12, x, y, facing: 0, strMult: 1, hpMax: 9999, hp: 9999,
+    r: 12, x, y, facing: 0, strMult: 1, dmgMult: 1, hpMax: 9999, hp: 9999,
     dmg: 1, speed: 0, range: 0, state: 'approach', atkCd: 0, kb: 0,
     hitFlash: 0, hitDmg: 0, rend: 0, rendT: 0, splits: 0, mass: 1, slow: 1, slowT: 0, heat: 0,
     bornWave: 1, veteran: false, agedWaves: 0,

@@ -1,7 +1,7 @@
 /* src/sim/state.ts — the serializable state factory. This object IS the save file and the
    contract the renderer reads. Keep everything here plain/JSON-safe (no functions). */
 import type { Meta, State } from '../types';
-import { tierDifficulty, WAVE } from './waves';
+import { tierMult, WAVE } from './waves';
 import { BASE_RANGE_M, PX_PER_METER, RAPID_CHECK } from './skills';
 import { labStartingGold } from './labs';
 
@@ -18,7 +18,7 @@ export function createState(seed: number, meta: Meta, firstRun?: boolean): State
     nextId: 1,
     atkMode: 'bullet', // 'bullet' (travelling projectile) | 'lightning' (instant beam, dev toggle)
     firstRun: !!firstRun, // scripted lethal intro run
-    difficultyMult: tierDifficulty((meta && meta.tier) || 1), // tier scaling, set once per run
+    difficultyMult: tierMult((meta && meta.tier) || 1), // flat HP/dmg tier multiplier, set once per run
     arena: { w: ARENA_W, h: ARENA_H },
     hero: {
       x: ARENA_W / 2,

@@ -172,7 +172,7 @@ const CSS = `
   .hud.theme-dnd .chip::after { animation: none; opacity: 0; }
 }
 
-/* in-run Tower-style HUD (currency strip, wave banner, You/Foe stat lines) in parchment + ink. */
+/* in-run Tower-style HUD (currency strip, wave banner, You/Enemy stat lines) in parchment + ink. */
 .hud.theme-dnd .cur { color: var(--ink); }
 .hud.theme-dnd .cur b { color: var(--ink); font-family: 'Cinzel', serif; }
 .hud.theme-dnd .cur.gold b { color: var(--gold-ink); }
@@ -183,7 +183,7 @@ const CSS = `
 .hud.theme-dnd .sl b { color: var(--ink); font-family: 'Cinzel', serif; }
 .hud.theme-dnd .sl-row .ic { color: var(--ink-dim); }
 .hud.theme-dnd .sl-wave { color: var(--ink); }
-.hud.theme-dnd .sl.foe .sl-wave { color: var(--crimson); }
+.hud.theme-dnd .sl.enemy .sl-wave { color: var(--crimson); }
 .hud.theme-dnd .sl-bar { background: #cdb89a; }
 .hud.theme-dnd .sl-bar .slbarfill { background: linear-gradient(90deg, #9a2a1a, #c08a2a); }
 .hud.theme-dnd .sl-bar.wave .slbarfill { background: linear-gradient(90deg, #7a5a2a, #b08a4a); }

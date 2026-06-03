@@ -2,7 +2,7 @@
    (5 bottom tabs), a spotlight tutorial, a milestones modal, and a settings modal.
    Handlers: onBuyRun, onBuyPerm, onClaimMilestone, onStartRun, onDev, onFF. */
 import type { BulkQty, CardDef, CardDrawResult, CardInstance, Hud as HudInstance, HudFactory, HudHandlers, MenuOpts, Meta, OfflineReward, Settings, State, ThemeDef, EarnSummary, UpgradeDef } from '../types';
-import { WAVE, waveCount, tierDifficulty, coinMult, coinsForRun, waveStr, waveSpeed, MAX_TIER, TIER_UNLOCK_WAVE, tierUnlocked } from '../sim/waves';
+import { WAVE, waveCount, tierMult, coinMult, coinsForRun, waveHp, waveDmg, waveSpeed, MAX_TIER, TIER_UNLOCK_WAVE, tierUnlocked } from '../sim/waves';
 import { TYPES } from '../sim/registries';
 import { spawnChances } from '../sim/enemies';
 import {
@@ -11,6 +11,7 @@ import {
   upgradeCap, tipOf, CARDS, CARD_INFO, MAX_STARS, CARD_ORDER, CARD_SLOTS, starSlot, buyCardCost, MILESTONES, milestoneReward,
   tierClaimableCount, TAB_DEFS, FIRST_PERM_COST, cardSlotCost, MAX_CARD_SLOTS, activeCardIds,
   availableBulkTiers, runBulkPlan, permBulkPlan, computeStats, effectiveUpgradeValue, effectiveCoinMult,
+  bigGroup, bigSuffix,
 } from '../sim/skills';
 import {
   LABS, LAB_BY_ID, labLevel, labUnlocked, labsTabUnlocked, labCoinCost, labTimeSec, labAtMax, researchOf, researchRemaining,
@@ -86,7 +87,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     // Fixed header: game info on the left, a single menu toggle pinned right. No wrapping, so
     // the layout is identical on every device and across themes (whose fonts have varying widths).
     // Tower-style top: a currency strip (in-run gold + the banked meta currencies) on the left, the
-    // menu toggle pinned right. The wave banner + our/foe stat lines sit just below it.
+    // menu toggle pinned right. The wave banner + our/enemy stat lines sit just below it.
     '<div class="topbar" id="h-top">' +
     '  <div class="curbar">' +
     '    <span class="cur gold" title="Gold (this run)">' + icon('coin', 15, 'gold') + '<b id="h-gold">0</b></span>' +
@@ -123,7 +124,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     '      </span>' +
     '      <span class="sl-bar"><i class="slbarfill" id="h-hpfill"></i><b id="h-hp">1</b></span>' +
     '    </button>' +
-    '    <button class="sl foe" id="h-sl-foe" title="Enemy stats">' +
+    '    <button class="sl enemy" id="h-sl-enemy" title="Enemy stats">' +
     '      <span class="sl-grid">' +
     '        <span class="sl-wave">Wave <b id="h-wave">1</b></span>' +
     '        <span class="sl-row">' + icon('bow', 12) + '<b id="h-fdmg">0</b></span>' +
@@ -165,18 +166,14 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
 
   const $ = <T extends HTMLElement = HTMLElement>(sel: string): T => root.querySelector(sel) as T;
   const fmt = (n: number): string => (typeof n === 'number' ? n.toLocaleString() : n);
-  const SUF: [number, string][] = [[1e15, 'q'], [1e12, 't'], [1e9, 'b'], [1e6, 'm']];
+  // Compact display: raw under 1000, dotted-grouped digits under 1e6, then the shared website-style
+  // suffix ladder (K/M/B/T/q/Q/s/S/O/N/D, then aa, ab, …) — so even tier-21 HP (~1e34) renders.
   const abbr = (n: number): string => {
     n = Math.floor(n || 0);
     if (n < 1000) return String(n);
     if (n < 1e6) return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    for (const [v, s] of SUF) {
-      if (n >= v) {
-        const m = n / v;
-        return (m < 10 ? m.toFixed(3) : m < 100 ? m.toFixed(2) : m.toFixed(1)) + s;
-      }
-    }
-    return String(n);
+    const { m, group } = bigGroup(n);
+    return (m < 10 ? m.toFixed(3) : m < 100 ? m.toFixed(2) : m.toFixed(1)) + bigSuffix(group);
   };
   const sumPerm = (meta: Meta): number => Object.values((meta && meta.perm) || {}).reduce((a, b) => a + b, 0);
   // An upgrade's DISPLAYED value as the EFFECTIVE number the sim runs on: base curve × labs × active
@@ -836,16 +833,15 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     uel.coins.textContent = abbr(s.meta.coins || 0);
     uel.gems.textContent = abbr(s.meta.gems || 0);
     uel.vials.textContent = abbr(s.meta.vials || 0);
-    // our live stats (damage / regen / coin multiplier) from computeStats; the baseline foe's HP/dmg
+    // our live stats (damage / regen / coin multiplier) from computeStats; the baseline enemy's HP/dmg
     // from the wave-strength curve at this (tier-scaled) wave.
     const st = computeStats(s);
     uel.dmg.textContent = abbr(Math.round(st.rangedDamage));
     uel.regen.textContent = abbr(Math.round(st.regen)) + '/s';
     uel.coinmult.textContent = coinMultText(s.meta, tier);
-    const eff = Math.max(1, s.wave.n) * tierDifficulty(tier);
-    const fstr = waveStr(eff);
-    uel.fhp.textContent = abbr(Math.max(1, Math.round(TYPES.melee.hp * fstr)));
-    uel.fdmg.textContent = abbr(Math.max(1, Math.round(TYPES.melee.dmg * fstr)));
+    const tm = tierMult(tier);
+    uel.fhp.textContent = abbr(Math.max(1, Math.round(TYPES.melee.hp * waveHp(s.wave.n) * tm)));
+    uel.fdmg.textContent = abbr(Math.max(1, Math.round(TYPES.melee.dmg * waveDmg(s.wave.n) * tm)));
     // HP: number + an inline bar that drains as the hero is hurt (low-HP danger pulse).
     uel.hp.textContent = abbr(Math.ceil(s.hero.hp)) + '/' + abbr(Math.ceil(s.hero.hpMax));
     const hpf = s.hero.hpMax > 0 ? Math.max(0, Math.min(1, s.hero.hp / s.hero.hpMax)) : 0;
@@ -934,7 +930,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       '<div class="statshead"><h2>Your Stats</h2><button class="iconclose" id="h-stats-close" title="Close">' + icon('close', 18) + '</button></div>' +
       '<div class="statsbody">' +
       strow('Tier', String(tier)) +
-      strow('Difficulty', '×' + tierDifficulty(tier)) +
+      strow('Difficulty', '×' + abbr(tierMult(tier))) +
       strow('Coin multiplier', coinMultText(m, tier, '×')) +
       strow('Damage', abbr(Math.round(st.rangedDamage))) +
       strow('Attack speed', st.fireRate.toFixed(2) + '/s') +
@@ -986,9 +982,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     const s = lastS;
     if (!s) return;
     const tier = s.meta.tier || 1,
-      eff = Math.max(1, s.wave.n) * tierDifficulty(tier),
-      str = waveStr(eff),
-      spd = waveSpeed(eff),
+      tm = tierMult(tier),
+      hpMult = waveHp(s.wave.n) * tm,
+      dmgMult = waveDmg(s.wave.n) * tm,
+      spd = waveSpeed(s.wave.n),
       ch = spawnChances(s.wave.n, (s.meta && s.meta.tier) || 1),
       st = computeStats(s);
     const waveTime = (WAVE.interval * (1 - (st.waveAccel || 0))).toFixed(1) + 's';
@@ -998,7 +995,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       const d = TYPES[t];
       if (!d) continue;
       rows += '<tr><td><span class="etype">' + enemyIcon(t) + ENEMY_LABELS[t] + '</span></td><td>' + Math.round((ch[t] || 0) * 100) + '%</td><td>' +
-        abbr(Math.max(1, Math.round(d.hp * str))) + '</td><td>' + abbr(Math.max(1, Math.round(d.dmg * str))) +
+        abbr(Math.max(1, Math.round(d.hp * hpMult))) + '</td><td>' + abbr(Math.max(1, Math.round(d.dmg * dmgMult))) +
         '</td><td>' + Math.round(d.speed * spd) + '</td><td>' + d.mass + '</td></tr>';
     }
     statsView = 'enemy';
@@ -1021,7 +1018,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   }
   $('#h-chart').addEventListener('click', () => toggleStats(openPlayerStats));
   $('#h-sl-us').addEventListener('click', () => toggleStats(openPlayerStats));
-  $('#h-sl-foe').addEventListener('click', () => toggleStats(openEnemyStats));
+  $('#h-sl-enemy').addEventListener('click', () => toggleStats(openEnemyStats));
   $('#h-stats').addEventListener('click', (e) => {
     if ((e.target as HTMLElement).id === 'h-stats') $('#h-stats').classList.add('hide');
   });
@@ -1903,9 +1900,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       '<div class="statsbody">' +
       row('Kills', fmt(e.kills || 0)) +
       row('Wave reached', fmt(e.wave || 0)) +
-      row('Foes per wave', fmt(waveCount((e.wave || 1) * tierDifficulty(tier)))) +
       row('Coin multiplier', coinMultText(meta, tier)) +
-      row('Total coins', fmt(meta.coins || 0)) +
       '</div>' +
       // offline overview is dismissed by tapping the backdrop, so it skips the back button entirely.
       (offline ? '' : '<button class="over-back" id="h-over-back">' + icon('back', 16) + ' Back to the Workshop</button>');

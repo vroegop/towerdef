@@ -97,14 +97,33 @@ export const TAB_DEFS: TabDef[] = [
   { id: 'economic', icon: 'coins', gated: true }, // locked until Tier 2 is reached
 ];
 
-// Compact K/M/B/T formatter for the big tabulated stats.
+// ── Shared "big number" notation, matching tower-enemy-stats.netlify.app ─────────────────────────
+// One scale of suffixes for every UI surface, so a value reads the same in the upgrade list, the HUD
+// chips and the enemy panel. CASE-SENSITIVE on purpose (q=1e15 vs Q=1e18, s=1e21 vs S=1e24, …). Past
+// 'D' (1e33) it rolls over to two-letter suffixes aa (1e36), ab (1e39), ac (1e42), … indefinitely.
+const BIG_SUF = ['', 'K', 'M', 'B', 'T', 'q', 'Q', 's', 'S', 'O', 'N', 'D'];
+export function bigSuffix(group: number): string {
+  if (group <= 0) return '';
+  if (group < BIG_SUF.length) return BIG_SUF[group];
+  const k = group - BIG_SUF.length; // 0 → 'aa' (1e36)
+  return String.fromCharCode(97 + Math.floor(k / 26)) + String.fromCharCode(97 + (k % 26));
+}
+// Split a number into mantissa (|m| < 1000) and its 1000^group exponent, by repeated division so
+// float log-precision can't mis-bucket exact powers of 1000.
+export function bigGroup(n: number): { m: number; group: number } {
+  let m = Math.abs(n),
+    group = 0;
+  while (m >= 1000) {
+    m /= 1000;
+    group++;
+  }
+  return { m: n < 0 ? -m : m, group };
+}
+// Compact formatter for the big tabulated stats (2 dp + the shared suffix ladder).
 const abbrNum = (v: number): string => {
-  const a = Math.abs(v);
-  if (a >= 1e12) return (v / 1e12).toFixed(2) + 'T';
-  if (a >= 1e9) return (v / 1e9).toFixed(2) + 'B';
-  if (a >= 1e6) return (v / 1e6).toFixed(2) + 'M';
-  if (a >= 1e3) return (v / 1e3).toFixed(2) + 'K';
-  return '' + Math.round(v);
+  if (Math.abs(v) < 1000) return '' + Math.round(v);
+  const { m, group } = bigGroup(v);
+  return m.toFixed(2) + bigSuffix(group);
 };
 
 // Exact Damage tables (sampled every 100 levels; interpolated between). value = damage per shot;

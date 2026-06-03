@@ -4,7 +4,7 @@ import type { Enemy, Rng, State, Stats } from '../types';
 import { makeRng } from './rng';
 import { ageSurvivors, makeEnemy } from './enemies';
 import { TYPES } from './registries';
-import { FIRST_RUN, COIN_DECAY_FACTOR, COIN_DECAY_WAVES, WAVE, waveCount, waveRoster } from './waves';
+import { FIRST_RUN, COIN_DECAY_FACTOR, COIN_DECAY_WAVES, WAVE, waveCount, waveRoster, econStr } from './waves';
 import { applyHit, fireProjectile, tickProjectiles } from './projectiles';
 import { computeStats, PX_PER_METER, RAPID_CHECK, RAPID_MULT } from './skills';
 import { tickActiveCards, trySecondWind, heroInvuln } from './cards-active';
@@ -70,10 +70,6 @@ export class Sim {
     return WAVE.screenCap; // concurrent cap stays fixed; wave SIZE is what upgrades grow
   }
 
-  // Effective wave for difficulty: real wave scaled by the run's tier multiplier.
-  private _effWave(n: number): number {
-    return n * (this.s.difficultyMult || 1);
-  }
 
   private _startWave(n: number): void {
     const w = this.s.wave,
@@ -97,20 +93,19 @@ export class Sim {
         if (this.s.fx.length > 32) this.s.fx.shift();
       }
     }
-    const eff = this._effWave(n);
     // Enemy Balance card: more enemies per wave (cash/kill ×mult applied on kill in _cleanup).
     const eb = this.stats.enemyBalance > 1 ? this.stats.enemyBalance : 1;
-    const want = Math.round(waveCount(eff) * eb);
-    // Composition is gated by the REAL wave number + tier (unlocks/boss cadence), while the wave
-    // SIZE scales with the effective wave. The roster (an ordered type list) is the deterministic,
-    // resume-safe source of truth for what spawns; caps may make it shorter than `want`.
+    // Wave SIZE and composition both key off the REAL wave number now — the tier is a flat HP/damage
+    // multiplier (Tower-style), so it no longer inflates how many enemies a wave spawns. The roster
+    // (an ordered type list) is the deterministic, resume-safe source of truth for what spawns.
+    const want = Math.round(waveCount(n) * eb);
     const tier = (this.s.meta && this.s.meta.tier) || 1;
     w.queue = waveRoster(this.rng, n, tier, want);
     w.count = w.queue.length;
     w.toSpawn = w.count;
     w.releaseGap = WAVE.spawnWindow / Math.max(1, w.count);
     w.releaseTimer = 0;
-    ageSurvivors(this.s, eff); // survivors get stronger as the new wave begins
+    ageSurvivors(this.s, n); // survivors get stronger as the new wave begins (reads tier mult itself)
   }
 
   // Wave Skip: cancel this wave's pending spawns and bank a reward = the wave's expected spoils ×1.10
@@ -136,11 +131,11 @@ export class Sim {
   }
 
   private _spawnOne(): void {
-    const s = this.s,
-      eff = this._effWave(s.wave.n);
-    // Pop the next planned type from the wave roster; stats still scale with the effective wave.
+    const s = this.s;
+    // Pop the next planned type from the wave roster; stats scale with the REAL wave × the tier's
+    // flat HP/damage multiplier (s.difficultyMult).
     const type = (s.wave.queue && s.wave.queue.shift()) || 'melee';
-    s.enemies.push(makeEnemy(s.nextId++, type, eff, this.rng, s.arena, s.hero.x, s.hero.y));
+    s.enemies.push(makeEnemy(s.nextId++, type, s.wave.n, this.rng, s.arena, s.hero.x, s.hero.y, s.difficultyMult || 1));
   }
 
   // First run only: a scripted, deliberately lethal trickle of weak melee.
@@ -486,6 +481,7 @@ export class Sim {
             c.x = e.x + Math.cos(a) * 14;
             c.y = e.y + Math.sin(a) * 14;
             c.strMult = e.strMult;
+            c.dmgMult = e.dmgMult;
             c.hpMax = Math.max(1, Math.round(e.hpMax * 0.5));
             c.hp = c.hpMax;
             c.dmg = Math.max(1, Math.round(e.dmg * 0.5));
@@ -496,7 +492,9 @@ export class Sim {
             spawned.push(c);
           }
         }
-        s.econ.xp += Math.round(2 * e.strMult * this.stats.xpGain);
+        // XP uses the TAME economy-strength curve at this wave (NOT e.strMult, which now carries the
+        // tier multiplier and Tower-scale HP and would overflow levelling). Tier-independent by design.
+        s.econ.xp += Math.round(2 * econStr(s.wave.n) * this.stats.xpGain);
         // UI-facing transient kill events (consumed by the renderer).
         s.fx.push({ seq: ++s.fxSeq, x: e.x, y: e.y, gold: g, coin: killCoins });
         if (s.fx.length > 32) s.fx.shift();

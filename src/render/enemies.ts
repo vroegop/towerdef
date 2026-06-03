@@ -1,6 +1,6 @@
 /* src/render/enemies.ts — top-down ENEMY bodies, one drawer per enemy TYPE.
 
-   The single source of truth for how every enemy looks, so a foe reads identically in the
+   The single source of truth for how every enemy looks, so an enemy reads identically in the
    live renderer (render/canvas2d.ts). Each enemy is a floating, wet, translucent "jelly" in
    its type colour; the slime trail behind it is owned by the caller (it needs per-id state).
 

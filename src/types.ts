@@ -92,7 +92,8 @@ export interface Enemy {
   x: number;
   y: number;
   facing: number;
-  strMult: number;
+  strMult: number; // HP multiplier (per-type base × wave HP curve × tier multiplier)
+  dmgMult: number; // damage multiplier (per-type base × wave DMG curve × tier multiplier)
   hpMax: number;
   hp: number;
   dmg: number;

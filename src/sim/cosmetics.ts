@@ -76,7 +76,7 @@ const TOWERS: Cosmetic[] = [
   { id: 'necro', kind: 'tower', name: "Necromancer's Eye", desc: 'An eldritch eye that finds every weak point.', tier: 6, buff: { stat: 'critMult', amount: 0.1 } },
   { id: 'hoard', kind: 'tower', name: "Dragon's Hoard", desc: 'A wyrm coiled on its gold — every kill pays.', tier: 7, buff: { stat: 'goldFind', amount: 0.1 } },
   { id: 'crystal', kind: 'tower', name: 'Crystal Conflux', desc: 'A geode that doubles every gem you earn.', tier: 8, buff: { stat: 'gemMult', amount: 1.0 } },
-  { id: 'nexus', kind: 'tower', name: 'Elemental Nexus', desc: 'A vortex that ricochets bolts between foes.', tier: 9, buff: { stat: 'bounceChance', amount: 0.1 } },
+  { id: 'nexus', kind: 'tower', name: 'Elemental Nexus', desc: 'A vortex that ricochets bolts between enemies.', tier: 9, buff: { stat: 'bounceChance', amount: 0.1 } },
   { id: 'spire', kind: 'tower', name: "Wizard's Spire", desc: 'A tall spire that sees — and strikes — far.', tier: 10, buff: { stat: 'range', amount: 0.1 } },
 ];
 // HUDs / BACKGROUNDS: only a 0-buff default for now. Adding more here (with a tier + buff) makes

@@ -5,7 +5,7 @@
    current baseline — hoarding a ball of enemies becomes lethal over time. */
 import type { Arena, Enemy, Rng, State } from '../types';
 import { TYPES } from './registries';
-import { SPAWN, allowedSpecials, isBossWave, waveCount, waveSpeed, waveStr } from './waves';
+import { SPAWN, allowedSpecials, isBossWave, waveCount, waveSpeed, waveHp, waveDmg } from './waves';
 
 // Expected per-type share of a wave at (real) wave n in `tier`, for the HUD enemy panel. Mirrors
 // waveRoster's composition (caps + unlocks + boss rule) using a representative wave size, with the
@@ -31,10 +31,14 @@ export function spawnChances(n: number, tier: number): Record<string, number> {
 
 const ihp = (base: number, mult: number): number => Math.max(1, Math.round(base * mult));
 
-export function makeEnemy(id: number, type: string, waveN: number, rng: Rng, arena: Arena, cx = arena.w / 2, cy = arena.h / 2): Enemy {
+// `diff` is the tier's flat HP/damage multiplier (state.difficultyMult = tierMult(tier)); 1 = tier 1.
+// HP and damage follow SEPARATE wave curves, each ×diff. strMult/dmgMult are the resolved per-enemy
+// multipliers, kept on the enemy so ageSurvivors can compound them independently.
+export function makeEnemy(id: number, type: string, waveN: number, rng: Rng, arena: Arena, cx = arena.w / 2, cy = arena.h / 2, diff = 1): Enemy {
   const def = TYPES[type];
-  const strMult = waveStr(waveN);
-  const speed = def.speed * waveSpeed(waveN);
+  const strMult = waveHp(waveN) * diff, // HP multiplier (also the "strength" proxy for splits)
+    dmgMult = waveDmg(waveN) * diff; // damage multiplier (grows slower than HP)
+  const speed = def.speed * waveSpeed(waveN); // tier does NOT change speed (Tower-style)
   const m = 30;
   // Spawn just outside one edge of the arena box, which is centered on (cx, cy) — the stationary
   // hero. (Default center = w/2,h/2 reproduces the legacy origin-anchored box exactly.)
@@ -56,11 +60,11 @@ export function makeEnemy(id: number, type: string, waveN: number, rng: Rng, are
     y = top + rng.next() * arena.h;
   }
   const hp = ihp(def.hp, strMult),
-    dmg = ihp(def.dmg, strMult);
+    dmg = ihp(def.dmg, dmgMult);
   return {
     id, type, shape: def.shape, behavior: def.behavior, color: def.color, r: def.r,
     x, y, facing: 0,
-    strMult, hpMax: hp, hp, dmg,
+    strMult, dmgMult, hpMax: hp, hp, dmg,
     speed, range: def.range, state: 'approach', atkCd: 0, kb: 0, hitFlash: 0, hitDmg: 0,
     rend: 0, rendT: 0,
     splits: def.splits || 0, mass: def.mass, slow: 1, slowT: 0,
@@ -69,16 +73,18 @@ export function makeEnemy(id: number, type: string, waveN: number, rng: Rng, are
 }
 
 export function ageSurvivors(state: State, newWaveN: number): void {
-  const baseStr = waveStr(newWaveN),
+  const diff = state.difficultyMult || 1;
+  const baseHp = waveHp(newWaveN) * diff, // fresh same-tier HP multiplier this wave
+    baseDmg = waveDmg(newWaveN) * diff,
     baseSpd = waveSpeed(newWaveN);
   for (const e of state.enemies) {
     const def = TYPES[e.type];
     const ratio = e.hpMax > 0 ? e.hp / e.hpMax : 1;
-    const freshStr = baseStr;
-    e.strMult = Math.max(e.strMult * 1.1, 1.1 * freshStr);
+    e.strMult = Math.max(e.strMult * 1.1, 1.1 * baseHp);
+    e.dmgMult = Math.max((e.dmgMult || e.strMult) * 1.1, 1.1 * baseDmg);
     e.hpMax = ihp(def.hp, e.strMult);
     e.hp = Math.max(1, e.hpMax * ratio);
-    e.dmg = ihp(def.dmg, e.strMult);
+    e.dmg = ihp(def.dmg, e.dmgMult);
     const freshSpd = def.speed * baseSpd;
     e.speed = Math.max(e.speed * 1.1, 1.1 * freshSpd);
     e.veteran = true;

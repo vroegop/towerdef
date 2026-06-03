@@ -164,7 +164,7 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     const hsx = tx(hp.x),
       hsy = ty(hp.y);
     // Endless battle-map: the arena has NO edges. It's a continuous parchment surface and the camera is
-    // locked on the tower — the sim's arena box only decides where foes spawn, never the visuals, so a
+    // locked on the tower — the sim's arena box only decides where enemies spawn, never the visuals, so a
     // big range never reveals a border or a too-small map. Paint a tower-centred parchment glow across
     // the whole viewport, then a world-anchored grid that tiles to the screen edges. No clip, no border.
     const fg = ctx.createRadialGradient(hsx, hsy, 0, hsx, hsy, Math.hypot(W, H) * 0.75);
@@ -291,7 +291,7 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
         if (f.seq <= lastFxSeq) continue;
         const fx = tx(f.x),
           fy = ty(f.y);
-        // Lightning bolt on every kill event, so a foe that dies INSTANTLY from the strike still flashes
+        // Lightning bolt on every kill event, so an enemy that dies INSTANTLY from the strike still flashes
         // a bolt (the hit-flash path below never sees it — it's already gone from s.enemies this frame).
         // Kill events carry the enemy's death position; non-kill events (interest/wave-skip) sit on the
         // hero, so their bolt is zero-length and invisible.
