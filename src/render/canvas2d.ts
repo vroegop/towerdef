@@ -8,6 +8,7 @@ import { BASE_RANGE_M, PX_PER_METER } from '../sim/skills';
 import { selectedCosmeticId } from '../sim/cosmetics';
 import { drawTowerSkin } from './towers';
 import { drawEnemy } from './enemies';
+import { drawGoldenBg, goldenBoltStyle, drawGoldenRing, drawMoat, drawCrystals } from './superpowers-fx';
 
 const RANGE_PAD = 0.25; // frame out to 1.25× range so the fog edge (1.2×) and its dim silhouettes are on-screen
 const FOG_VISION = 1.2; // vision edge as a multiple of range: inside = clear, outside = fog (enemies spawn at 1.4×)
@@ -199,6 +200,9 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     }
     ctx.stroke();
 
+    drawGoldenBg(ctx, s, W, H); // Golden Lightning warm-dim tint
+    drawMoat(ctx, s, hsx, hsy, scale, rdt, animClock); // Moat trench + caustic water (ground layer)
+
     // Slime trails — a quick-fading smear of colour behind each moving enemy, drawn UNDER the
     // bodies. Per-id screen-space history; each dab fades out over TRAIL_LIFE seconds (frozen on pause).
     for (const e of s.enemies) {
@@ -278,6 +282,9 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
         drawHealthBar(ctx, esx, by, bw, bh, e.hp / e.hpMax);
       }
     }
+    // Crystal Circle: orbiting crystals + flying shards. Drawn BEFORE the fog overlay so shards that
+    // fly out past the vision edge get dimmed by the fog as they die there.
+    drawCrystals(ctx, s, tx, ty, animClock);
     // Fog overlay: darken the world beyond the vision edge with a soft radial gradient. Drawn AFTER the
     // enemies (so silhouettes sit under it) but BEFORE the projectiles, tower and range ring (so those
     // always stay crisp and readable). Inside the vision edge it's fully transparent.
@@ -383,13 +390,16 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
 
     const h = s.hero;
     if (s.alive) {
-      ctx.strokeStyle = 'rgba(95,62,24,.4)';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([6, 6]);
-      ctx.beginPath();
-      ctx.arc(hsx, hsy, range * scale, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      // Golden Lightning recolours the range ring to a rotating gold dash while its window is live.
+      if (!drawGoldenRing(ctx, s, hsx, hsy, range * scale, animClock)) {
+        ctx.strokeStyle = 'rgba(95,62,24,.4)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([6, 6]);
+        ctx.beginPath();
+        ctx.arc(hsx, hsy, range * scale, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
       // the hero IS the tower: draw the player's selected skin (shadow-free) at the arena centre.
       drawTowerSkin(ctx, selectedCosmeticId(s.meta, 'tower'), hsx, hsy, h.r * scale, animClock);
       // rapid-fire cue (replaces the old gold-core tint): a pulsing gold ring while Burst is up.
@@ -452,19 +462,20 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     ctx.globalAlpha = 1;
     shards = shards.filter((sh) => sh.life > 0);
 
+    const goldBolt = goldenBoltStyle(s); // gold recolor while Golden Lightning is active (null = white)
     for (const b of bolts) {
       b.life -= rdt;
       ctx.globalAlpha = Math.max(0, b.life / b.max);
       ctx.beginPath();
       ctx.moveTo(b.pts[0].x, b.pts[0].y);
       for (let i = 1; i < b.pts.length; i++) ctx.lineTo(b.pts[i].x, b.pts[i].y);
-      ctx.shadowColor = 'rgba(255,255,255,0.6)';
-      ctx.shadowBlur = 4;
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 3;
+      ctx.shadowColor = goldBolt ? goldBolt.glow : 'rgba(255,255,255,0.6)';
+      ctx.shadowBlur = goldBolt ? goldBolt.blur : 4;
+      ctx.strokeStyle = goldBolt ? goldBolt.color : '#ffffff';
+      ctx.lineWidth = goldBolt ? goldBolt.width : 3;
       ctx.stroke();
       ctx.shadowBlur = 0;
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = goldBolt ? '#fffdf0' : '#ffffff';
       ctx.lineWidth = 1;
       ctx.stroke();
     }
