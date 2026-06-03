@@ -98,7 +98,7 @@ const DEFPCT_LIST = [
 ];
 export const DEFPCT_COST = shift(DEFPCT_LIST);
 
-// ---- thorns / Reflect (full per-level, max 99) ----
+// ---- thorns / Disintegrate (full per-level, max 99) ----
 const THORNS_LIST = [
   60, 85, 117, 157, 206, 264, 331, 409, 497, 596, 706, 828, 961, 1.11e3, 1.26e3, 1.43e3, 1.62e3, 1.81e3,
   2.02e3, 2.24e3, 2.47e3, 2.72e3, 2.98e3, 3.26e3, 3.54e3, 3.85e3, 4.16e3, 4.49e3, 4.84e3, 5.2e3, 5.57e3,

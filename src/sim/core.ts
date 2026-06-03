@@ -196,9 +196,10 @@ export class Sim {
   private _hurtHero(amount: number, attacker?: Enemy): void {
     const h = this.s.hero,
       st = this.stats;
-    // Reflect: send a share of the (landed) hit back at the attacker.
+    // Disintegrate: an attacker that hits the tower loses a fraction of its OWN max HP (not the
+    // incoming damage). Fires on every landed hit, melee and ranged alike. Capped at 99% by the curve.
     if (st.thorns && attacker) {
-      const refl = amount * st.thorns;
+      const refl = attacker.hpMax * st.thorns;
       attacker.hp -= refl;
       attacker.lastHurt = 'reflect';
       attacker.hitFlash = 0.12;
