@@ -7,7 +7,7 @@ import { makeRng } from '../../src/sim/rng';
 import { Sim } from '../../src/sim/core';
 import { createState, ARENA_W, ARENA_H } from '../../src/sim/state';
 import { makeEnemy } from '../../src/sim/enemies';
-import { migrateMeta, availableSpeeds, gameSpeed, setGameSpeed, SPEED_STEPS, LAB_BY_ID } from '../../src/sim/labs';
+import { migrateMeta, availableSpeeds, gameSpeed, setGameSpeed, SPEED_STEPS, LAB_BY_ID, labInterestCap } from '../../src/sim/labs';
 import { buyPerm, permCost, computeStats, waveStrSafe } from './helpers';
 import { waveCount, econStr, waveHp, waveDmg, tierMult, MAX_TIER, tierUnlocked, coinMult, waveRoster, allowedSpecials, isBossWave } from '../../src/sim/waves';
 import { buyCard, buyCardCost, MAX_STARS, CARD_ORDER, evalCurve, UP_BY_ID, PX_PER_METER, isUnlocked, unlockGroup, nextUnlockGroup, skillGroup, bigSuffix, bigGroup } from '../../src/sim/skills';
@@ -232,6 +232,20 @@ describe('tiers', () => {
     expect(coinMult(1)).toBeCloseTo(1);
     expect(coinMult(2)).toBeCloseTo(1.8);
     expect(coinMult(3)).toBeCloseTo(2.6);
+  });
+});
+
+describe('interest cap', () => {
+  it('labInterestCap is a geometric ladder from 25/wave (L0) to 20,000/wave (L20)', () => {
+    expect(labInterestCap(freshMeta())).toBe(25); // no lab → base ceiling
+    expect(labInterestCap(freshMeta({ labs: { interestCapLab: 20 } }))).toBe(20000);
+    // accelerating increments: each level's jump exceeds the previous
+    const at = (n: number) => labInterestCap(freshMeta({ labs: { interestCapLab: n } }));
+    expect(at(10) - at(9)).toBeGreaterThan(at(2) - at(1));
+  });
+  it('computeStats exposes interestCap, raised by the lab', () => {
+    expect(computeStats(createState(1, freshMeta(), false)).interestCap).toBe(25);
+    expect(computeStats(createState(1, freshMeta({ labs: { interestCapLab: 20 } }), false)).interestCap).toBe(20000);
   });
 });
 

@@ -297,7 +297,7 @@ export interface LabDef {
   time: LabCurve;
   gate: { wave: number };
   // How the per-level effect is phrased in the HUD. Defaults to 'mult' (×) for scale labs.
-  unit?: 'mult' | 'meters' | 'pct' | 'gold' | 'tierpct';
+  unit?: 'mult' | 'meters' | 'pct' | 'gold' | 'tierpct' | 'interestcap';
 }
 // ---- HUD surface ----
 export interface EarnSummary {

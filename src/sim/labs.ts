@@ -110,6 +110,12 @@ export const LABS: LabDef[] = [
   // Tier Coin multiplier: +1% on the end-of-run coin reward per level, up to +20% at level 20.
   { id: 'tierCoinLab', cat: 'economic', kind: 'special', target: 'tierCoinMult', label: 'Tier Coin Lab',
     per: 0.01, max: 20, unit: 'tierpct', coin: tcurve(LAB_COST), time: tcurve(TIERCOIN_TIME), gate: { wave: 30 } },
+  // Interest Cap: raises the per-wave gold ceiling on the Interest skill. Geometric — the cap climbs
+  // from 25/wave (level 0) to 20,000/wave (level 20) via labInterestCap, so increments accelerate.
+  // `per` here is harmless metadata (the real value comes from labInterestCap); the HUD renders the
+  // 'interestcap' unit through that helper, not per·level.
+  { id: 'interestCapLab', cat: 'economic', kind: 'special', target: 'interestCap', label: 'Interest Cap Lab',
+    per: 0, max: 20, unit: 'interestcap', coin: tcurve(LAB_COST), time: tcurve(LAB_TIME), gate: { wave: 30 } },
 ];
 export const LAB_BY_ID: Record<string, LabDef> = {};
 for (const L of LABS) LAB_BY_ID[L.id] = L;
@@ -155,6 +161,10 @@ export function labFlatAdds(meta: Meta): Record<string, number> {
 export const labStartingGold = (meta: Meta): number => 30 * lvl(meta, 'startGoldLab');
 // Tier Coin multiplier — ×(1 + 0.01·level) on the end-of-run coin reward.
 export const labTierCoinMult = (meta: Meta): number => 1 + 0.01 * lvl(meta, 'tierCoinLab');
+// Interest Cap — the per-wave gold ceiling on interest income. Geometric ladder over 20 levels:
+// 25·800^(level/20), so level 0 = 25/wave and level 20 = 20,000/wave with accelerating increments.
+export const labInterestCap = (meta: Meta): number =>
+  Math.round(25 * Math.pow(800, lvl(meta, 'interestCapLab') / 20));
 
 // ---- gating / pricing for the NEXT level of a lab ----
 export function labUnlocked(meta: Meta, id: string): boolean {

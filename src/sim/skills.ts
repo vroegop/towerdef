@@ -7,7 +7,7 @@
    The effective number of levels a stat has is perm + run (capped at the upgrade's max).
    Tabs: attack / defense / economic (icons, not words). */
 import type { BulkQty, CardDef, CardSpec, CardDrawResult, Curve, Meta, State, Stats, TabDef, UpgradeCurve, UpgradeDef, UpgradeSpec } from '../types';
-import { labCapBonus, labFlatAdds, labScaleMults, labTierCoinMult } from './labs';
+import { labCapBonus, labFlatAdds, labInterestCap, labScaleMults, labTierCoinMult } from './labs';
 import { coinMult } from './waves';
 import { cosmeticBuffMult, towerForTier, TOWER_UNLOCK_WAVE } from './cosmetics';
 import {
@@ -379,7 +379,7 @@ const UPGRADE_SPECS: UpgradeSpec[] = [
     gold: tcurve(CASHBONUS_COST), coin: tcurve(CASHBONUS_COST) },
   { id: 'interest', tab: 'economic', icon: 'coin', label: 'Interest',
     name: 'Interest',
-    tip: 'Earns a percentage of banked gold as a bonus each wave.',
+    tip: 'Earns a percentage of banked gold as a bonus each wave, capped per wave (25/wave; raise the ceiling to 20k/wave with the Interest Cap lab).',
     max: 99, gated: true, curve: { kind: 'linear', base: 0, per: 0.0006 }, fmt: (v) => (v * 100).toFixed(1) + '%/wave',
     gold: tcurve(INTEREST_COST), coin: tcurve(INTEREST_COST) },
   { id: 'freeUpAttack', tab: 'economic', icon: 'coins', label: 'Free Atk',
@@ -944,6 +944,7 @@ export function computeStats(state: State): Stats {
     lifesteal: U.lifesteal.value(b('lifesteal')),
     cashMult: U.cashBonus.value(b('cashBonus')),
     interest: U.interest.value(b('interest')),
+    interestCap: labInterestCap(state.meta), // per-wave gold ceiling on interest income (25 → 20k via lab)
     goldPerWave: U.goldPerWave.value(b('goldPerWave')),
     coinsPerWave: U.coinsPerWave.value(b('coinsPerWave')),
     coinsPerKill: U.coinsPerKill.value(b('coinsPerKill')),

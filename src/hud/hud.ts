@@ -1528,6 +1528,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     if (unit === 'pct') return 'Adds +' + Math.round(per * lv * 100) + '% ' + label.replace(/ Lab$/, '') + ' (+' + Math.round(per * 100) + '% per level).';
     if (unit === 'gold') return 'Begin each run with +' + per * lv + ' gold (+' + per + ' per level).';
     if (unit === 'tierpct') return '+' + Math.round(per * lv * 100) + '% coins from runs (+' + Math.round(per * 100) + '% per level).';
+    if (unit === 'interestcap') return 'Caps Interest income at ' + Math.round(25 * Math.pow(800, lv / 20)).toLocaleString() + ' gold/wave (25 → 20,000 across 20 levels).';
     // default: a scale lab (×multiplier on its workshop stat).
     return 'Multiplies ' + label.replace(/ Lab$/, '') + ' (×' + (1 + per * lv).toFixed(2) + ' at lv ' + lv + ').';
   }

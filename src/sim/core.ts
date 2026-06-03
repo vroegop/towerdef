@@ -83,9 +83,11 @@ export class Sim {
       this.s.econ.goldEarned += cw;
     }
     if (st.coinsPerWave) this.s.econ.bonusCoins += st.coinsPerWave;
-    // Interest: gain a fraction of banked cash each wave (uncapped).
+    // Interest: gain a fraction of banked cash each wave, clamped to a per-wave gold ceiling
+    // (interestCap: 25/wave base, raised to 20k/wave by the Interest Cap lab).
     if (st.interest) {
-      const gain = Math.floor(this.s.econ.gold * st.interest);
+      const raw = Math.floor(this.s.econ.gold * st.interest);
+      const gain = st.interestCap > 0 ? Math.min(raw, st.interestCap) : raw;
       if (gain > 0) {
         this.s.econ.gold += gain;
         this.s.econ.goldEarned += gain;
