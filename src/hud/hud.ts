@@ -15,7 +15,7 @@ import {
 import {
   LABS, LAB_BY_ID, labLevel, labUnlocked, labsTabUnlocked, labCoinCost, labTimeSec, labAtMax, researchOf, researchRemaining,
   researchProgress, freeSlots, rushVialCost, labSlotCost, MAX_SLOTS, checkInPending, CHECKIN_VIALS, CHECKIN_GEMS,
-  availableSpeeds, gameSpeed, speedAtLevel,
+  availableSpeeds, gameSpeed, speedAtLevel, interestCapAt, INTEREST_CAP_BASE,
 } from '../sim/labs';
 import { cosmeticsOf, isCosmeticUnlocked, selectedCosmeticId, buffText, cosmeticById } from '../sim/cosmetics';
 import { drawTowerSkin } from '../render/towers';
@@ -1532,6 +1532,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     if (unit === 'meters') return 'Adds +' + Math.round(per * lv) + 'm attack range (+' + per + 'm per level).';
     if (unit === 'pct') return 'Adds +' + Math.round(per * lv * 100) + '% ' + label.replace(/ Lab$/, '') + ' (+' + Math.round(per * 100) + '% per level).';
     if (unit === 'gold') return 'Begin each run with +' + per * lv + ' gold (+' + per + ' per level).';
+    if (unit === 'intcap') return 'Interest pays at most ' + interestCapAt(lv).toLocaleString() + ' gold/wave (base ' + INTEREST_CAP_BASE + ', up to 200,000 at lv 20).';
     if (unit === 'tierpct') return '+' + Math.round(per * lv * 100) + '% coins from runs (+' + Math.round(per * 100) + '% per level).';
     // default: a scale lab (×multiplier on its workshop stat).
     return 'Multiplies ' + label.replace(/ Lab$/, '') + ' (×' + (1 + per * lv).toFixed(2) + ' at lv ' + lv + ').';

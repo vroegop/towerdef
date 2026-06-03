@@ -334,7 +334,7 @@ const UPGRADE_SPECS: UpgradeSpec[] = [
     gold: tcurve(CASHBONUS_COST), coin: tcurve(CASHBONUS_COST) },
   { id: 'interest', tab: 'economic', icon: 'coin', label: 'Interest',
     name: 'Interest',
-    tip: 'Earns a percentage of banked gold as a bonus each wave.',
+    tip: 'Earns a percentage of banked gold each wave, capped per wave (base 100 gold; raise the ceiling with the Interest Cap lab, up to 200k).',
     max: 99, gated: true, curve: { kind: 'linear', base: 0, per: 0.0006 }, fmt: (v) => (v * 100).toFixed(1) + '%/wave',
     gold: tcurve(INTEREST_COST), coin: tcurve(INTEREST_COST) },
   { id: 'freeUpAttack', tab: 'economic', icon: 'coins', label: 'Free Atk',

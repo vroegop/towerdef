@@ -8,6 +8,7 @@ import { FIRST_RUN, COIN_DECAY_FACTOR, COIN_DECAY_WAVES, WAVE, waveCount, waveRo
 import { applyHit, fireProjectile, tickProjectiles } from './projectiles';
 import { computeStats, PX_PER_METER, RAPID_CHECK, RAPID_MULT } from './skills';
 import { tickActiveCards, trySecondWind, heroInvuln } from './cards-active';
+import { labInterestCap } from './labs';
 import { ARENA_W, ARENA_H } from './state';
 
 export class Sim {
@@ -87,9 +88,10 @@ export class Sim {
       this.s.econ.goldEarned += cw;
     }
     if (st.coinsPerWave) this.s.econ.bonusCoins += st.coinsPerWave;
-    // Interest: gain a fraction of banked cash each wave (uncapped).
+    // Interest: gain a fraction of banked cash each wave, capped per wave (base 100 gold, lifted by the
+    // Interest Cap lab up to 200k) so it can't compound into a runaway hoard.
     if (st.interest) {
-      const gain = Math.floor(this.s.econ.gold * st.interest);
+      const gain = Math.min(labInterestCap(this.s.meta), Math.floor(this.s.econ.gold * st.interest));
       if (gain > 0) {
         this.s.econ.gold += gain;
         this.s.econ.goldEarned += gain;

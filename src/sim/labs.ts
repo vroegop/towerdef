@@ -107,6 +107,10 @@ export const LABS: LabDef[] = [
   // Starting Gold: +30 gold at run start per level (20 levels). Durations: 1 min, +1 min per level.
   { id: 'startGoldLab', cat: 'economic', kind: 'special', target: 'startingGold', label: 'Starting Gold Lab',
     per: 30, max: 20, unit: 'gold', coin: tcurve(LAB_COST), time: tcurve(STARTGOLD_TIME), gate: { wave: 30 } },
+  // Interest Cap: raises the per-wave Interest payout ceiling from the 100-gold base up to 200,000 at
+  // level 20 (geometric ×2000 over 20 levels). per is unused (the curve is geometric, see interestCapAt).
+  { id: 'interestCapLab', cat: 'economic', kind: 'special', target: 'interestCap', label: 'Interest Cap Lab',
+    per: 0, max: 20, unit: 'intcap', coin: tcurve(LAB_COST), time: tcurve(LAB_TIME), gate: { wave: 30 } },
   // Tier Coin multiplier: +1% on the end-of-run coin reward per level, up to +20% at level 20.
   { id: 'tierCoinLab', cat: 'economic', kind: 'special', target: 'tierCoinMult', label: 'Tier Coin Lab',
     per: 0.01, max: 20, unit: 'tierpct', coin: tcurve(LAB_COST), time: tcurve(TIERCOIN_TIME), gate: { wave: 30 } },
@@ -155,6 +159,14 @@ export function labFlatAdds(meta: Meta): Record<string, number> {
 // special labs applied OUTSIDE computeStats:
 // Starting Gold — flat gold granted at the start of every run (Σ per·level = 30·level).
 export const labStartingGold = (meta: Meta): number => 30 * lvl(meta, 'startGoldLab');
+// Interest payout cap — the most gold the Interest skill can pay out in a single wave. Base 100,
+// raised geometrically by the Interest Cap lab to 200,000 at level 20 (×2000 spread over 20 levels,
+// so each level multiplies the cap by 2000^(1/20) ≈ 1.462). Consumed by the interest step in core.ts.
+export const INTEREST_CAP_BASE = 100;
+export const INTEREST_CAP_MAX = 200000;
+export const interestCapAt = (level: number): number =>
+  Math.round(INTEREST_CAP_BASE * Math.pow(INTEREST_CAP_MAX / INTEREST_CAP_BASE, Math.min(20, Math.max(0, level)) / 20));
+export const labInterestCap = (meta: Meta): number => interestCapAt(lvl(meta, 'interestCapLab'));
 // Tier Coin multiplier — ×(1 + 0.01·level) on the end-of-run coin reward.
 export const labTierCoinMult = (meta: Meta): number => 1 + 0.01 * lvl(meta, 'tierCoinLab');
 
