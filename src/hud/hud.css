@@ -576,6 +576,8 @@
 .hud .tut-thought.hide { display: none; }
 .hud .tut-thought:after { content: ''; position: absolute; left: var(--arrow-x, 50%); bottom: -9px; transform: translateX(-50%);
   border: 9px solid transparent; border-top-color: #1c2030; border-bottom: 0; }
+/* bubble flipped BELOW its target (no room above): arrow points up, from the bubble's top edge. */
+.hud .tut-thought.below:after { top: -9px; bottom: auto; border-top: 0; border-bottom-color: #1c2030; }
 
 /* ---- locked-tab unlock tooltip (click a locked menu tab) ---- */
 .hud .lk-tip { position: fixed; transform: translateY(-100%); z-index: 61; pointer-events: none;
