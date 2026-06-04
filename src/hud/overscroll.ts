@@ -70,7 +70,19 @@ export function attachOverscrollBounce(el: HTMLElement | null, opts: BounceOpts 
   // element then keeps its OWN flex (crucially flex-basis) so a content-sized modal still sizes
   // to its content rather than collapsing. Plain block panels (e.g. the tab dock, sized by its
   // own max-height) are simply wrapped as-is.
-  if (parseFloat(cs.flexGrow) > 0) {
+  //
+  // The distinction is whether the panel is a flex *item* (its parent lays it out with flexbox) —
+  // not whether it grows. A non-growing flex child (e.g. the milestones list, which shrinks to fit
+  // the modal and scrolls) still needs the clip to stand in for it on the flex line, or the modal
+  // mis-sizes and the content spills to the very edge over the shell's shadow.
+  // `flexGrow > 0` is visibility-independent (panels like the menu body are wrapped while their
+  // overlay is still display:none). For non-growing vertical panels — chiefly the milestones list,
+  // which shrinks to fit its modal and scrolls — fall back to checking whether the parent actually
+  // lays the panel out with flexbox (those are always wrapped while visible, so this reads true).
+  const parentDisplay = el.parentElement ? getComputedStyle(el.parentElement).display : '';
+  const parentIsFlex = parentDisplay === 'flex' || parentDisplay === 'inline-flex';
+  const isFlexItem = parseFloat(cs.flexGrow) > 0 || (!horizontal && parentIsFlex);
+  if (isFlexItem) {
     clip.style.display = 'flex';
     clip.style.flexDirection = horizontal ? 'row' : 'column';
     clip.style.flexGrow = cs.flexGrow;
