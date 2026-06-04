@@ -1,0 +1,167 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<title>Arena · Super Weapons art gallery</title><style>
+:root{color-scheme:dark;--offense:#ff7a4d;--defense:#4fb6e0;--utility:#b08bff;--economy:#f0c94a}
+body{margin:0;background:#14161b;color:#e6e8ee;font:14px/1.45 ui-sans-serif,system-ui,Segoe UI,Roboto,sans-serif}
+header{padding:16px 22px;border-bottom:1px solid #333845}h1{margin:0;font-size:17px}
+.sub{color:#9aa3b2;font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;padding:20px}
+.tile{margin:0;background:#1e2128;border:1px solid #333845;border-radius:12px;overflow:hidden}
+.arena{aspect-ratio:1;position:relative;background:radial-gradient(circle at 50% 46%,#232834,#161922 60%,#0f1117)}
+.ring{position:absolute;inset:16%;border-radius:50%;border:1px dashed rgba(255,255,255,.12)}
+.tower{position:absolute;left:50%;top:50%;width:12px;height:12px;margin:-6px;border-radius:50%;background:#cdd6e6;box-shadow:0 0 10px #cdd6e6}
+.art{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);filter:drop-shadow(0 2px 8px rgba(0,0,0,.5))}
+.cat-offense .art{color:var(--offense)}.cat-defense .art{color:var(--defense)}
+.cat-utility .art{color:var(--utility)}.cat-economy .art{color:var(--economy)}
+figcaption{padding:10px 12px}figcaption b{font-size:14px}
+.cat{font-size:11px;text-transform:capitalize;margin:2px 0 4px}
+.cat-offense{color:var(--offense)}.cat-defense{color:var(--defense)}.cat-utility{color:var(--utility)}.cat-economy{color:var(--economy)}
+figcaption p{margin:4px 0 0;color:#9aa3b2;font-size:12px}
+.b{font-size:9px;font-weight:700;border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:middle}
+.b.new{color:#14161b;background:#46c98b}.b.live{color:#9aa3b2;border:1px solid #333845}
+</style></head><body>
+<header><h1>Super Weapons — example art</h1>
+<div class="sub">13 weapons (3 live, 10 proposed) · the dot is the tower, the dashed circle its range · tinted by category · tune them all in <code>npm run super:dashboard</code></div></header>
+<div class="grid">
+    <figure class="tile">
+      <div class="arena cat-offense">
+        <div class="ring"></div><div class="tower"></div>
+        <div class="art"><svg class="wart wart-golden" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 5 13h4.6l-2 9 9.4-12.4H12l3-7.6z" fill="#f4c64a" stroke="#caa233" stroke-width="1"/><g class="spark"><path d="M19 3.6l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z" fill="#fff" stroke="none"/></g><path d="M4.2 19.2l.5 1.4 1.4.5-1.4.5-.5 1.4-.5-1.4-1.4-.5 1.4-.5z" fill="#ffe9a8" stroke="none"/></svg></div>
+      </div>
+      <figcaption>
+        <b>Golden Lightning</b><span class="b live">LIVE</span>
+        <div class="cat cat-offense">offense</div>
+        <p>For a burst, lightning turns gold and every kill pays far more gold & coins.</p>
+      </figcaption>
+    </figure>
+    <figure class="tile">
+      <div class="arena cat-defense">
+        <div class="ring"></div><div class="tower"></div>
+        <div class="art"><svg class="wart wart-moat" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.4" stroke="#4fb6e0" stroke-opacity=".55" stroke-dasharray="1.5 2.6"/><circle cx="12" cy="12" r="6.6" fill="#2f7fa8" fill-opacity=".32" stroke="#4fb6e0"/><path d="M5.8 12c1-1 2-1 3 0s2 1 3 0 2-1 3 0 2 1 3 0" stroke="#bfeaff" stroke-width="1" fill="none"/><path d="M9.2 15.4 12 9.6l2.8 5.8z" fill="#d8c39a" stroke="#8a6d44"/><path d="M10.6 15.4v-2.2h2.8v2.2" stroke="#8a6d44" stroke-width="1"/></svg></div>
+      </div>
+      <figcaption>
+        <b>Moat</b><span class="b live">LIVE</span>
+        <div class="cat cat-defense">defense</div>
+        <p>A dry trench rings the tower; periodically it floods, slowing everything caught in it.</p>
+      </figcaption>
+    </figure>
+    <figure class="tile">
+      <div class="arena cat-utility">
+        <div class="ring"></div><div class="tower"></div>
+        <div class="art"><svg class="wart wart-crystal" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8" stroke-opacity=".32" stroke-dasharray="2 3"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><g class="spin"><path d="M12 1.6 13.7 4 12 6.4 10.3 4z" fill="#a9ecff" stroke="#37d7ff"/><path d="M22.4 12 20 13.7 17.6 12 20 10.3z" fill="#a9ecff" stroke="#37d7ff"/><path d="M12 22.4 10.3 20 12 17.6 13.7 20z" fill="#a9ecff" stroke="#37d7ff"/><path d="M1.6 12 4 10.3 6.4 12 4 13.7z" fill="#a9ecff" stroke="#37d7ff"/></g></svg></div>
+      </div>
+      <figcaption>
+        <b>Crystal Circle</b><span class="b live">LIVE</span>
+        <div class="cat cat-utility">utility</div>
+        <p>Crystals orbit and instakill on contact for gems; survivors burst into shards that fly into the fog.</p>
+      </figcaption>
+    </figure>
+    <figure class="tile">
+      <div class="arena cat-offense">
+        <div class="ring"></div><div class="tower"></div>
+        <div class="art"><svg class="wart wart-meteor" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 2.6 13 11" stroke="#ff8a3c" stroke-width="2.2"/><path d="M22 5 17 10M19 2 14.5 6.5" stroke="#ffd08a" stroke-width="1.1"/><circle cx="11" cy="13" r="3.6" fill="#ff6a2c" stroke="#b23c12"/><circle cx="10" cy="12" r="1.1" fill="#ffd9b0" stroke="none"/><path d="M3.5 20.5c1.8-2.2 3.8-2.2 5 0M8.5 21.5c1.2-1.6 3-1.6 4.2 0" stroke="#ff8a3c" stroke-width="1.3"/></svg></div>
+      </div>
+      <figcaption>
+        <b>Meteor Storm</b><span class="b new">NEW</span>
+        <div class="cat cat-offense">offense</div>
+        <p>Meteors rain across the arena, each cratering for heavy splash damage in a blast radius.</p>
+      </figcaption>
+    </figure>
+    <figure class="tile">
+      <div class="arena cat-offense">
+        <div class="ring"></div><div class="tower"></div>
+        <div class="art"><svg class="wart wart-tesla" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="4.2" cy="6" r="1.7" fill="#9fe0ff" stroke="#37d7ff"/><circle cx="19.8" cy="18" r="1.7" fill="#9fe0ff" stroke="#37d7ff"/><path d="M5.4 7.2 9 8.2 7 11.4l4.4 1L9 15.6l4.6 1-2 3.1" stroke="#cfeeff" stroke-width="1.7"/><path d="M5.4 7.2 9 8.2 7 11.4l4.4 1L9 15.6l4.6 1-2 3.1" stroke="#37d7ff" stroke-width=".7"/></svg></div>
+      </div>
+      <figcaption>
+        <b>Chain Tesla</b><span class="b new">NEW</span>
+        <div class="cat cat-offense">offense</div>
+        <p>A charged arc leaps to the nearest enemy and chains onward, splitting more with every level.</p>
+      </figcaption>
+    </figure>
+    <figure class="tile">
+      <div class="arena cat-offense">
+        <div class="ring"></div><div class="tower"></div>
+        <div class="art"><svg class="wart wart-inferno" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.1" fill="#ffd08a" stroke="#ff6a2c"/><g class="flames" fill="#ff7a33" stroke="#c8431a" stroke-width=".8"><path d="M12 3.2c1.3 1.2 1.6 2.4.9 3.6.9-.3 1.4-1.1 1.3-2.1 1.1 1.3.7 2.9-.8 3.6h-2.8c-1.5-.7-1.9-2.3-.8-3.6-.1 1 .4 1.8 1.3 2.1-.7-1.2-.4-2.4.9-3.6z"/><path d="M20 9.4c-.2 1.2-1 1.9-2.1 2 .8.5 1.6.3 2.2-.4-.1 1.6-1.6 2.5-3 1.9l-1.8-2.1c-.4-1.5.5-2.9 2-3.2-.6.7-.6 1.6.1 2.2.1-1.3 1-2.1 2.6-2.4z"/><path d="M4 9.4c.2 1.2 1 1.9 2.1 2-.8.5-1.6.3-2.2-.4.1 1.6 1.6 2.5 3 1.9l1.8-2.1c.4-1.5-.5-2.9-2-3.2.6.7.6 1.6-.1 2.2-.1-1.3-1-2.1-2.6-2.4z"/><path d="M12 20.8c1.3-1.2 1.6-2.4.9-3.6.9.3 1.4 1.1 1.3 2.1 1.1-1.3.7-2.9-.8-3.6h-2.8c-1.5.7-1.9 2.3-.8 3.6-.1-1 .4-1.8 1.3-2.1-.7 1.2-.4 2.4.9 3.6z"/></g></svg></div>
+      </div>
+      <figcaption>
+        <b>Inferno Ring</b><span class="b new">NEW</span>
+        <div class="cat cat-offense">offense</div>
+        <p>A ring of fire encircles the tower, burning everything caught inside it over time.</p>
+      </figcaption>
+    </figure>
+    <figure class="tile">
+      <div class="arena cat-defense">
+        <div class="ring"></div><div class="tower"></div>
+        <div class="art"><svg class="wart wart-frost" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" stroke="#9fe6ff" stroke-opacity=".4" stroke-dasharray="2 3.4"/><g stroke="#cdefff" stroke-width="1.5"><path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9"/><path d="M12 6.4 9.8 4.4M12 6.4l2.2-2M12 17.6l-2.2 2M12 17.6l2.2 2" stroke-width="1.1"/><path d="M6.4 8.9 4 8.2M6.4 8.9 5.8 6.5M17.6 15.1l2.4.7M17.6 15.1l.6 2.3" stroke-width="1"/><path d="M17.6 8.9 20 8.2M17.6 8.9l.6-2.4M6.4 15.1 4 15.8M6.4 15.1l-.6 2.3" stroke-width="1"/></g><circle cx="12" cy="12" r="1.6" fill="#eafaff" stroke="none"/></svg></div>
+      </div>
+      <figcaption>
+        <b>Frost Nova</b><span class="b new">NEW</span>
+        <div class="cat cat-defense">defense</div>
+        <p>A shock of cold freezes every enemy in range solid; on thaw the frozen shatter for damage.</p>
+      </figcaption>
+    </figure>
+    <figure class="tile">
+      <div class="arena cat-defense">
+        <div class="ring"></div><div class="tower"></div>
+        <div class="art"><svg class="wart wart-aegis" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.2" stroke="#7fd0ff" stroke-opacity=".45"/><path d="M12 2.8 19 5.4v5.4C19 16 15.6 19.2 12 20.8 8.4 19.2 5 16 5 10.8V5.4z" fill="#3a7fd6" fill-opacity=".32" stroke="#7fd0ff" stroke-width="1.6"/><path d="M8.8 12.2 11 14.4 15.4 9.6" stroke="#eaf6ff" stroke-width="1.8"/><path d="M12 3.6 6.2 5.7v5C6.2 14.6 8.4 17 11 18.4" stroke="#bfe6ff" stroke-opacity=".7" stroke-width="1"/></svg></div>
+      </div>
+      <figcaption>
+        <b>Aegis Bulwark</b><span class="b new">NEW</span>
+        <div class="cat cat-defense">defense</div>
+        <p>A shield bubble snaps up around the tower, soaking hits and reflecting a share back.</p>
+      </figcaption>
+    </figure>
+    <figure class="tile">
+      <div class="arena cat-utility">
+        <div class="ring"></div><div class="tower"></div>
+        <div class="art"><svg class="wart wart-singularity" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><g class="spin" stroke="#9a8bf0" stroke-width="1.4" fill="none"><path d="M3 8c4-1.6 6.5.4 7.4 3.6"/><path d="M21 16c-4 1.6-6.5-.4-7.4-3.6"/><path d="M8 3.2c1.6 4 .2 6.6-2.9 7.7"/><path d="M16 20.8c-1.6-4-.2-6.6 2.9-7.7"/></g><circle cx="12" cy="12" r="3.4" fill="#0c0c18" stroke="#b6a8ff" stroke-width="1.4"/><circle cx="12" cy="12" r="3.4" fill="none" stroke="#6a5acd" stroke-width="2.6" stroke-opacity=".4"/></svg></div>
+      </div>
+      <figcaption>
+        <b>Singularity</b><span class="b new">NEW</span>
+        <div class="cat cat-utility">utility</div>
+        <p>A black hole tears open, dragging enemies inward and crushing them into pure Energy.</p>
+      </figcaption>
+    </figure>
+    <figure class="tile">
+      <div class="arena cat-utility">
+        <div class="ring"></div><div class="tower"></div>
+        <div class="art"><svg class="wart wart-chrono" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7.6" stroke="#9fe0ff" stroke-width="1.7"/><path d="M12 7.2V12l3.2 2" stroke="#eaf6ff" stroke-width="1.8"/><path d="M12 2.2v2M12 19.8v2M2.2 12h2M19.8 12h2" stroke="#9fe0ff" stroke-width="1.4"/><g class="spin"><path d="M18.8 5.2c2.2 2.4 2.4 5.4.6 7.4" stroke="#7fc8ff" stroke-opacity=".6" stroke-dasharray="1.6 2"/></g></svg></div>
+      </div>
+      <figcaption>
+        <b>Chrono Field</b><span class="b new">NEW</span>
+        <div class="cat cat-utility">utility</div>
+        <p>Time dilates: every enemy crawls while the tower keeps firing at full speed (and faster).</p>
+      </figcaption>
+    </figure>
+    <figure class="tile">
+      <div class="arena cat-economy">
+        <div class="ring"></div><div class="tower"></div>
+        <div class="art"><svg class="wart wart-midas" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5.5v3M14 3.5v3M18.5 7v3" stroke="#caa233" stroke-opacity=".5" stroke-dasharray="1 1.8"/><circle cx="7" cy="16.5" r="2.7" fill="#f4c64a" stroke="#9a7416"/><circle cx="14.2" cy="12" r="2.3" fill="#f4c64a" stroke="#9a7416"/><circle cx="18.4" cy="18" r="2" fill="#f4c64a" stroke="#9a7416"/><circle cx="7" cy="16.5" r="1.4" stroke="#9a7416" stroke-opacity=".5"/><g class="spark"><path d="M19.6 4.4l.6 1.8 1.8.6-1.8.6-.6 1.8-.6-1.8-1.8-.6 1.8-.6z" fill="#fff7d6" stroke="none"/></g></svg></div>
+      </div>
+      <figcaption>
+        <b>Midas Rain</b><span class="b new">NEW</span>
+        <div class="cat cat-economy">economy</div>
+        <p>For a window every kill rains coins and gold — a gold rush bolted onto your kill streak.</p>
+      </figcaption>
+    </figure>
+    <figure class="tile">
+      <div class="arena cat-utility">
+        <div class="ring"></div><div class="tower"></div>
+        <div class="art"><svg class="wart wart-mirror" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 21v-7l3.4-2.6L20.8 14v7z" fill="#5b8cff" fill-opacity=".18" stroke="#7fa8ff" stroke-dasharray="2 1.8"/><path d="M3.2 21v-7l3.4-2.6L10 14v7z" fill="#5b8cff" fill-opacity=".35" stroke="#9fc0ff" stroke-width="1.6"/><path d="M4.8 14.6h3.6M6.6 21v-3.6h1.2V21" stroke="#9fc0ff" stroke-opacity=".7"/><circle cx="6.6" cy="10.4" r="1.5" fill="#eaf6ff" stroke="#9fc0ff"/></svg></div>
+      </div>
+      <figcaption>
+        <b>Mirror Turret</b><span class="b new">NEW</span>
+        <div class="cat cat-utility">utility</div>
+        <p>Summons a ghost clone of your tower that fights beside you for the duration of the window.</p>
+      </figcaption>
+    </figure>
+    <figure class="tile">
+      <div class="arena cat-utility">
+        <div class="ring"></div><div class="tower"></div>
+        <div class="art"><svg class="wart wart-soul" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.6c2.8 2.8 2.8 6.4 0 9.6-2.8-3.2-2.8-6.8 0-9.6z" fill="#9be7c4" fill-opacity=".55" stroke="#5fd6a0"/><circle cx="12" cy="7" r="1.1" fill="#eafff5" stroke="none"/><path d="M5.5 13.5h13l-2.8 7H8.3z" fill="#2a6a55" fill-opacity=".4" stroke="#5fd6a0" stroke-width="1.5"/><g class="spark"><path d="M7.5 16.5l.4 1.3 1.3.4-1.3.4-.4 1.3-.4-1.3-1.3-.4 1.3-.4z" fill="#d8fff0" stroke="none"/><path d="M16 16l.4 1.3 1.3.4-1.3.4-.4 1.3-.4-1.3-1.3-.4 1.3-.4z" fill="#d8fff0" stroke="none"/></g></svg></div>
+      </div>
+      <figcaption>
+        <b>Soul Harvest</b><span class="b new">NEW</span>
+        <div class="cat cat-utility">utility</div>
+        <p>Opens a reaping window: every kill is siphoned for Energy, and bosses pay a fortune.</p>
+      </figcaption>
+    </figure></div></body></html>
