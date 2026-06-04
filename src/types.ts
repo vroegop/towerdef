@@ -128,11 +128,18 @@ export interface Enemy {
   poison?: number; // active Poison burn in HP/second (0 / undefined = none)
   poisonT?: number; // seconds the Poison burn remains (refreshed by each hit)
   stunT?: number; // seconds the enemy is stunned (frozen: no moving or attacking)
+  // The absolute HP / damage this enemy gained in its most recent wave-step (set at spawn from the
+  // wave N-1→N delta, refreshed each ageSurvivors). Chrono Field "de-levels" an enemy by subtracting
+  // these. Optional for save-compat with enemies serialized before the field existed (treated as 0).
+  hpStep?: number;
+  dmgStep?: number;
   bornWave: number;
   veteran: boolean;
   agedWaves: number;
   heat: number; // landed-hit count; outgoing dmg is scaled by 1.04^heat (compounding heat-up)
-  lastHurt?: 'dmg' | 'reflect' | 'crystal'; // source of the most recent HP loss; read at death for kill attribution
+  // source of the most recent HP loss; read at death for kill attribution + superpower reward routing.
+  // 'void' = Singularity black hole, 'sentry' = Sentry Battery turret, 'aegis' = Aegis break shockwave.
+  lastHurt?: 'dmg' | 'reflect' | 'crystal' | 'void' | 'sentry' | 'aegis';
 }
 export interface Projectile {
   id: number;
@@ -163,8 +170,16 @@ export interface FxEvent {
   note?: 'waveskip' | 'interest' | 'hpskip' | 'dmgskip' | 'dodge';
   noteVal?: number; // the number that goes with the note (wave number, interest gold, or skip count)
 }
-// A transient superpower render event (shatter burst at x,y with a payout currency tag for floats).
-export interface SuperFxEvent { seq: number; x: number; y: number; kind: 'shatter' | 'gem' | 'energy'; }
+// A transient superpower render event (a burst at x,y tagged by kind for the renderer/floats).
+// shatter/gem/energy = Crystal Circle; nova = Frost Nova flash; shock = Aegis break shockwave.
+export interface SuperFxEvent { seq: number; x: number; y: number; kind: 'shatter' | 'gem' | 'energy' | 'nova' | 'shock'; }
+// A transient Chain Tesla arc: a polyline of world-space points the renderer fades over a few frames.
+export interface TeslaArc { seq: number; pts: { x: number; y: number }[]; }
+// A live Singularity black hole (present only while the power's window is up). World-space centre.
+export interface BlackHole { x: number; y: number; r: number; }
+// A live Sentry Battery turret (present only while the power's window is up). Mirrors the tower's
+// shooting from its own position; `atkCd` is its private fire cooldown, `life` seconds remaining.
+export interface Sentry { x: number; y: number; atkCd: number; life: number; }
 export interface Wave {
   n: number;
   clock: number;
@@ -210,6 +225,10 @@ export interface Run {
   superCd?: Record<string, number>;     // seconds until each power may fire again
   superActive?: Record<string, number>; // seconds the power's window is currently live
   goldenMult?: number;                   // transient ×gold/coins from Golden Lightning this tick (1 = none)
+  // Aegis Bulwark: a pooled shield that grows on each activation and absorbs tower damage. aegisBroke
+  // marks that the once-per-run break shockwave has already fired (later breaks are silent).
+  aegisPool?: number;
+  aegisBroke?: boolean;
 }
 // A Crystal Circle crystal: orbits the tower; on enemy contact it instakills + shatters. `ang` is its
 // current orbit angle (advances each tick); position is derived from ang + the live orbit radius.
@@ -241,6 +260,10 @@ export interface State {
   crystalFrags?: CrystalFrag[]; // shards in flight after a shatter
   superFx?: SuperFxEvent[];     // transient superpower events the renderer consumes (shatter bursts)
   superFxSeq?: number;
+  // ---- new superpower entities (per-run; serialized so offline replay is identical) ----
+  blackHole?: BlackHole;        // Singularity: the pulling void (present only while active)
+  sentries?: Sentry[];          // Sentry Battery: the live mini-turrets (present only while active)
+  teslaArcs?: TeslaArc[];       // Chain Tesla: transient arcs the renderer fades (capped)
   // first-run scripted-intro scratch fields (set by core._firstRunWaves)
   firstSpawned?: number;
   firstTimer?: number;

@@ -8,7 +8,7 @@ import { FIRST_RUN, COIN_DECAY_FACTOR, COIN_DECAY_WAVES, WAVE, concurrentCap, sp
 import { applyHit, fireProjectile, tickProjectiles } from './projectiles';
 import { computeStats, PX_PER_METER, RAPID_CHECK, RAPID_MULT, GREED_CAP } from './skills';
 import { tickActiveCards, trySecondWind, heroInvuln } from './cards-active';
-import { tickSuperpowers, moatSlowFactor, bossEnergy, crystalKillMult } from './superpowers';
+import { tickSuperpowers, moatSlowFactor, bossEnergy, superKillMult, superKillBonus, chronoActive, aegisAbsorb } from './superpowers';
 import { ARENA_W, ARENA_H } from './state';
 
 // Detonate card: blast radius (px) of the on-death eruption. ~half the base range ring, so it
@@ -63,7 +63,7 @@ export class Sim {
     s.arena.w = Math.max(ARENA_W, Math.round(this.stats.range * 4));
     s.arena.h = Math.max(ARENA_H, Math.round(this.stats.range * 3));
     tickActiveCards(s, dt, this.stats, this.rng); // active-card timers; sets run.dmgBoost / run.invuln
-    tickSuperpowers(s, dt, this.rng); // superpower timers: golden window, moat water, crystal orbit/shatter
+    tickSuperpowers(s, dt, this.rng, this.stats); // superpower timers + the auto-firing powers (tesla/inferno/frost/void/chrono/sentry)
     this._waves(dt);
     this._hero(dt);
     this._enemies(dt);
@@ -248,6 +248,12 @@ export class Sim {
       attacker.hitFlash = 0.12;
       this.s.econ.reflectDealt += refl;
     }
+    // Chrono Field: while the time window holds, an enemy's blow HEALS the tower instead of hurting it
+    // (the disintegrate above still bites the attacker). Supersedes all damage handling below.
+    if (chronoActive(this.s)) {
+      h.hp = Math.min(h.hpMax, h.hp + amount);
+      return;
+    }
     // Demon Mode / Second Wind shield: ignore all incoming damage while invincible.
     if (heroInvuln(this.s)) return;
     // Dodge: a chance to fully evade the hit — no damage taken, and the Greed kill streak is preserved.
@@ -267,6 +273,10 @@ export class Sim {
       amt -= soak;
       if (amt <= 0) return;
     }
+    // Aegis Bulwark (superpower): the pooled shield soaks next, burning the attacker and — the first
+    // time it empties this run — clearing the battlefield with a rewarding shockwave.
+    amt = aegisAbsorb(this.s, amt, attacker);
+    if (amt <= 0) return;
     this.s.econ.hitsTaken++; // instrumentation: a hit that actually dealt damage
     this.s.econ.dmgTaken += amt;
     this.s.run.streak = 0; // taking real damage breaks the Greed kill streak
@@ -567,9 +577,10 @@ export class Sim {
         // explode past coins. The gold-only bonuses (Gold/Kill via goldFind, Gold Bonus, Enemy Balance,
         // and the Gold card folded into goldFind) are what let gold still outpace coins.
         const ebMult = this.stats.enemyBalance || 1;
-        // Superpower reward ×: Golden Lightning window (all kills) × Crystal gold track (crystal kills
-        // only). Both gold AND coins ride it, so "all numbers multiply" holds end-to-end.
-        const superMult = (s.run.goldenMult || 1) * (e.lastHurt === 'crystal' ? crystalKillMult(s.meta) : 1);
+        // Superpower reward ×: Golden Lightning window (all kills) × the per-source kill multiplier
+        // (Crystal gold track, Singularity void ×2, Aegis shockwave ×10, Sentry kill-gold track). Both
+        // gold AND coins ride it, so "all numbers multiply" holds end-to-end.
+        const superMult = (s.run.goldenMult || 1) * superKillMult(s, e);
         // Greed: each kill in an unbroken (no-damage) streak ramps a gold multiplier, capped at GREED_CAP.
         s.run.streak = (s.run.streak || 0) + 1;
         const greedMult = this.stats.greed > 0 ? 1 + Math.min(s.run.streak * this.stats.greed, GREED_CAP) : 1;
@@ -580,6 +591,9 @@ export class Sim {
         let killCoins = Math.round(rewardBase * coinMult * superMult);
         // Energy income: +1 per boss kill (× the Moat boss-Energy track if it died in the water).
         if (e.type === 'boss') s.meta.energy = (s.meta.energy || 0) + bossEnergy(s, e);
+        // Superpower non-gold payouts by kill source: Singularity Energy/kill, Aegis-shockwave gems +
+        // vials + energy per 1000 waves.
+        superKillBonus(s, e);
         // Critical Coin card: a chance per kill to drop bonus coins = base coins × crit damage mult.
         if (this.stats.criticalCoin > 0 && this.rng.next() < this.stats.criticalCoin) {
           killCoins += Math.round(killCoins * (this.stats.critMult || 1));

@@ -257,13 +257,18 @@ export const PROPOSED: DraftWeapon[] = [
   },
 ];
 
-// Default unlock ladder: the game's first three rungs, then a hand-tuned ramp for the extra weapons.
-const EXTRA_RUNGS = [500_000, 1_500_000, 4_000_000, 10_000_000, 25_000_000, 60_000_000, 150_000_000, 350_000_000, 800_000_000];
+// Default unlock ladder: the game's own UNLOCK_COSTS (9 rungs now), then a few extra rungs for any
+// still-proposed weapons beyond the nine that ship.
+const EXTRA_RUNGS = [150_000_000, 350_000_000, 800_000_000];
 
 export function defaultCatalog(): Catalog {
   const current = SUPERPOWERS.map((sp) => gameWeaponToDraft(sp.id));
+  const liveIds = new Set(current.map((w) => w.id));
+  // Drop any proposal that has since shipped (its id is now in the live registry) so the catalog never
+  // lists a weapon twice — the live, real-balance version always wins.
+  const proposed = structuredClone(PROPOSED).filter((w) => !liveIds.has(w.id));
   return {
-    weapons: [...current, ...structuredClone(PROPOSED)],
+    weapons: [...current, ...proposed],
     unlockLadder: [...UNLOCK_COSTS, ...EXTRA_RUNGS],
   };
 }

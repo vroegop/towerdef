@@ -47,6 +47,10 @@ export function makeEnemy(id: number, type: string, waveN: number, rng: Rng, are
     y = cy + Math.sin(a) * spawnR;
   const hp = ihp(def.hp, strMult),
     dmg = ihp(def.dmg, dmgMult);
+  // The HP/damage gained by being THIS wave rather than the one before (the single-wave step), so
+  // Chrono Field can "de-level" the enemy by subtracting it. Never negative.
+  const prevHp = ihp(def.hp, waveHp(Math.max(1, waveN - 1 - (hpSkip || 0))) * diff),
+    prevDmg = ihp(def.dmg, waveDmg(Math.max(1, waveN - 1 - (dmgSkip || 0))) * diff);
   return {
     id, type, shape: def.shape, behavior: def.behavior, color: def.color, r: def.r,
     x, y, facing: 0,
@@ -54,6 +58,7 @@ export function makeEnemy(id: number, type: string, waveN: number, rng: Rng, are
     speed, range: def.range, state: 'approach', atkCd: 0, kb: 0, hitFlash: 0, hitDmg: 0,
     rend: 0, rendT: 0,
     splits: def.splits || 0, mass: def.mass, slow: 1, slowT: 0, poison: 0, poisonT: 0, stunT: 0,
+    hpStep: Math.max(0, hp - prevHp), dmgStep: Math.max(0, dmg - prevDmg),
     bornWave: waveN, veteran: false, agedWaves: 0, heat: 0,
   };
 }
@@ -69,11 +74,16 @@ export function ageSurvivors(state: State, newWaveN: number): void {
   for (const e of state.enemies) {
     const def = TYPES[e.type];
     const ratio = e.hpMax > 0 ? e.hp / e.hpMax : 1;
+    const oldHpMax = e.hpMax,
+      oldDmg = e.dmg;
     e.strMult = Math.max(e.strMult * 1.1, 1.1 * baseHp);
     e.dmgMult = Math.max((e.dmgMult || e.strMult) * 1.1, 1.1 * baseDmg);
     e.hpMax = ihp(def.hp, e.strMult);
     e.hp = Math.max(1, e.hpMax * ratio);
     e.dmg = ihp(def.dmg, e.dmgMult);
+    // record this wave's HP/damage step for Chrono's de-level (the gain from aging up one wave)
+    e.hpStep = Math.max(0, e.hpMax - oldHpMax);
+    e.dmgStep = Math.max(0, e.dmg - oldDmg);
     const freshSpd = def.speed * baseSpd;
     e.speed = Math.max(e.speed * 1.1, 1.1 * freshSpd);
     e.veteran = true;
