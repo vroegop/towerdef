@@ -4,7 +4,7 @@
 import type { Enemy, Hero, Projectile, Rng, State, Stats } from '../types';
 import { MAX_REND, REND_DECAY, PX_PER_METER } from './skills';
 
-export const BULLET_SPEED = 520; // px/s — well above enemy speeds, so only lateral movers slip past
+export const BULLET_SPEED = 416; // px/s — ~20% slower than the old 520 so the shot's travel reads clearly; still well above enemy speeds so only lateral movers slip past
 export const BULLET_R = 4;
 export const PLASMA_SPEED = 300; // px/s — slower than a bullet so the lobbed arc reads clearly
 export const PLASMA_R = 7;
