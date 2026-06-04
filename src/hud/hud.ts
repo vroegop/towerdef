@@ -1,7 +1,7 @@
 /* src/hud/hud.ts — in-game HUD (top stats + 3-tab upgrade bar), the between-games MENU
    (5 bottom tabs), a spotlight tutorial, a milestones modal, and a settings modal.
    Handlers: onBuyRun, onBuyPerm, onClaimMilestone, onStartRun, onDev, onFF. */
-import type { BulkQty, CardDef, CardDrawResult, CardInstance, Hud as HudInstance, HudFactory, HudHandlers, MenuOpts, Meta, OfflineReward, Settings, State, ThemeDef, EarnSummary, UpgradeDef } from '../types';
+import type { BulkQty, CardDef, CardDrawResult, CardInstance, Hud as HudInstance, HudFactory, HudHandlers, LabDef, MenuOpts, Meta, OfflineReward, Settings, State, ThemeDef, EarnSummary, UpgradeDef } from '../types';
 import { WAVE, spawnRate, tierMult, coinMult, coinsForRun, waveHp, waveDmg, waveSpeed, MAX_TIER, TIER_UNLOCK_WAVE, tierUnlocked } from '../sim/waves';
 import { TYPES } from '../sim/registries';
 import { spawnChances } from '../sim/enemies';
@@ -17,6 +17,7 @@ import {
   LABS, LAB_BY_ID, labLevel, labUnlocked, labsTabUnlocked, labCoinCost, labTimeSec, labAtMax, researchOf, researchRemaining,
   researchProgress, freeSlots, rushVialCost, labSlotCost, MAX_SLOTS, checkInPending, CHECKIN_VIALS, CHECKIN_GEMS,
   availableSpeeds, gameSpeed, speedAtLevel, SPEED_LAB,
+  labBoostMult, labBoostRemaining, labBoostCost, boostLabCount, MAX_BOOST_MULT, MAX_BOOST_DAYS,
 } from '../sim/labs';
 import { cosmeticsOf, isCosmeticUnlocked, selectedCosmeticId, buffText, cosmeticById } from '../sim/cosmetics';
 import {
@@ -591,25 +592,36 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     const slotChip = '<span class="chip cur-slot">' + icon('flask', 13) + ' <b>' + used + '/' + slots + '</b></span>';
     let html = '<div class="cur-with-slot">' + curChips(meta, ['coins', 'gems', 'vials'], slotChip) + '</div>';
     html += '<div class="labslots">' + labSlotsHtml(meta) + '</div>';
+    html += labBoostBtnHtml(meta);
     const sc = labSlotCost(meta),
       canSlot = slots < MAX_SLOTS;
     if (canSlot) html += '<button class="slotbtn' + ((meta.gems || 0) < sc ? ' cant' : '') + '" id="h-buyslot">+1 Slot · ' + sc + ' ' + icon('gem', 13, 'gem') + '</button>';
     return html;
   }
+  // The "Speed Up" control: when a boost is live it shows the rate + time left; otherwise a button
+  // that opens the boost modal (disabled when no labs are assigned — nothing to speed up).
+  function labBoostBtnHtml(meta: Meta): string {
+    const now = Date.now();
+    const m = labBoostMult(meta, now);
+    if (m > 1) {
+      return '<div class="labboost-active">' + icon('ffwd', 14) + ' <b>' + fmtSpeed(m) +
+        '</b> boost · ' + fmtTime(labBoostRemaining(meta, now)) + ' left</div>';
+    }
+    const cant = boostLabCount(meta) <= 0;
+    return '<button class="labboost-btn' + (cant ? ' cant' : '') + '" id="h-labboost"' + (cant ? ' disabled' : '') +
+      '>' + icon('ffwd', 14) + ' Speed Up Labs</button>';
+  }
   function wireLabsPane(scope: HTMLElement, rerender: () => void): void {
     // Clicking an empty vial slot opens the lab picker modal.
     scope.querySelectorAll<HTMLElement>('[data-pickslot]').forEach((el) =>
-      el.addEventListener('click', () => openLabPicker(rerender)),
+      el.addEventListener('click', () => openLabPickerFor(rerender, null)),
     );
-    // "Change" frees this slot (refunds the in-progress research) and opens the picker so you can
-    // start a different lab — you rarely want to just STOP, you want to switch what's researching.
+    // "Change" does NOT stop the running lab — it just opens the picker in replace mode. The lab keeps
+    // researching unless the player actually picks a DIFFERENT one, which swaps it in place.
     scope.querySelectorAll<HTMLElement>('[data-changelab]').forEach((b) =>
       b.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (handlers.onCancelResearch && handlers.onCancelResearch(b.dataset.changelab!)) {
-          rerender();
-          openLabPicker(rerender);
-        }
+        openLabPickerFor(rerender, b.dataset.changelab!);
       }),
     );
     scope.querySelectorAll<HTMLElement>('[data-rushlab]').forEach((b) =>
@@ -619,6 +631,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         else shake(b);
       }),
     );
+    const bst = scope.querySelector<HTMLElement>('#h-labboost');
+    if (bst) bst.addEventListener('click', () => openLabBoostModal(rerender));
     const sb = scope.querySelector<HTMLElement>('#h-buyslot');
     if (sb) sb.addEventListener('click', () => {
       if (handlers.onBuyLabSlot && handlers.onBuyLabSlot()) rerender();
@@ -1590,29 +1604,49 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     updmodal.classList.remove('hide');
   }
 
-  // Lab picker: lists the labs you can drop into an open slot. Maxed / already-running / locked labs
-  // are disabled. Each row has a Start button (coins + time); clicking anywhere else on the banner
-  // expands an explanation.
-  let labInfoOpen: string | null = null;
+  // Lab picker: lists the labs you can drop into a slot, grouped under section headers. Maxed /
+  // already-running / locked labs are disabled. Rows start collapsed (the modal opens that way every
+  // time); a head-click expands one description, "Expand all" opens them all at once. When CHANGING a
+  // running lab (labReplacing set), picking a different lab swaps it in place — see the Start handler.
+  const LAB_SECTIONS: { label: string; icon: string; cats: string[] }[] = [
+    { label: 'Attack', icon: 'sword', cats: ['attack'] },
+    { label: 'Defense', icon: 'shield', cats: ['defense'] },
+    { label: 'Utility', icon: 'coin', cats: ['economic'] },
+    { label: 'Superpowers', icon: 'prestige', cats: ['speed'] },
+  ];
+  const labInfoOpen = new Set<string>(); // individually-expanded rows
+  let labExpandAll = false;              // "Expand all" → every row's detail open at once
+  let labReplacing: string | null = null; // the running lab being swapped (Change), or null for an empty slot
+  // Open the picker fresh: collapse everything (default) and remember which slot we're filling.
+  function openLabPickerFor(onChange: () => void, replacingId: string | null): void {
+    labReplacing = replacingId;
+    labInfoOpen.clear();
+    labExpandAll = false;
+    openLabPicker(onChange);
+  }
   function openLabPicker(onChange: () => void): void {
     if (!lastMeta) return;
     const meta = lastMeta;
-    let rows = '';
-    for (const L of LABS) {
+    const replacing = labReplacing != null;
+    const rowHtml = (L: LabDef): string => {
       const lv = labLevel(meta, L.id),
         maxed = labAtMax(meta, L.id),
         unlocked = labUnlocked(meta, L.id),
-        running = !!researchOf(meta, L.id);
+        running = !!researchOf(meta, L.id),
+        current = L.id === labReplacing;
       const cost = labCoinCost(meta, L.id),
         t = labTimeSec(meta, L.id);
-      const can = unlocked && !maxed && !running && (meta.coins || 0) >= cost && freeSlots(meta) > 0;
+      // When swapping, the slot we'd free counts as available so the target isn't blocked on slots.
+      const can = unlocked && !maxed && !running && (meta.coins || 0) >= cost && (freeSlots(meta) > 0 || replacing);
       const disabled = !can;
-      const statusTag = maxed ? 'MAX' : running ? 'Running' : !unlocked ? icon('lock', 12) + ' wave ' + L.gate.wave : '';
-      const startLabel = maxed ? 'Maxed' : running ? 'In progress' : !unlocked ? 'Locked'
-        : cost + ' ' + coinsIc(13) + ' · ' + (t > 0 ? fmtTime(t) : 'instant');
+      const open = labExpandAll || labInfoOpen.has(L.id);
+      const statusTag = maxed ? 'MAX' : current ? 'Current' : running ? 'Running'
+        : !unlocked ? icon('lock', 12) + ' wave ' + L.gate.wave : '';
+      const startLabel = maxed ? 'Maxed' : current ? 'Current' : running ? 'In progress' : !unlocked ? 'Locked'
+        : (replacing ? 'Switch · ' : '') + cost + ' ' + coinsIc(13) + ' · ' + (t > 0 ? fmtTime(t) : 'instant');
       // The whole banner head is the info toggle (data-info); the Start button stops propagation so a
       // start-click never also flips the info panel.
-      rows += '<div class="labpick-row' + (labInfoOpen === L.id ? ' open' : '') + '">' +
+      return '<div class="labpick-row' + (open ? ' open' : '') + '">' +
         '<div class="labpick-head" data-info="' + L.id + '">' +
           '<div class="labpick-ic">' + icon(LAB_CAT_ICON[L.cat] || 'flask', 18) + '</div>' +
           '<div class="labpick-title"><b>' + L.label + '</b><span>lv ' + lv + ' / ' + L.max +
@@ -1620,32 +1654,123 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
           '<button class="labpick-start' + (disabled ? ' cant' : '') + '" data-startlab="' + L.id + '"' +
             (disabled ? ' disabled' : '') + '>' + startLabel + '</button>' +
         '</div>' +
-        (labInfoOpen === L.id
+        (open
           ? '<div class="labpick-detail">' + labDesc(L, lv + 1) +
             '<br>Instant-complete a running lab for 1 ' + icon('gem', 12, 'gem') + ' per minute left.</div>'
           : '') +
         '</div>';
+    };
+    let body = '';
+    for (const sec of LAB_SECTIONS) {
+      const inSec = LABS.filter((L) => sec.cats.includes(L.cat));
+      if (!inSec.length) continue;
+      body += '<div class="labpick-section">' + icon(sec.icon, 13) + ' <span>' + sec.label + '</span></div>';
+      for (const L of inSec) body += rowHtml(L);
     }
+    const title = replacing ? 'Switch Lab' : 'Choose a Lab';
+    const sub = replacing
+      ? 'Pick a new lab — the current one keeps running until you do'
+      : 'Research scales workshop stats &amp; raises caps';
     updmodalInner.innerHTML =
       '<div class="upd-head"><div class="upd-icon">' + icon('flask', 20) + '</div>' +
-        '<div class="upd-title"><b>Choose a Lab</b><span>Research scales workshop stats &amp; raises caps</span></div>' +
+        '<div class="upd-title"><b>' + title + '</b><span>' + sub + '</span></div>' +
+        '<button class="labpick-expand" id="h-labpick-expand">' + (labExpandAll ? 'Collapse all' : 'Expand all') + '</button>' +
         '<button class="iconclose" id="h-labpick-close">' + icon('close', 18) + '</button></div>' +
-      '<div class="labpick-list">' + rows + '</div>';
+      '<div class="labpick-list">' + body + '</div>';
     attachOverscrollBounceAll(updmodalInner, '.labpick-list');
-    $('#h-labpick-close').addEventListener('click', () => { labInfoOpen = null; updmodal.classList.add('hide'); });
+    $('#h-labpick-close').addEventListener('click', () => updmodal.classList.add('hide'));
+    $('#h-labpick-expand').addEventListener('click', () => {
+      labExpandAll = !labExpandAll;
+      labInfoOpen.clear();
+      openLabPicker(onChange);
+    });
     updmodalInner.querySelectorAll<HTMLElement>('[data-info]').forEach((b) =>
-      b.addEventListener('click', () => { labInfoOpen = labInfoOpen === b.dataset.info ? null : b.dataset.info!; openLabPicker(onChange); }),
+      b.addEventListener('click', () => {
+        const id = b.dataset.info!;
+        // Toggling a single row while "expand all" is on: switch to per-row mode with every row open,
+        // then collapse just the one clicked — so one click never hides everything.
+        if (labExpandAll) { labExpandAll = false; for (const L of LABS) labInfoOpen.add(L.id); }
+        if (labInfoOpen.has(id)) labInfoOpen.delete(id); else labInfoOpen.add(id);
+        openLabPicker(onChange);
+      }),
     );
     updmodalInner.querySelectorAll<HTMLElement>('[data-startlab]').forEach((b) =>
       b.addEventListener('click', (e) => {
         e.stopPropagation(); // don't let the Start click bubble to the banner's info toggle
-        if (handlers.onStartResearch && handlers.onStartResearch(b.dataset.startlab!)) {
-          labInfoOpen = null;
+        const id = b.dataset.startlab!;
+        // Swapping: free the running lab first (refunds its in-progress coins) so a slot opens for the
+        // new pick. Refund-then-charge keeps an affordable row affordable across the swap.
+        if (replacing && id !== labReplacing && handlers.onCancelResearch) handlers.onCancelResearch(labReplacing!);
+        if (handlers.onStartResearch && handlers.onStartResearch(id)) {
           updmodal.classList.add('hide');
           onChange();
         } else shake(b);
       }),
     );
+    updmodal.classList.remove('hide');
+  }
+
+  // ---- "Speed Up" modal: buy a timed global lab boost (duration × multiplier, paid in vials) ----
+  const BOOST_DURATIONS: { label: string; sec: number }[] = [
+    { label: '1h', sec: 3600 }, { label: '6h', sec: 6 * 3600 }, { label: '12h', sec: 12 * 3600 },
+    { label: '1d', sec: 86400 }, { label: '2d', sec: 2 * 86400 }, { label: '3d', sec: 3 * 86400 },
+    { label: '5d', sec: 5 * 86400 }, { label: '7d', sec: MAX_BOOST_DAYS * 86400 },
+  ];
+  let boostDurSel = 86400;   // default 1 day
+  let boostMultSel = 2;      // default 2×
+  function openLabBoostModal(onChange: () => void): void {
+    if (!lastMeta) return;
+    const meta = lastMeta;
+    const now = Date.now();
+    // Already boosting? Show the live status and bail (no stacking).
+    if (labBoostMult(meta, now) > 1) {
+      updmodalInner.innerHTML =
+        '<div class="upd-head"><div class="upd-icon">' + icon('ffwd', 20) + '</div>' +
+          '<div class="upd-title"><b>Labs Boosted</b><span>' + fmtSpeed(labBoostMult(meta, now)) +
+            ' speed · ' + fmtTime(labBoostRemaining(meta, now)) + ' left</span></div>' +
+          '<button class="iconclose" id="h-boost-close">' + icon('close', 18) + '</button></div>' +
+        '<div class="boost-body"><p class="boost-note">A boost is already running. Wait for it to finish before buying another.</p></div>';
+      $('#h-boost-close').addEventListener('click', () => updmodal.classList.add('hide'));
+      updmodal.classList.remove('hide');
+      return;
+    }
+    const render = (): void => {
+      const nLabs = boostLabCount(meta);
+      const cost = labBoostCost(meta, boostMultSel, boostDurSel);
+      const afford = (meta.vials || 0) >= cost && nLabs > 0;
+      const durChips = BOOST_DURATIONS.map((d) =>
+        '<button class="boost-chip' + (d.sec === boostDurSel ? ' on' : '') + '" data-dur="' + d.sec + '">' + d.label + '</button>').join('');
+      const multChips = [];
+      for (let m = 2; m <= MAX_BOOST_MULT; m++)
+        multChips.push('<button class="boost-chip' + (m === boostMultSel ? ' on' : '') + '" data-mult="' + m + '">' + m + 'x</button>');
+      updmodalInner.innerHTML =
+        '<div class="upd-head"><div class="upd-icon">' + icon('ffwd', 20) + '</div>' +
+          '<div class="upd-title"><b>Speed Up Labs</b><span>All labs run faster for a fixed time</span></div>' +
+          '<button class="iconclose" id="h-boost-close">' + icon('close', 18) + '</button></div>' +
+        '<div class="boost-body">' +
+          '<div class="boost-sec">' + icon('stopwatch', 13) + ' <span>Duration</span></div>' +
+          '<div class="boost-chips">' + durChips + '</div>' +
+          '<div class="boost-sec">' + icon('ffwd', 13) + ' <span>Speed</span></div>' +
+          '<div class="boost-chips">' + multChips.join('') + '</div>' +
+          '<p class="boost-note">Banks <b>' + fmtTime(boostDurSel * boostMultSel) + '</b> of lab time across ' +
+            '<b>' + nLabs + '</b> lab' + (nLabs === 1 ? '' : 's') + ' over <b>' + fmtTime(boostDurSel) + '</b> of real time.</p>' +
+        '</div>' +
+        '<button class="boost-buy' + (afford ? '' : ' cant') + '" id="h-boost-buy"' + (afford ? '' : ' disabled') + '>' +
+          (nLabs <= 0 ? 'No labs to boost' : 'Boost · ' + cost.toLocaleString() + ' ' + icon('vial', 14, 'vial')) + '</button>';
+      $('#h-boost-close').addEventListener('click', () => updmodal.classList.add('hide'));
+      updmodalInner.querySelectorAll<HTMLElement>('[data-dur]').forEach((b) =>
+        b.addEventListener('click', () => { boostDurSel = Number(b.dataset.dur); render(); }));
+      updmodalInner.querySelectorAll<HTMLElement>('[data-mult]').forEach((b) =>
+        b.addEventListener('click', () => { boostMultSel = Number(b.dataset.mult); render(); }));
+      const buy = $('#h-boost-buy');
+      buy.addEventListener('click', () => {
+        if (handlers.onApplyLabBoost && handlers.onApplyLabBoost(boostMultSel, boostDurSel)) {
+          updmodal.classList.add('hide');
+          onChange();
+        } else shake(buy);
+      });
+    };
+    render();
     updmodal.classList.remove('hide');
   }
 
@@ -1916,7 +2041,20 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     let h = '';
     for (let i = 0; i < slots; i++) {
       const r = running[i];
-      if (r) {
+      if (r && r.waiting) {
+        // The next level auto-started but the player can't afford it yet: the slot stays ASSIGNED to
+        // this lab (never idle) and resumes automatically once coins are available.
+        const L = LAB_BY_ID[r.id];
+        const lv = labLevel(meta, r.id),
+          need = labCoinCost(meta, r.id);
+        h += '<div class="labslot running waiting">' +
+          vialHtml(L.label, 'lv ' + lv + '→' + (lv + 1), 0, 'running') +
+          '<div class="labdesc">' + labDesc(L, lv + 1) + '</div>' +
+          '<div class="labactions">' +
+          '<span class="labrem">Need ' + abbr(need) + ' ' + coinsIc(12) + ' to continue</span>' +
+          '<button class="changelab" data-changelab="' + r.id + '" title="Switch to a different research">' + icon('swap', 14) + ' Change</button>' +
+          '</div></div>';
+      } else if (r) {
         const L = LAB_BY_ID[r.id];
         const lv = labLevel(meta, r.id),
           prog = researchProgress(meta, r.id, now),

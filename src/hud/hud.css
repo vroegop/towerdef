@@ -430,6 +430,50 @@
 .hud .slotbtn:hover:not(.cant) { border-color: #4aa8ff; }
 .hud .slotbtn.cant { opacity: .45; cursor: default; }
 
+/* a coins-blocked (waiting) lab keeps its slot but reads dimmed until it resumes */
+.hud .labslot.waiting { border-color: #4a3a1e; box-shadow: none; }
+.hud .labslot.waiting .vial .vfluid { filter: grayscale(.5) brightness(.8); }
+.hud .labslot.waiting .labrem { color: #d6a23a; }
+
+/* lab-picker section headers (Attack / Defense / Utility / Superpowers) + expand-all toggle */
+.hud .labpick-section { display: flex; align-items: center; gap: 6px; margin: 14px 14px 4px; font-size: 11px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 1.4px; color: #6e768c; }
+.hud .labpick-section:first-child { margin-top: 12px; }
+.hud .labpick-section svg { color: #6e768c; }
+.hud .labpick-expand { background: transparent; border: 1px solid #2d3344; border-radius: 6px; color: #9aa3b6;
+  font: 600 11px 'Roboto', system-ui; padding: 5px 9px; cursor: pointer; white-space: nowrap; margin-right: 4px; }
+.hud .labpick-expand:hover { border-color: #4aa8ff; color: #d8deea; }
+
+/* "Speed Up" control in the labs pane */
+.hud .labboost-btn { display: flex; width: 100%; margin-top: 12px; background: rgba(74,168,255,.10); border: 1px solid #2d3344;
+  border-radius: 6px; color: #4aa8ff; font: 700 13px 'Roboto', system-ui; padding: 10px; cursor: pointer;
+  align-items: center; justify-content: center; gap: 6px; }
+.hud .labboost-btn:hover:not(.cant) { border-color: #4aa8ff; background: rgba(74,168,255,.16); }
+.hud .labboost-btn.cant { opacity: .45; cursor: default; }
+.hud .labboost-active { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 12px;
+  padding: 9px; border: 1px solid #2d5680; border-radius: 6px; background: rgba(74,168,255,.10);
+  color: #8fc6ff; font: 600 12px 'Roboto', system-ui; font-variant-numeric: tabular-nums; }
+.hud .labboost-active b { color: #cfe6ff; }
+
+/* "Speed Up" modal (reuses the .updmodal shell) */
+.hud .boost-body { padding: 12px 16px 4px; }
+.hud .boost-sec { display: flex; align-items: center; gap: 6px; margin: 12px 0 7px; font-size: 11px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #6e768c; }
+.hud .boost-sec:first-child { margin-top: 2px; }
+.hud .boost-sec svg { color: #6e768c; }
+.hud .boost-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.hud .boost-chip { background: #11151f; border: 1px solid #2d3344; border-radius: 6px; color: #aeb6c6;
+  font: 600 13px 'Roboto', system-ui; padding: 7px 13px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.hud .boost-chip:hover { border-color: #4aa8ff; color: #fff; }
+.hud .boost-chip.on { border-color: #4aa8ff; background: rgba(74,168,255,.16); color: #fff; }
+.hud .boost-note { margin: 14px 0 4px; font-size: 12px; line-height: 1.5; color: #9aa3b6; }
+.hud .boost-note b { color: #d8deea; }
+.hud .boost-buy { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%;
+  border: 0; border-top: 1px solid rgba(74,168,255,.22); border-radius: 0; padding: 13px; margin-top: 8px;
+  font: 700 14px 'Roboto', system-ui; cursor: pointer; background: rgba(74,168,255,.12); color: #cfe6ff; }
+.hud .boost-buy:hover:not(.cant) { background: rgba(74,168,255,.2); }
+.hud .boost-buy.cant { opacity: .45; cursor: default; }
+
 .hud .locked-tab { text-align: center; color: #4a5168; padding-top: 70px; }
 .hud .lockbig { font-size: 46px; }
 .hud .lockmsg { margin-top: 8px; font-size: 14px; }

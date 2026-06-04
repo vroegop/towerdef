@@ -347,6 +347,26 @@ const CSS = `
 .hud.theme-dnd .labpick-start:hover:not(.cant) { border-color: var(--gold-ink); }
 .hud.theme-dnd .labpick-start.cant { color: var(--ink-dim); }
 .hud.theme-dnd .labpick-detail { border-top-color: var(--rule); color: var(--ink-dim); }
+.hud.theme-dnd .labpick-section { color: var(--ink-dim); }
+.hud.theme-dnd .labpick-section svg { color: var(--ink-dim); }
+.hud.theme-dnd .labpick-expand { border-color: var(--rule); color: var(--ink-dim); }
+.hud.theme-dnd .labpick-expand:hover { border-color: var(--accent); color: var(--ink); }
+.hud.theme-dnd .labslot.waiting { border-color: var(--rule); }
+.hud.theme-dnd .labslot.waiting .labrem { color: var(--gold-ink); }
+/* "Speed Up" boost control + modal on parchment */
+.hud.theme-dnd .labboost-btn { background: rgba(154,106,26,.12); border-color: var(--rule); color: var(--gold-ink); }
+.hud.theme-dnd .labboost-btn:hover:not(.cant) { border-color: var(--gold-ink); background: rgba(154,106,26,.2); }
+.hud.theme-dnd .labboost-active { border-color: var(--accent); background: rgba(154,106,26,.12); color: var(--gold-ink); }
+.hud.theme-dnd .labboost-active b { color: var(--ink); }
+.hud.theme-dnd .boost-sec { color: var(--ink-dim); }
+.hud.theme-dnd .boost-sec svg { color: var(--ink-dim); }
+.hud.theme-dnd .boost-chip { background: var(--parch-lt); border-color: var(--rule); color: var(--ink-dim); }
+.hud.theme-dnd .boost-chip:hover { border-color: var(--accent); color: var(--ink); }
+.hud.theme-dnd .boost-chip.on { border-color: var(--accent); background: rgba(154,106,26,.16); color: var(--ink); }
+.hud.theme-dnd .boost-note { color: var(--ink-dim); }
+.hud.theme-dnd .boost-note b { color: var(--ink); }
+.hud.theme-dnd .boost-buy { border-top-color: var(--rule); background: rgba(154,106,26,.14); color: var(--gold-ink); }
+.hud.theme-dnd .boost-buy:hover:not(.cant) { background: rgba(154,106,26,.24); }
 /* glass tube reads fine on parchment; nudge its rim to a warmer bronze to match the wood cork */
 .hud.theme-dnd .vial .vtube { border-color: rgba(90,60,20,.55); }
 
