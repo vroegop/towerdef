@@ -8,6 +8,17 @@ of the shipped game bundle — like `tools/sim-dashboard`, it is served by Vite 
 npm run super:dashboard
 ```
 
+## On GitHub Pages
+
+The dashboard ships with the game build, so it's reachable on the deployed site (the Vite build emits
+it under `/tools/` — see `rollupOptions.input` in `vite.config.ts`). After this lands on `main` and the
+Pages workflow runs:
+
+- dashboard → `https://vroegop.github.io/towerdef/tools/superweapons-dashboard/`
+- art gallery → `https://vroegop.github.io/towerdef/tools/superweapons-dashboard/art-gallery.html`
+
+(Pages only deploys from `main`, so it goes live once this PR is merged.)
+
 ## What it does
 
 - **Loads the current powers live** from `src/sim/superpowers.ts`, so Moat & friends always show their
