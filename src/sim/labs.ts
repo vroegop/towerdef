@@ -184,9 +184,12 @@ export function researchRemaining(meta: Meta, id: string, nowMs: number): number
 }
 export function researchProgress(meta: Meta, id: string, nowMs: number): number {
   const r = researchOf(meta, id);
-  if (!r) return 0;
-  const total = labTimeSec(meta, id) * 1000; // buffed duration, so progress matches the real timer
-  return total > 0 ? Math.max(0, Math.min(1, 1 - (r.endsAt - nowMs) / total)) : 1;
+  if (!r || r.waiting) return 0; // a coins-blocked level hasn't begun → 0% done
+  const total = labTimeSec(meta, id) * 1000; // buffed (unboosted) duration = total lab-WORK for this level
+  if (total <= 0) return 1;
+  // Progress is measured in lab-WORK done, not real time, so an active boost fills the bar faster
+  // without ever jumping it backwards (remainingWorkMs inverts the boost-aware endsAt projection).
+  return Math.max(0, Math.min(1, 1 - remainingWorkMs(meta, r.endsAt, nowMs) / total));
 }
 export function labAtMax(meta: Meta, id: string): boolean {
   const L = LAB_BY_ID[id];
@@ -203,6 +206,75 @@ export function labTimeSec(meta: Meta, id: string): number {
   if (!L) return 0;
   const speed = cosmeticBuffMult(meta, 'labSpeed');
   return Math.max(0, Math.round(L.time.at(lvl(meta, id)) / speed));
+}
+
+// ---- timed global lab-speed boost (the "Speed Up" modal) ----------------------------------------
+// A boost makes EVERY running lab advance `mult`× faster for a fixed real-time window. The window is
+// NOT shortened by the multiplier: a 1-day 2× boost runs a full day of real time and banks 2 days of
+// lab work. We bake the boost into each research's `endsAt` (a wall-clock instant), so reconcile stays
+// a dumb `now >= endsAt` check and offline catch-up needs no special-casing.
+export const MAX_BOOST_MULT = 5; // multipliers go 2×..5×
+export const MAX_BOOST_DAYS = 7; // durations go up to 7 days
+
+// The boost multiplier in effect right now (1 = none / expired).
+export function labBoostMult(meta: Meta, nowMs: number): number {
+  const b = meta.labBoost;
+  return b && b.mult > 1 && b.endsAt > nowMs ? b.mult : 1;
+}
+// Seconds left on the active boost (0 if none).
+export function labBoostRemaining(meta: Meta, nowMs: number): number {
+  const b = meta.labBoost;
+  return b && b.endsAt > nowMs ? (b.endsAt - nowMs) / 1000 : 0;
+}
+// How many labs a boost would pay for / speed up: every assigned slot (running OR coins-blocked).
+export const boostLabCount = (meta: Meta): number => (meta.research || []).length;
+
+// Vial price to run all assigned labs at `mult`× for `durationSec`. Base "block" = 1 vial / hour / lab
+// (one multiplier step at full price). Each step above 2× is 10% cheaper than the last, so for N labs
+// over H hours: 2× = N·H, 3× = +0.9·N·H, 4× = +0.8·N·H, 5× = +0.7·N·H.
+export function labBoostCost(meta: Meta, mult: number, durationSec: number): number {
+  const block = boostLabCount(meta) * (durationSec / 3600);
+  let cost = 0;
+  for (let k = 0; k <= mult - 2; k++) cost += block * (1 - 0.1 * k);
+  return Math.round(cost);
+}
+
+// Wall-clock instant that `workMs` of lab-work begun at `startMs` finishes, honouring the boost window.
+function projectEndsAt(meta: Meta, startMs: number, workMs: number): number {
+  const b = meta.labBoost;
+  if (!b || b.mult <= 1 || b.endsAt <= startMs) return startMs + workMs;
+  const D = b.endsAt - startMs, // real ms of boost still ahead of startMs
+    m = b.mult;
+  if (workMs <= m * D) return startMs + workMs / m; // finishes inside the boost window
+  return startMs + workMs - (m - 1) * D; // boost the first D real-ms, run the tail at 1×
+}
+// Inverse of projectEndsAt: lab-WORK still left at `nowMs` for a level finishing at `endsAt`.
+function remainingWorkMs(meta: Meta, endsAt: number, nowMs: number): number {
+  if (endsAt <= nowMs) return 0;
+  const b = meta.labBoost;
+  if (!b || b.mult <= 1 || b.endsAt <= nowMs) return endsAt - nowMs; // no live boost → 1:1
+  if (endsAt <= b.endsAt) return (endsAt - nowMs) * b.mult; // whole tail inside the boost
+  return (b.endsAt - nowMs) * b.mult + (endsAt - b.endsAt); // boosted part + unboosted tail
+}
+
+// Purchase a global lab-speed boost: charge vials, then re-time every running lab to the new rate.
+export function applyLabBoost(meta: Meta, mult: number, durationSec: number, nowMs: number): boolean {
+  mult = Math.round(mult);
+  if (mult < 2 || mult > MAX_BOOST_MULT) return false;
+  if (durationSec <= 0 || durationSec > MAX_BOOST_DAYS * 86400) return false;
+  if (labBoostMult(meta, nowMs) > 1) return false; // one boost at a time — no stacking
+  if (boostLabCount(meta) <= 0) return false; // nothing to boost
+  const cost = labBoostCost(meta, mult, durationSec);
+  if ((meta.vials || 0) < cost) return false;
+  meta.vials = (meta.vials || 0) - cost;
+  meta.labBoost = { mult, endsAt: nowMs + durationSec * 1000 };
+  // No boost was active a moment ago, so each running lab's remaining real-time IS its remaining work;
+  // re-project that work onto the new (faster) timeline.
+  for (const r of meta.research || []) {
+    if (r.waiting) continue;
+    r.endsAt = projectEndsAt(meta, nowMs, Math.max(0, r.endsAt - nowMs));
+  }
+  return true;
 }
 
 // ---- research lifecycle (wall-clock; meta-only; safe to advance from any delta) ----
@@ -228,8 +300,18 @@ export function startResearch(meta: Meta, id: string, nowMs: number): boolean {
     return true;
   }
   meta.research = meta.research || [];
-  meta.research.push({ id, cost, endsAt: nowMs + t * 1000 });
+  meta.research.push({ id, cost, endsAt: projectEndsAt(meta, nowMs, t * 1000) });
   return true;
+}
+
+// Begin the NEXT level of `id` at wall-clock `startMs` (used by auto-start + waiting resume). If the
+// player can't afford it, return a WAITING entry that holds the slot until coins arrive — so a lab
+// never goes idle until it maxes out.
+function beginNextLevel(meta: Meta, id: string, startMs: number): Research {
+  const cost = labCoinCost(meta, id);
+  if ((meta.coins || 0) < cost) return { id, cost: 0, endsAt: 0, waiting: true };
+  meta.coins -= cost;
+  return { id, cost, endsAt: projectEndsAt(meta, startMs, labTimeSec(meta, id) * 1000) };
 }
 
 // Cancel an in-progress lab: refund its coins, free the slot.
@@ -245,12 +327,13 @@ export function cancelResearch(meta: Meta, id: string): boolean {
 // not enough gems → no-op. (Named rushVialCost/rushResearch to keep the existing main.ts wiring.)
 export function rushVialCost(meta: Meta, id: string, nowMs: number): number {
   const r = researchOf(meta, id);
-  if (!r) return 0;
-  return Math.max(1, Math.ceil(Math.max(0, (r.endsAt - nowMs) / 1000) / 60));
+  if (!r || r.waiting) return 0; // a waiting (not-yet-started) level has nothing to rush
+  // rushing pays out the remaining lab-WORK, so a boosted lab is correspondingly cheaper to finish.
+  return Math.max(1, Math.ceil(remainingWorkMs(meta, r.endsAt, nowMs) / 1000 / 60));
 }
 export function rushResearch(meta: Meta, id: string, nowMs: number): boolean {
   const r = researchOf(meta, id);
-  if (!r) return false;
+  if (!r || r.waiting) return false;
   const cost = rushVialCost(meta, id, nowMs);
   if ((meta.gems || 0) < cost) return false;
   meta.gems -= cost;
@@ -258,17 +341,27 @@ export function rushResearch(meta: Meta, id: string, nowMs: number): boolean {
   return true;
 }
 
-// Complete every research whose timer has elapsed. Returns the list of completed lab ids.
+// Complete every research whose timer has elapsed, and AUTO-START the next level of the same lab so a
+// slot keeps working without intervention (the chain handles long offline gaps — many levels at once).
+// A slot only frees up when its lab maxes out; if the next level isn't yet affordable the slot is held
+// in a WAITING state and resumes the moment coins allow. Returns the list of completed lab ids.
 export function reconcileResearch(meta: Meta, nowMs: number): string[] {
   if (!meta.research || !meta.research.length) return [];
   const done: string[] = [],
     keep: Research[] = [];
-  for (const r of meta.research) {
-    if (nowMs >= r.endsAt) {
+  for (const r0 of meta.research) {
+    // Resume a coins-blocked level the instant funds are available.
+    let r: Research | null = r0.waiting ? beginNextLevel(meta, r0.id, nowMs) : r0;
+    while (r && !r.waiting && nowMs >= r.endsAt) {
       meta.labs = meta.labs || {};
       meta.labs[r.id] = (meta.labs[r.id] || 0) + 1;
       done.push(r.id);
-    } else keep.push(r);
+      if (labAtMax(meta, r.id)) { r = null; break; } // maxed → the only time a slot goes idle
+      // Chain the next level from the instant this one finished, so an offline gap completes the
+      // right number of levels (each subsequent endsAt projects off the previous completion time).
+      r = beginNextLevel(meta, r.id, r.endsAt);
+    }
+    if (r) keep.push(r); // running OR waiting-on-coins — either way the slot stays assigned
   }
   meta.research = keep;
   return done;

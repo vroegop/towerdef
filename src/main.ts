@@ -7,7 +7,7 @@ import { DT, catchUp } from './sim/offline';
 import { Sim, tickDying } from './sim/core';
 import { requestActiveSkill } from './sim/cards-active';
 import { createState } from './sim/state';
-import { migrateMeta, reconcileResearch, claimCheckIn, startResearch, cancelResearch, rushResearch, buyLabSlot, gameSpeed, setGameSpeed, availableSpeeds, LABS, MAX_SLOTS } from './sim/labs';
+import { migrateMeta, reconcileResearch, claimCheckIn, startResearch, cancelResearch, rushResearch, applyLabBoost, buyLabSlot, gameSpeed, setGameSpeed, availableSpeeds, LABS, MAX_SLOTS } from './sim/labs';
 import { buyRunUpgradeBulk, buyPermBulk, unlockGroup, claimMilestone, claimAllMilestones, buyCard, buyCardSlot, setActiveCard, FIRST_PERM_COST, UPGRADES, SKILL_GROUPS, upgradeCap, CARD_ORDER, MAX_STARS, MAX_CARD_SLOTS } from './sim/skills';
 import { MAX_TIER, tierUnlocked, coinsForRun } from './sim/waves';
 import { selectCosmetic, buyCosmetic, type CosmeticKind } from './sim/cosmetics';
@@ -185,6 +185,11 @@ const handlers: HudHandlers = {
   },
   onRushResearch: (id) => {
     const ok = rushResearch(meta, id, Date.now());
+    if (ok) saveMeta();
+    return ok;
+  },
+  onApplyLabBoost: (mult, durationSec) => {
+    const ok = applyLabBoost(meta, mult, durationSec, Date.now());
     if (ok) saveMeta();
     return ok;
   },

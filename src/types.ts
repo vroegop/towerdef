@@ -35,8 +35,11 @@ export interface CardInstance {
 export type Rarity = 'common' | 'rare' | 'epic';
 export interface Research {
   id: string;
-  cost: number;
-  endsAt: number;
+  cost: number;   // coins paid for the level currently in progress (refunded on replace; 0 while waiting)
+  endsAt: number; // wall-clock ms the in-progress level completes (0 while waiting on coins)
+  // Set when an auto-started next level can't be afforded yet: the slot stays ASSIGNED to this lab
+  // (never idle) and reconcileResearch begins the level the moment coins are available.
+  waiting?: boolean;
 }
 export interface Meta {
   coins: number;
@@ -58,6 +61,10 @@ export interface Meta {
   labSlots: number;
   vials: number;
   lastCheckIn: number;
+  // A purchased, time-limited GLOBAL lab-speed boost (the "Speed Up" modal). While endsAt is in the
+  // future every running lab advances `mult`× faster; the window is real wall-clock time and is NOT
+  // shortened by the multiplier (a 1-day 2× boost runs a full day and banks 2 days of lab time).
+  labBoost?: { mult: number; endsAt: number } | null;
   // ---- Superpowers (Prestige tab): Energy currency + per-power unlock/level/enable state ----
   // Optional so existing save literals / tests stay valid; migrateMeta + loadMeta always seed them.
   energy?: number;                          // earned +1 per boss kill (+ moat/crystal bonuses)
@@ -399,6 +406,7 @@ export interface HudHandlers {
   onStartResearch?: (id: string) => boolean;
   onCancelResearch?: (id: string) => boolean;
   onRushResearch?: (id: string) => boolean;
+  onApplyLabBoost?: (mult: number, durationSec: number) => boolean; // buy a timed global lab-speed boost
   onBuyLabSlot?: () => boolean;
   onBuySuperpower?: (id: string) => boolean;          // unlock a superpower with Energy
   onBuySuperTrack?: (spId: string, trackId: string) => boolean; // level a superpower track with Energy
