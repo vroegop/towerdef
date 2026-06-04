@@ -71,6 +71,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       '<circle class="vb vb3" cx="12" cy="16.6" r=".7" fill="currentColor" stroke="none"/></g>',
     burst: '<path d="M12 2v5M12 17v5M2 12h5M17 12h5M5.2 5.2l3.4 3.4M18.8 5.2l-3.4 3.4M5.2 18.8l3.4-3.4M18.8 18.8l-3.4-3.4"/>',
     bow: '<path d="M8 3a10 10 0 0 1 0 18"/><path d="M8 3v18"/><path d="M5 12h13"/><path d="M15 9l3 3-3 3"/><path d="M5 12l2.5-2M5 12l2.5 2"/>',
+    // bolt = a forked lightning strike (the Multi-hit / Max-Bolts skill icon, replacing the old bow)
+    bolt: '<path d="M13 2 4 14h6l-1 8 9-12h-6z"/>',
     bullseye: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.6"/>',
     rate: '<circle cx="12" cy="13" r="7"/><path d="M12 13V9.5"/><path d="M10 3h4M12 3v3"/>',
     heart: '<path d="M12 20s-6.5-4.3-6.5-9.3A3.7 3.7 0 0 1 12 8a3.7 3.7 0 0 1 6.5 2.7c0 5-6.5 9.3-6.5 9.3z"/>',
@@ -108,6 +110,17 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     crystal: '<path d="M12 2l4 6-4 14-4-14z"/><path d="M8 8h8"/>', // a tall shard, matching the Crystal Circle art
     // atom = Energy. Nucleus (static) + 3 orbit ellipses in a group that slowly spins (see .ic.atom .orbits)
     atom: '<circle class="nuc" cx="12" cy="12" r="2" fill="currentColor" stroke="none"/><g class="orbits"><ellipse cx="12" cy="12" rx="10" ry="4.2"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(120 12 12)"/></g>',
+    // ---- new mechanic-skill glyphs (Frostbite / Poison / Splash / Dodge / Stun) ----
+    // frost = a 6-spoke snowflake (vertical + two diagonals) with chevron barbs top & bottom
+    frost: 'M12 2v20 M3.34 7l17.32 10 M20.66 7l-17.32 10 M9 5l3-2 3 2 M9 19l3 2 3-2',
+    // poison = a venom droplet with two little X "eyes"
+    poison: 'M12 3c0 0 5.5 6.5 5.5 10.5a5.5 5.5 0 0 1-11 0C6.5 9.5 12 3 12 3z M9.5 12l1.8 1.8 M11.3 12l-1.8 1.8 M12.7 12l1.8 1.8 M14.5 12l-1.8 1.8',
+    // splash = an upward spray over two concentric ripple arcs
+    splash: 'M12 9V6 M12 9l2.6-1.6 M12 9l-2.6-1.6 M6 13a6 6 0 0 0 12 0 M3 13a9 9 0 0 0 18 0',
+    // dodge = a double chevron leaning aside (evading)
+    dodge: 'M15 4l-7 8 7 8 M10 4l-7 8 7 8',
+    // stun = a dazed face: head ring, two X eyes, a wavy mouth
+    stun: 'M12 12 m-9 0 a9 9 0 1 0 18 0 a9 9 0 1 0 -18 0 M8.5 10.5l2 1.5-2 1.5 M15.5 10.5l-2 1.5 2 1.5 M9 16q3 2 6 0',
   };
   function icon(name: string, size?: number, cls?: string): string {
     size = size || 16;
@@ -281,12 +294,12 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   const STARP = 'M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6z';
   const STAT_ICON: Record<string, string> = { rangedDamage: 'bow', attackSpeed: 'rate', health: 'heart', regen: 'regen',
     critChance: 'crit', critDamage: 'burst', gold: 'coin',
-    thorns: 'shield', msChance: 'bow', bounceChance: 'arrow', rendMult: 'burst', range: 'range', interest: 'coin',
+    thorns: 'shield', msChance: 'bolt', bounceChance: 'arrow', rendMult: 'burst', range: 'range', interest: 'coin',
     ambush: 'burst', lastStand: 'heart', berserk: 'rate', execute: 'crit', detonate: 'burst', aegis: 'shield',
     vengeance: 'burst', ascetic: 'heart' };
   const STAT_LABEL: Record<string, string> = { rangedDamage: 'Damage', attackSpeed: 'Speed', health: 'HP', regen: 'Regen',
     critChance: 'Crit', critDamage: 'Crit Dmg', gold: 'Gold',
-    thorns: 'Disintegrate', msChance: 'Lightning', bounceChance: 'Lightning Arc', rendMult: 'Amp', range: 'Range', interest: 'Interest',
+    thorns: 'Disintegrate', msChance: 'Multi hit', bounceChance: 'Lightning Arc', rendMult: 'Amp', range: 'Range', interest: 'Interest',
     ambush: 'Ambush', lastStand: 'Last Stand', berserk: 'Berserk', execute: 'Execute', detonate: 'Detonate', aegis: 'Shield',
     vengeance: 'Vengeance', ascetic: 'Max HP/wave' };
   // currencies shown on the Hero screen
@@ -923,7 +936,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     // The letter holds only a compass-rose seal and the spoils chips — no title, no claim button.
     checkinFloat.innerHTML =
       '<span class="cr-glow" aria-hidden="true"></span>' +
-      '<span class="cr-emblem">' + icon('compassHand', 46) + '</span>' +
+      '<span class="cr-emblem">' + icon('compassHand', 30) + '</span>' +
       '<span class="cr-loot">' +
         '<span class="cr-chip">' + icon('vial', 13, 'vial') + '<b>+' + pend * CHECKIN_VIALS + '</b></span>' +
         '<span class="cr-chip">' + icon('gem', 13, 'gem') + '<b>+' + pend * CHECKIN_GEMS + '</b></span>' +
@@ -1379,6 +1392,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       { key: 'coinOnKill', label: 'Coins on kill', icon: 'coinstar', cls: 'coin' },
       { key: 'enemyHp', label: 'Enemy HP bars', icon: 'heart', cls: 'hp' },
       { key: 'damageNumbers', label: 'Damage numbers', icon: 'burst' },
+      { key: 'msgDodge', label: 'Dodge', icon: 'dodge', cls: 'cyan' },
     ] },
     { title: 'Wave messages', rows: [
       { key: 'msgWaveSkip', label: 'Wave skipped', icon: 'arrow', cls: 'cyan' },

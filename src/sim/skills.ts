@@ -69,6 +69,12 @@ export const MAX_REND = 10; // cap on Rend stacks an enemy can carry
 export const REND_DECAY = 4; // seconds a Rend stack persists without a refresh
 export const RAPID_CHECK = 5; // seconds between Burst rolls
 export const RAPID_MULT = 3; // fire-rate multiplier during a Burst
+// ---- new mechanic skills (Frostbite / Poison / Stun / Splash / Greed) ----
+export const FROST_DURATION = 2.5; // seconds a Frostbite chill slows an enemy (refreshed on hit)
+export const POISON_DURATION = 3; // seconds a Poison burn lasts (refreshed on hit; strongest hit wins)
+export const STUN_DURATION = 1.2; // seconds a Stun freezes an enemy (no moving or attacking)
+export const SPLASH_RADIUS = 36; // px radius of Splash collateral damage around a struck enemy
+export const GREED_CAP = 1.0; // max bonus gold multiplier from an unbroken kill streak (×2 at the cap)
 
 // cost factory: round(base · growth^n). growth > 1 → accelerating curve. `cost` reads this.base/
 // this.grow (not the closed-over args) so the dev dashboard can rebalance base/grow in place.
@@ -303,12 +309,12 @@ const UPGRADE_SPECS: UpgradeSpec[] = [
     tip: (up) => 'Damage bonus per Amp stack on the target. Stacks decay after ' + REND_DECAY + 's. Max: ' + up.fmt(up.value(up.max)) + '.',
     max: 299, curve: { kind: 'linear', base: 0.001, per: 0.001, cap: 0.3 }, fmt: (v) => '+' + (v * 100).toFixed(1) + '%/hit',
     gold: tcurve(REND_COST), coin: tcurve(REND_COST) },
-  { id: 'msChance', tab: 'attack', icon: 'bow', label: 'Lightning',
+  { id: 'msChance', tab: 'attack', icon: 'bolt', label: 'Multi hit',
     name: 'Split chance',
     tip: (up) => 'Chance each attack splits lightning to nearby targets. Max: ' + up.fmt(up.value(up.max)) + '.',
     max: 99, curve: { kind: 'linear', base: 0, per: 0.005, cap: 0.495 }, fmt: pctFmt,
     gold: curve(100, 1.6), coin: curve(25, 1.0018) },
-  { id: 'msTargets', tab: 'attack', icon: 'bow', label: 'Lightning',
+  { id: 'msTargets', tab: 'attack', icon: 'bolt', label: 'Max Bolts',
     name: 'Splits',
     tip: (up) => 'Maximum extra targets hit per split. Max: ' + up.fmt(up.value(up.max)) + '.',
     max: 8, curve: { kind: 'linear', base: 1, per: 1 }, fmt: (v) => '' + v,
@@ -338,6 +344,21 @@ const UPGRADE_SPECS: UpgradeSpec[] = [
     tip: (up) => 'How long the Burst lasts. Base: ' + up.fmt(up.value(0)) + ', max: ' + up.fmt(up.value(up.max)) + '.',
     max: 99, curve: { kind: 'linear', base: 0.65, per: 0.05 }, fmt: (v) => v.toFixed(1) + 's',
     gold: tcurve(RAPID_COST), coin: tcurve(RAPID_COST) },
+  { id: 'poison', tab: 'attack', icon: 'poison', label: 'Poison',
+    name: 'Poison',
+    tip: (up) => 'Each hit lays a venom that burns the target for a share of the hit’s damage every second, for ' + POISON_DURATION + 's (refreshed by each hit; the strongest hit wins). Max: ' + up.fmt(up.value(up.max)) + '.',
+    max: 60, curve: { kind: 'linear', base: 0, per: 0.01, cap: 0.6 }, fmt: (v) => '+' + (v * 100).toFixed(0) + '%/s',
+    gold: curve(80, 1.08), coin: curve(80, 1.08) },
+  { id: 'splash', tab: 'attack', icon: 'splash', label: 'Splash',
+    name: 'Splash Damage',
+    tip: (up) => 'Each hit also deals this share of its damage to other enemies near the target (no chaining). Max: ' + up.fmt(up.value(up.max)) + '.',
+    max: 50, curve: { kind: 'linear', base: 0, per: 0.01, cap: 0.5 }, fmt: pctFmt,
+    gold: curve(120, 1.08), coin: curve(120, 1.08) },
+  { id: 'dmgPerCoin', tab: 'attack', icon: 'coin', label: 'Coin Power',
+    name: 'Coin Power',
+    tip: (up) => 'Adds +1 base damage per 100 banked coins for every level — added before all multipliers, so Crit, cards, labs and cosmetics scale it exactly like Damage. At level ' + up.max + ': ' + up.fmt(up.value(up.max)) + '.',
+    max: 200, curve: { kind: 'linear', base: 0, per: 1 }, fmt: (v) => '+' + abbrNum(v) + ' dmg / 100 coins',
+    gold: curve(50, 1.05), coin: curve(50, 1.05) },
 
   // ---- DEFENSE ----
   { id: 'health', stat: 'maxHp', tab: 'defense', icon: 'heart', label: 'HP',
@@ -378,6 +399,21 @@ const UPGRADE_SPECS: UpgradeSpec[] = [
     tip: (up) => 'Heals for a percentage of all damage dealt. Max: ' + up.fmt(up.value(up.max)) + '.',
     max: 80, curve: { kind: 'table', points: LIFESTEAL_VALUE }, fmt: pctFmt,
     gold: tcurve(LIFESTEAL_COST), coin: tcurve(LIFESTEAL_COST) },
+  { id: 'frostbite', tab: 'defense', icon: 'frost', label: 'Frostbite',
+    name: 'Frostbite',
+    tip: (up) => 'Each hit chills the enemy, slowing its movement for ' + FROST_DURATION + 's (the strongest chill wins). Max slow: ' + up.fmt(up.value(up.max)) + '.',
+    max: 120, curve: { kind: 'linear', base: 0, per: 0.005, cap: 0.6 }, fmt: pctFmt,
+    gold: curve(60, 1.05), coin: curve(60, 1.05) },
+  { id: 'dodge', tab: 'defense', icon: 'dodge', label: 'Dodge',
+    name: 'Dodge',
+    tip: (up) => 'Chance to completely evade an incoming hit, taking no damage (and keeping any kill streak). Max: ' + up.fmt(up.value(up.max)) + '.',
+    max: 120, curve: { kind: 'linear', base: 0, per: 0.005, cap: 0.6 }, fmt: pctFmt,
+    gold: curve(80, 1.05), coin: curve(80, 1.05) },
+  { id: 'stun', tab: 'defense', icon: 'stun', label: 'Stun',
+    name: 'Stun',
+    tip: (up) => 'Chance each hit freezes the enemy for ' + STUN_DURATION + 's — it cannot move or attack. Bosses are immune. Max: ' + up.fmt(up.value(up.max)) + '.',
+    max: 100, curve: { kind: 'linear', base: 0, per: 0.004, cap: 0.4 }, fmt: pctFmt,
+    gold: curve(150, 1.06), coin: curve(150, 1.06) },
 
   // ---- ECONOMIC (Tier 2+) ----
   { id: 'goldPerWave', tab: 'economic', icon: 'coin', label: 'Gold/Wave',
@@ -394,6 +430,11 @@ const UPGRADE_SPECS: UpgradeSpec[] = [
     tip: (up) => 'Global multiplier on all gold earned. Base: ' + up.fmt(up.value(0)) + '.',
     max: 149, gated: true, curve: { kind: 'linear', base: 1, per: 0.01 }, fmt: (v) => '×' + v.toFixed(2),
     gold: tcurve(CASHBONUS_COST), coin: tcurve(CASHBONUS_COST) },
+  { id: 'greed', tab: 'economic', icon: 'coin', label: 'Greed',
+    name: 'Greed',
+    tip: (up) => 'Each enemy killed without taking damage raises your gold multiplier by ' + up.fmt(up.value(up.max)) + ', stacking up to ×' + (1 + GREED_CAP).toFixed(1) + '. Resets the moment you are hit.',
+    max: 100, gated: true, curve: { kind: 'linear', base: 0, per: 0.0002, cap: 0.02 }, fmt: (v) => '+' + (v * 100).toFixed(2) + '%/kill',
+    gold: curve(60, 1.05), coin: curve(60, 1.05) },
   { id: 'interest', tab: 'economic', icon: 'coin', label: 'Interest',
     name: 'Interest',
     tip: 'Earns a percentage of banked gold as a bonus each wave, capped per wave (25/wave; raise the ceiling to 20k/wave with the Interest Cap lab).',
@@ -505,6 +546,10 @@ export const UNLOCK_COST_OVERRIDE: Record<string, number> = {
   coinsPerKill: 100, coinsPerWave: 100,
   freeUpAttack: 800, freeUpDefense: 800, freeUpUtility: 800, interest: 5000,
   skipEnemyHp: 500_000_000, skipEnemyDmg: 500_000_000,
+  // new mechanic skills
+  poison: 10_000, splash: 200_000, dmgPerCoin: 1500,
+  frostbite: 5000, dodge: 3000, stun: 8000,
+  greed: 200,
 };
 // Coin cost to unlock a skill: 0 for starters, the override if listed, else ≈10× its first-level price.
 export function skillUnlockCost(id: string): number {
@@ -540,6 +585,14 @@ const RAW_GROUPS: { id: string; label: string; skills: string[] }[] = [
   { id: 'freeup', label: 'Free Upgrades', skills: ['freeUpAttack', 'freeUpDefense', 'freeUpUtility'] },
   { id: 'interest', label: 'Interest', skills: ['interest'] },
   { id: 'enemyskip', label: 'Enemy Skip', skills: ['skipEnemyHp', 'skipEnemyDmg'] },
+  // ---- new mechanic skills (each unlocks on its own; cost ordering is per-tab) ----
+  { id: 'poison', label: 'Poison', skills: ['poison'] },
+  { id: 'splash', label: 'Splash', skills: ['splash'] },
+  { id: 'coinpower', label: 'Coin Power', skills: ['dmgPerCoin'] },
+  { id: 'frostbite', label: 'Frostbite', skills: ['frostbite'] },
+  { id: 'dodge', label: 'Dodge', skills: ['dodge'] },
+  { id: 'stun', label: 'Stun', skills: ['stun'] },
+  { id: 'greed', label: 'Greed', skills: ['greed'] },
 ];
 // cost = the (shared) per-skill unlock price of the group's members; tab from the first member.
 // Stable-sorted ascending by cost so the unlock sequence and the skill list follow the same order.
@@ -1066,8 +1119,12 @@ export function computeStats(state: State): Stats {
   const b = (id: string) => boughtOf(state, id);
   const U = UP_BY_ID;
   const rangeM = U.range.value(b('range'));
+  // Coin Power: +1 base damage per 100 banked coins per level. Folded into BASE damage so every
+  // multiplier (crit, dmg/m, cards, labs, cosmetics) scales it exactly like the Damage skill.
+  const dmgPerCoin = U.dmgPerCoin.value(b('dmgPerCoin'));
+  const coinDamage = dmgPerCoin > 0 ? (Math.max(0, (state.meta && state.meta.coins) || 0) / 100) * dmgPerCoin : 0;
   const out: Stats = {
-    rangedDamage: U.rangedDamage.value(b('rangedDamage')),
+    rangedDamage: U.rangedDamage.value(b('rangedDamage')) + coinDamage,
     fireRate: U.attackSpeed.value(b('attackSpeed')),
     maxHp: U.health.value(b('health')),
     regen: U.regen.value(b('regen')),
@@ -1103,6 +1160,14 @@ export function computeStats(state: State): Stats {
     goldFind: U.goldPerKill.value(b('goldPerKill')), // value IS the ×multiplier (1.00 → 2.49)
     skipEnemyHp: U.skipEnemyHp.value(b('skipEnemyHp')),   // per-wave chance to skip an enemy HEALTH level
     skipEnemyDmg: U.skipEnemyDmg.value(b('skipEnemyDmg')), // per-wave chance to skip an enemy ATTACK level
+    // ---- new mechanic skills ----
+    frostbite: U.frostbite.value(b('frostbite')), // each hit slows the target (fraction) for FROST_DURATION s
+    poison: U.poison.value(b('poison')),           // each hit burns this fraction of its damage per second
+    splash: U.splash.value(b('splash')),           // each hit splashes this fraction of its damage to neighbours
+    dodge: U.dodge.value(b('dodge')),              // chance to fully evade an incoming hit
+    stun: U.stun.value(b('stun')),                 // chance a hit freezes the enemy for STUN_DURATION s
+    greed: U.greed.value(b('greed')),              // gold-multiplier gained per kill in an unbroken streak
+    dmgPerCoin,                                    // damage added per 100 banked coins, per level (display)
     // ---- card-driven aura/mechanic/active stats (0 / 1 when no card supplies them) ----
     cardCoinMult: 1,   // ×coins from the Coins card
     slowAura: 0,       // enemy speed reduction within range (fraction)

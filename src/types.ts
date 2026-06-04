@@ -123,8 +123,11 @@ export interface Enemy {
   rendT: number;
   splits: number;
   mass: number; // resists knockback
-  slow: number; // active slow multiplier (1 = none) from knockback on a too-heavy enemy
+  slow: number; // active slow multiplier (1 = none) from knockback / Frostbite on the enemy
   slowT: number; // seconds the slow remains
+  poison?: number; // active Poison burn in HP/second (0 / undefined = none)
+  poisonT?: number; // seconds the Poison burn remains (refreshed by each hit)
+  stunT?: number; // seconds the enemy is stunned (frozen: no moving or attacking)
   bornWave: number;
   veteran: boolean;
   agedWaves: number;
@@ -157,7 +160,7 @@ export interface FxEvent {
   gold?: number;
   coin?: number;
   // Per-wave info message (rendered as a transient on-screen note, gated by a Display toggle).
-  note?: 'waveskip' | 'interest' | 'hpskip' | 'dmgskip';
+  note?: 'waveskip' | 'interest' | 'hpskip' | 'dmgskip' | 'dodge';
   noteVal?: number; // the number that goes with the note (wave number, interest gold, or skip count)
 }
 // A transient superpower render event (shatter burst at x,y with a payout currency tag for floats).
@@ -202,6 +205,7 @@ export interface Run {
   shield?: number;          // current Aegis shield HP (absorbs damage before it reaches the hero)
   asceticWaves?: number;    // frugal waves accrued (no in-run gold/free-up buy) — drives the Ascetic card
   asceticBroken?: boolean;  // set once an in-run upgrade is bought; freezes asceticWaves for the run
+  streak?: number;          // consecutive kills since the hero last took damage (powers the Greed skill)
   // ---- Superpowers (per-run timers, reset each run) ----
   superCd?: Record<string, number>;     // seconds until each power may fire again
   superActive?: Record<string, number>; // seconds the power's window is currently live
@@ -379,6 +383,7 @@ export interface Settings {
   msgWaveSkip: boolean;       // "Wave N skipped"
   msgInterest: boolean;       // "+X interest"
   msgEnemySkip: boolean;      // "Enemy HP/Attack level skipped"
+  msgDodge: boolean;          // "Dodge!" when the hero evades a hit
 }
 // Spoils accrued while a survived run was simulated offline — shown in the offline-reward modal.
 // The modal shows the currency gains (gold + coins) as hexagon chips; kills/waves are progress, kept
