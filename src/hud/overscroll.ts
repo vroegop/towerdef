@@ -35,19 +35,14 @@ interface BounceOpts {
   alwaysBounce?: boolean;
 }
 
-// The nearest ancestor background colour, so the gap revealed behind a pulled panel matches the
-// panel instead of showing black/canvas through it. Walks up from `node` until a non-transparent
-// colour is found.
-function nearestBg(node: HTMLElement | null): string {
-  for (let n = node; n; n = n.parentElement) {
-    const bg = getComputedStyle(n).backgroundColor;
-    const m = /^rgba?\(([^)]+)\)/.exec(bg);
-    if (!m) continue;
-    const parts = m[1].split(',');
-    const alpha = parts.length === 4 ? parseFloat(parts[3]) : 1;
-    if (alpha > 0) return bg;
-  }
-  return '';
+// True when a computed colour actually paints something (alpha > 0). `transparent` and a 0-alpha
+// rgba() return false; an `rgb()` or any positive-alpha rgba() returns true.
+function isOpaqueColor(c: string): boolean {
+  const m = /^rgba?\(([^)]+)\)/.exec(c);
+  if (!m) return false;
+  const parts = m[1].split(',');
+  const alpha = parts.length === 4 ? parseFloat(parts[3]) : 1;
+  return alpha > 0;
 }
 
 export function attachOverscrollBounce(el: HTMLElement | null, opts: BounceOpts = {}): void {
@@ -98,9 +93,13 @@ export function attachOverscrollBounce(el: HTMLElement | null, opts: BounceOpts 
   }
   el.parentNode!.insertBefore(clip, el);
   clip.appendChild(el);
-  // Fill the gap behind the panel with the panel's own backdrop colour (computed now that the
-  // clip is in the tree), so pulling never reveals black canvas behind it.
-  clip.style.background = nearestBg(clip.parentElement);
+  // Fill the overscroll gap with the panel's OWN surface colour when it has one (e.g. the parchment
+  // menu body), so pulling it never reveals the darker frame behind it. When the panel is itself
+  // transparent — a modal body whose parchment fill + inset border live on the modal shell — leave
+  // the clip transparent so the gap reveals that shell intact. Painting it here would hide the
+  // shell's inset border and make the content look like it spills past the frame.
+  const ownBg = getComputedStyle(el).backgroundColor;
+  if (isOpaqueColor(ownBg)) clip.style.background = ownBg;
 
   let offset = 0; // current rubber-band translate (px), signed
   let springTimer = 0;
