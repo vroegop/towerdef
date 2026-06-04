@@ -308,25 +308,33 @@
 .hud .permgroup.future .pg-act { color: #6b7488; }
 
 
-/* ---- 15-minute check-in button (Hero screen) ---- */
-.hud .checkin { display: inline-flex; align-items: center; justify-content: center; gap: 5px; margin: 2px auto 0;
-  background: #11151f; border: 1px solid #2d3344; border-radius: 8px; color: #8b93a7;
-  font: 600 13px 'Roboto', system-ui; padding: 8px 14px; cursor: default; }
-.hud .checkin.ready { color: #0c0e14; background: linear-gradient(90deg, #37d7ff, #3ddc84); border-color: #37d7ff; cursor: pointer;
-  box-shadow: 0 0 14px rgba(55,215,255,.35); animation: checkinpulse 1.6s ease-in-out infinite; }
-.hud .checkin.ready .ic { color: #0c0e14; }
-@keyframes checkinpulse { 0%,100% { box-shadow: 0 0 10px rgba(55,215,255,.25); } 50% { box-shadow: 0 0 18px rgba(55,215,255,.5); } }
-/* Floating check-in button — fixed bottom-left, just above the DEV toggle (bottom:110). Shown only
-   when a reward is claimable (menu + in-game). No label; each currency reward stacks on its own line. */
-.hud .checkin-float { position: fixed; left: 10px; bottom: 150px; z-index: 60; pointer-events: auto;
-  display: flex; flex-direction: column; align-items: stretch; gap: 4px; width: max-content;
-  background: #11151f; color: #d8deea; border: 1px solid #2d3344;
-  border-radius: 8px; padding: 7px 8px; font: 700 12px 'Roboto', system-ui, sans-serif; cursor: pointer;
-  box-shadow: 0 2px 10px rgba(0,0,0,.35); }
-.hud .checkin-float:hover { border-color: #3a4256; }
-.hud .checkin-float.hide { display: none; }
-.hud .checkin-float .cf-chip { display: inline-flex; align-items: center; justify-content: center; gap: 4px;
-  background: rgba(255,255,255,.05); border-radius: 5px; padding: 2px 8px; white-space: nowrap; }
+/* ---- Check-in REWARD COFFER — a fixed treasure prompt pinned bottom-left, shown ONLY when a
+   check-in reward is claimable (menu + in-game). No countdown: the 15-min cadence lives in the sim.
+   It reads as found loot — a glowing chest spilling spoils with a wax-seal Claim — so the structure
+   is theme-agnostic here and the D&D skin paints the parchment/gilt treatment. Clicking claims. */
+.hud .checkin-reward { position: fixed; left: 12px; bottom: 150px; z-index: 60; pointer-events: auto;
+  display: flex; flex-direction: column; align-items: center; gap: 6px; width: max-content; min-width: 120px;
+  padding: 12px 14px 11px; border-radius: 12px; cursor: pointer; color: #eef2fb;
+  background: linear-gradient(180deg, #1b2030, #11151f); border: 1px solid #2d3344;
+  box-shadow: 0 6px 18px rgba(0,0,0,.45); animation: cr-bob 3.4s ease-in-out infinite; }
+.hud .checkin-reward.hide { display: none; }
+.hud .checkin-reward:hover { border-color: #3a4256; }
+/* the "reward" halo: a warm glow behind the coffer that gently breathes to draw the eye */
+.hud .checkin-reward .cr-glow { position: absolute; inset: -8px; z-index: 0; border-radius: 16px; pointer-events: none;
+  background: radial-gradient(circle at 50% 38%, rgba(255,210,90,.45), rgba(255,180,60,0) 70%);
+  animation: cr-glow 2.6s ease-in-out infinite; }
+.hud .checkin-reward > *:not(.cr-glow) { position: relative; z-index: 1; }
+.hud .checkin-reward .cr-chest { line-height: 0; color: #ffcf5a; filter: drop-shadow(0 2px 3px rgba(0,0,0,.4)); }
+.hud .checkin-reward .cr-title { font: 800 12px 'Roboto', system-ui, sans-serif; letter-spacing: .3px; color: #ffe6a6; }
+.hud .checkin-reward .cr-loot { display: flex; gap: 6px; }
+.hud .checkin-reward .cr-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px;
+  background: rgba(255,255,255,.06); font: 700 12px 'Roboto', system-ui, sans-serif; white-space: nowrap; }
+.hud .checkin-reward .cr-chip b { color: #fff; }
+.hud .checkin-reward .cr-claim { margin-top: 1px; padding: 4px 18px; border-radius: 999px;
+  font: 800 11px 'Roboto', system-ui, sans-serif; letter-spacing: .6px; text-transform: uppercase;
+  background: linear-gradient(90deg, #37d7ff, #3ddc84); color: #0c0e14; }
+@keyframes cr-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes cr-glow { 0%,100% { opacity: .5; } 50% { opacity: 1; } }
 
 /* ---- LAB tab (research rows + progress bars) ---- */
 /* ---- Labs: each slot is a sideways VIAL with a description + actions below ---- */
@@ -544,16 +552,16 @@
 /* gilded shimmer flowing down the reached spine (paired with .msrail::before background-size above) */
 @keyframes ms-spine-flow { 0% { background-position: 0 0; } 100% { background-position: 0 -300%; } }
 
-/* claim buttons (milestone + floating check-in) catch the light: a sheen sweeps across the button —
-   and over the gem/vial icon inside it — every few seconds. overflow:hidden masks the sheen to the
-   button; the breathe/pulse box-shadows live outside the border box so they're unaffected. */
-.hud .mn-claim, .hud .checkin-float { position: relative; overflow: hidden; }
-.hud .mn-claim::after, .hud .checkin-float::after { content: ''; position: absolute; top: -50%; left: 0;
+/* claim buttons (milestone + the coffer's Claim seal) catch the light: a sheen sweeps across the
+   button every few seconds. overflow:hidden masks the sheen to the button; the breathe/pulse
+   box-shadows live outside the border box so they're unaffected. */
+.hud .mn-claim, .hud .checkin-reward .cr-claim { position: relative; overflow: hidden; }
+.hud .mn-claim::after, .hud .checkin-reward .cr-claim::after { content: ''; position: absolute; top: -50%; left: 0;
   width: 35%; height: 200%; pointer-events: none;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
   transform: translateX(-260%) skewX(-18deg); animation: hud-claim-flare 4.5s ease-in-out infinite; }
-/* desync the float button so the two never flare in lockstep */
-.hud .checkin-float::after { animation-duration: 5.5s; animation-delay: 1.6s; }
+/* desync the coffer's seal so the two never flare in lockstep */
+.hud .checkin-reward .cr-claim::after { animation-duration: 5.5s; animation-delay: 1.6s; }
 @keyframes hud-claim-flare {
   0%   { transform: translateX(-260%) skewX(-18deg); }
   10%  { transform: translateX(360%) skewX(-18deg); }
@@ -561,9 +569,12 @@
 
 /* respect reduced-motion: keep the static facets/bevels, drop the moving sweeps and pulses */
 @media (prefers-reduced-motion: reduce) {
-  .hud .msdot::after, .hud .mn-claim::after, .hud .checkin-float::after { animation: none; opacity: 0; }
+  .hud .msdot::after, .hud .mn-claim::after, .hud .checkin-reward .cr-claim::after { animation: none; opacity: 0; }
   .hud .msrow.reached .msrail::before { animation: none; }
   .hud .msrow.can .msdot { animation: none; }
+  /* the coffer keeps its glow (held steady) but stops bobbing/breathing */
+  .hud .checkin-reward { animation: none; transform: none; }
+  .hud .checkin-reward .cr-glow { animation: none; opacity: .8; }
 }
 
 /* ---- spotlight tutorial (flashlight) ---- */

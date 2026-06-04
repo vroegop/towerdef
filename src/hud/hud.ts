@@ -86,6 +86,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     gear: '<circle cx="12" cy="12" r="3.2"/><path d="M19.4 13a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.7 8.6a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
     eye: '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/>',
+    // treasure chest = the check-in reward coffer (domed lid, seam, lock plate)
+    chest: '<path d="M3 11v7a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-7"/><path d="M3 11a9 9 0 0 1 18 0"/><path d="M3 11h18"/><path d="M11 10.5h2v3.5h-2z"/>',
     // refresh = cooldown; stopwatch = duration (both feather-style, 24×24 stroked)
     refresh: '<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3.5v5h-5"/>',
     stopwatch: '<circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9"/><path d="M9.5 2h5"/><path d="M12 2v3.5"/><path d="M18.8 6.8l1.4-1.4"/>',
@@ -820,12 +822,15 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   let lastS: State | null = null;
   renderTabContent();
 
-  // Floating check-in button: fixed bottom-left, a little above the DEV toggle. Shows the pending
-  // check-in reward as wrapped icon+number chips, in BOTH the menu and in-game, and is HIDDEN whenever
-  // nothing is claimable (no idle "next reward in…" countdown). Clicking claims the check-in.
+  // Check-in REWARD COFFER: a fixed treasure prompt pinned bottom-left, shown in BOTH the menu and
+  // in-game but ONLY when a reward is actually claimable. It deliberately reads as found loot — a
+  // glowing chest spilling its spoils with a wax-seal "Claim" — rather than a utility button. There
+  // is no idle countdown: the 15-minute cadence lives entirely in the sim (checkInPending). Clicking
+  // claims the banked spoils, after which it has nothing to show and hides itself again.
   const checkinFloat = document.createElement('button');
   checkinFloat.id = 'h-checkin-float';
-  checkinFloat.className = 'checkin-float hide';
+  checkinFloat.className = 'checkin-reward hide';
+  checkinFloat.title = 'Claim your spoils';
   root.appendChild(checkinFloat);
   checkinFloat.addEventListener('click', () => {
     if (handlers.onCheckIn && handlers.onCheckIn()) {
@@ -840,10 +845,16 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       checkinFloat.classList.add('hide');
       return;
     }
-    // No label — each currency reward on its own line (icon + amount).
+    // Treasure coffer: a gilt glow halo, the chest itself, then the loot it holds and a Claim seal.
     checkinFloat.innerHTML =
-      '<span class="cf-chip">' + icon('vial', 14, 'vial') + ' +' + pend * CHECKIN_VIALS + '</span>' +
-      '<span class="cf-chip">' + icon('gem', 14, 'gem') + ' +' + pend * CHECKIN_GEMS + '</span>';
+      '<span class="cr-glow" aria-hidden="true"></span>' +
+      '<span class="cr-chest">' + icon('chest', 34) + '</span>' +
+      '<span class="cr-title">Spoils await!</span>' +
+      '<span class="cr-loot">' +
+        '<span class="cr-chip">' + icon('vial', 13, 'vial') + '<b>+' + pend * CHECKIN_VIALS + '</b></span>' +
+        '<span class="cr-chip">' + icon('gem', 13, 'gem') + '<b>+' + pend * CHECKIN_GEMS + '</b></span>' +
+      '</span>' +
+      '<span class="cr-claim">Claim</span>';
     checkinFloat.classList.remove('hide');
   }
 
@@ -2073,8 +2084,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     let html = '';
     if (menuTab === 'hero') {
       html += curChips(meta, CURRENCIES.map((c) => c.key));
-      // The check-in is surfaced by the floating #h-checkin-float button (menu + in-game), shown only
-      // when a reward is claimable — so there's no inline button or idle countdown here anymore.
+      // The check-in is surfaced by the fixed #h-checkin-float reward coffer (menu + in-game), shown
+      // only when spoils are claimable — so there's no inline button or idle countdown here.
       html += '<div class="avatar-frame"><canvas id="h-avatar" width="200" height="200"></canvas></div>';
       const tier = meta.tier || 1,
         canUp = tier < MAX_TIER && tierUnlocked(meta, tier + 1);
@@ -2280,7 +2291,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     $('#h-stats').classList.add('hide');
   }
 
-  // 1s tick: keep the floating check-in button current (menu AND in-game) and advance research bars on
+  // 1s tick: keep the check-in reward coffer current (menu AND in-game) and advance research bars on
   // the Lab tab. The Hero tab holds nothing time-driven (the avatar animates on its own rAF loop), so we
   // do NOT re-render it here — doing so rebuilt the DOM every second, flashing the UI and resetting hover.
   setInterval(() => {
