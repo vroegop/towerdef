@@ -148,6 +148,9 @@ export interface FxEvent {
   y: number;
   gold?: number;
   coin?: number;
+  // Per-wave info message (rendered as a transient on-screen note, gated by a Display toggle).
+  note?: 'waveskip' | 'interest' | 'hpskip' | 'dmgskip';
+  noteVal?: number; // the number that goes with the note (wave number, interest gold, or skip count)
 }
 // A transient superpower render event (shatter burst at x,y with a payout currency tag for floats).
 export interface SuperFxEvent { seq: number; x: number; y: number; kind: 'shatter' | 'gem' | 'energy'; }
@@ -184,6 +187,10 @@ export interface Run {
   invuln?: number;          // seconds the hero is invincible (Demon Mode / Second Wind shield)
   dmgBoost?: number;        // transient outgoing-damage multiplier from active abilities (1 = none)
   plasmaDone?: number[];    // boss ids already struck by Plasma Cannon (one shot per boss, ever)
+  demonReq?: boolean;       // Dark Wiz (Demon Mode): player tapped to activate; consumed next tick
+  demonUsed?: boolean;      // Dark Wiz fires only once per run
+  hpSkip?: number;          // enemy HEALTH levels skipped so far this run (Skip Enemy Health utility)
+  dmgSkip?: number;         // enemy ATTACK levels skipped so far this run (Skip Enemy Attack utility)
   // ---- Superpowers (per-run timers, reset each run) ----
   superCd?: Record<string, number>;     // seconds until each power may fire again
   superActive?: Record<string, number>; // seconds the power's window is currently live
@@ -356,6 +363,10 @@ export interface Settings {
   damageNumbers: boolean;
   showTutorials: boolean;     // play the in-run guided tutorials (also re-enables them after a skip)
   showOfflineReward: boolean; // show the "while you were away" summary modal when a run survives offline
+  // ---- per-wave info messages (transient on-screen notes) ----
+  msgWaveSkip: boolean;       // "Wave N skipped"
+  msgInterest: boolean;       // "+X interest"
+  msgEnemySkip: boolean;      // "Enemy HP/Attack level skipped"
 }
 // Spoils accrued while a survived run was simulated offline — shown in the offline-reward modal.
 // The modal shows the currency gains (gold + coins) as hexagon chips; kills/waves are progress, kept
@@ -373,6 +384,7 @@ export interface HudHandlers {
   settings?: Settings;
   onSaveSettings?: () => void;
   onSaveMeta?: () => void; // persist meta after the HUD mutates it directly (e.g. tutorial flags)
+  onActivateSkill?: (id: string) => void; // player taps an in-run active-skill button (e.g. Dark Wiz)
   onBuyRun?: (stat: string, qty?: BulkQty) => void;
   onBuyPerm?: (id: string, qty?: BulkQty) => boolean;
   onUnlockGroup?: (groupId: string) => boolean;

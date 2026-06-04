@@ -231,6 +231,23 @@ const DEFABS_COST: [number, number][] = [
   [5000, 797450000],
 ];
 
+// "Enemy skip" cost curve: mirrors the Damage COIN cost, but read at 10× the level — so skip-skill
+// level L costs the same as Damage level 10L (L1 = Damage 10, L600 = Damage 6000). Past level 600 the
+// sampled table ends, so cost grows LINEARLY at a fixed step (the Damage 5990→6000 per-level gap).
+const skipCostCurve = (): UpgradeCurve => {
+  const at = (L: number): number => interpTableGeom(DAMAGE_COST, 10 * L);
+  return {
+    base: at(1),
+    grow: 0,
+    cost(n: number): number {
+      const L = n + 1; // our cost(n) buys level n+1, so the level being purchased is 1-indexed
+      if (L <= 600) return Math.max(1, Math.round(at(L)));
+      const slope = at(600) - at(599); // constant linear step beyond the table's end
+      return Math.max(1, Math.round(at(600) + (L - 600) * slope));
+    },
+  };
+};
+
 // Every upgrade as a SPEC: `curve` is the balance data (graphable/rebalanceable); `value` is
 // generated from it below. `fmt(v)` formats a COMPUTED value; `max` caps perm+run; `gold`/`coin`
 // are the cost curves. `tip` is static or (up) => string and derives any numbers via up.value/fmt.
@@ -406,6 +423,18 @@ const UPGRADE_SPECS: UpgradeSpec[] = [
     tip: (up) => 'Global multiplier on coins earned per kill. Base ' + up.fmt(up.value(0)) + ', max ' + up.fmt(up.value(up.max)) + '.',
     max: 149, gated: true, curve: { kind: 'linear', base: 1, per: 0.01 }, fmt: (v) => '×' + v.toFixed(2),
     gold: tcurve(COINS_COST), coin: tcurve(COINS_COST) },
+  // ---- ENEMY-SKIP utilities: each wave, a chance to SKIP an enemy stat-level (enemies are treated
+  // as one wave lower for that stat, for the rest of the run). +0.05%/level, capped near 35% at L699.
+  { id: 'skipEnemyHp', tab: 'economic', icon: 'heart', label: 'Skip HP',
+    name: 'Skip Enemy Health',
+    tip: (up) => 'Each wave, this chance to skip an enemy HEALTH level — enemies stay one wave weaker for the rest of the run. Max: ' + up.fmt(up.value(up.max)) + '.',
+    max: 699, gated: true, curve: { kind: 'linear', base: 0, per: 0.0005, cap: 0.3495 }, fmt: pctFmt,
+    gold: skipCostCurve(), coin: skipCostCurve() },
+  { id: 'skipEnemyDmg', tab: 'economic', icon: 'sword', label: 'Skip Atk',
+    name: 'Skip Enemy Attack',
+    tip: (up) => 'Each wave, this chance to skip an enemy ATTACK level — enemies stay one wave weaker for the rest of the run. Max: ' + up.fmt(up.value(up.max)) + '.',
+    max: 699, gated: true, curve: { kind: 'linear', base: 0, per: 0.0005, cap: 0.3495 }, fmt: pctFmt,
+    gold: skipCostCurve(), coin: skipCostCurve() },
 ];
 // In-round GOLD costs TRACK the permanent COIN curve's shape, but are a flat fraction cheaper — so
 // gold is ALWAYS cheaper than coin (never the geometric curve that started cheap then exploded past
@@ -475,6 +504,7 @@ export const UNLOCK_COST_OVERRIDE: Record<string, number> = {
   cashBonus: 40, goldPerWave: 40,
   coinsPerKill: 100, coinsPerWave: 100,
   freeUpAttack: 800, freeUpDefense: 800, freeUpUtility: 800, interest: 5000,
+  skipEnemyHp: 500_000_000, skipEnemyDmg: 500_000_000,
 };
 // Coin cost to unlock a skill: 0 for starters, the override if listed, else ≈10× its first-level price.
 export function skillUnlockCost(id: string): number {
@@ -509,6 +539,7 @@ const RAW_GROUPS: { id: string; label: string; skills: string[] }[] = [
   { id: 'coins', label: 'Coins', skills: ['coinsPerKill', 'coinsPerWave'] },
   { id: 'freeup', label: 'Free Upgrades', skills: ['freeUpAttack', 'freeUpDefense', 'freeUpUtility'] },
   { id: 'interest', label: 'Interest', skills: ['interest'] },
+  { id: 'enemyskip', label: 'Enemy Skip', skills: ['skipEnemyHp', 'skipEnemyDmg'] },
 ];
 // cost = the (shared) per-skill unlock price of the group's members; tab from the first member.
 // Stable-sorted ascending by cost so the unlock sequence and the skill list follow the same order.
@@ -641,7 +672,7 @@ const CARD_SPECS: Record<string, CardSpec> = {
   overrun: { id: 'overrun', name: 'Overrun', art: 'rate', tint: '#e64cff', rarity: 'common',
     effects: [{ stat: 'lullReduce', kind: 'mechanic' }],
     curve: tbl([[1, 0.3], [15, 4.5]]), // linear: 0.3s of lull cut per star (5s base → 0.5s floor at ★15)
-    fmt: (v) => '-' + v.toFixed(1) + 's', desc: (v) => '-' + v.toFixed(1) + 's between-wave lull' },
+    fmt: (v) => '-' + v.toFixed(1) + 's', desc: (v) => '-' + v.toFixed(1) + 's wave cooldown' },
 
   // ---------------- RARE ----------------
   freeUpgrades: { id: 'freeUpgrades', name: 'Free Upgrades', art: 'coins', tint: '#3ddc84', rarity: 'rare',
@@ -666,18 +697,14 @@ const CARD_SPECS: Record<string, CardSpec> = {
     effects: [{ stat: 'superTower', kind: 'active' }], active: { duration: 15, cooldown: 30 },
     curve: tbl([[1, 2.5], [3, 2.9], [5, 3.3], [7, 3.7], [9, 4.1], [11, 4.5], [13, 5.0], [15, 5.5]]),
     fmt: (v) => '×' + v.toFixed(1), desc: (v) => '×' + v.toFixed(1) + ' damage for 15s' },
-  waveAccelerator: { id: 'waveAccelerator', name: 'Accelerator', art: 'rate', tint: '#ffae4a', rarity: 'epic',
-    effects: [{ stat: 'waveAccel', kind: 'mechanic' }],
-    curve: tbl([[1, 0.30], [3, 0.34], [5, 0.38], [7, 0.42], [9, 0.46], [11, 0.50], [13, 0.54], [15, 0.58]]),
-    fmt: (v) => '-' + (v * 100).toFixed(0) + '%', desc: (v) => '-' + (v * 100).toFixed(0) + '% wave cooldown' },
-  secondWind: { id: 'secondWind', name: 'Second Wind', art: 'heart', tint: '#ff5d6c', rarity: 'epic',
+  secondWind: { id: 'secondWind', name: 'Revive', art: 'heart', tint: '#ff5d6c', rarity: 'epic',
     effects: [{ stat: 'secondWind', kind: 'active' }],
     curve: tbl([[1, 10], [3, 15], [5, 20], [7, 25], [9, 30], [11, 35], [13, 40], [15, 45]]),
     fmt: secs, desc: (v) => 'revive once/run, ' + Math.round(v) + 's shield' },
-  demonMode: { id: 'demonMode', name: 'Demon Mode', art: 'burst', tint: '#e64cff', rarity: 'epic',
-    effects: [{ stat: 'demonMode', kind: 'active' }], active: { cooldown: 310 },
+  demonMode: { id: 'demonMode', name: 'Dark Wiz', art: 'burst', tint: '#e64cff', rarity: 'epic',
+    effects: [{ stat: 'demonMode', kind: 'active' }], active: { duration: 180 },
     curve: tbl([[1, 180], [3, 200], [5, 220], [7, 240], [9, 260], [11, 280], [13, 300], [15, 320]]),
-    fmt: secs, desc: (v) => '×3 dmg + invincible ' + Math.round(v) + 's' },
+    fmt: secs, desc: (v) => '×3 dmg + invincible ' + Math.round(v) + 's, once/run' },
 };
 // Generate each card's `value` from its `curve` (reads `def.curve` live, like the upgrades).
 export const CARDS: Record<string, CardDef> = {};
@@ -691,7 +718,7 @@ export const CARD_ORDER = [
   'damage', 'attackSpeed', 'health', 'healthRegen', 'range', 'cash', 'coins', 'slowAura',
   'critChance', 'enemyBalance', 'extraDefense', 'fortress', 'overrun',
   'freeUpgrades', 'plasmaCanon', 'criticalCoin', 'waveSkip',
-  'superTower', 'waveAccelerator', 'secondWind', 'demonMode',
+  'superTower', 'secondWind', 'demonMode',
 ];
 export const CARD_SLOTS = CARD_ORDER.length; // grid size (one tile per defined card)
 // rarity → draw weight. Roll the rarity first, then pick a card within it.
@@ -718,9 +745,8 @@ export const CARD_INFO: Record<string, string> = {
   criticalCoin: 'Critical kills can drop bonus coins (base × crit damage).',
   waveSkip: 'Chance at each wave to skip it and bank coins + cash.',
   superTower: 'Activates for 15s of greatly boosted damage (30s cooldown).',
-  waveAccelerator: 'Permanently shortens the time between waves.',
-  secondWind: 'Auto-revives at half HP once per run with a brief shield.',
-  demonMode: 'Triple damage and invincibility for a while (310s cooldown).',
+  secondWind: 'Auto-revives at half HP once per run with a brief shield. Stays armed until it fires.',
+  demonMode: 'Tap to unleash: triple damage and invincibility for a while. Once per run.',
 };
 export const starSlot = (i: number, stars: number): string =>
   stars >= i + 11 ? 'chroma' : stars >= i + 6 ? 'gold' : stars >= i + 1 ? 'white' : 'empty';
@@ -973,6 +999,8 @@ export function computeStats(state: State): Stats {
     coinsPerWave: U.coinsPerWave.value(b('coinsPerWave')),
     coinsPerKill: U.coinsPerKill.value(b('coinsPerKill')),
     goldFind: U.goldPerKill.value(b('goldPerKill')), // value IS the ×multiplier (1.00 → 2.49)
+    skipEnemyHp: U.skipEnemyHp.value(b('skipEnemyHp')),   // per-wave chance to skip an enemy HEALTH level
+    skipEnemyDmg: U.skipEnemyDmg.value(b('skipEnemyDmg')), // per-wave chance to skip an enemy ATTACK level
     // ---- card-driven aura/mechanic/active stats (0 / 1 when no card supplies them) ----
     cardCoinMult: 1,   // ×coins from the Coins card
     slowAura: 0,       // enemy speed reduction within range (fraction)

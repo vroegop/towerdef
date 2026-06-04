@@ -93,6 +93,11 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
   function spawnFloat(x: number, y: number, text: string, color: string, size?: number): void {
     floats.push({ x, y, text, color, size: size || 13, life: 0.9, max: 0.9, vy: -42 + (Math.random() - 0.5) * 14, vx: (Math.random() - 0.5) * 16 });
   }
+  // A per-wave info note: drifts up slowly above the tower and lingers longer than combat floats, so
+  // it reads as a deliberate message rather than spilled combat text. Stays subtle (no note → nothing).
+  function spawnNote(x: number, y: number, text: string, color: string): void {
+    floats.push({ x, y, text, color, size: 14, life: 1.8, max: 1.8, vy: -16, vx: 0 });
+  }
 
   function spawnBolt(x1: number, y1: number, x2: number, y2: number): void {
     const segs = 6,
@@ -375,6 +380,7 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
 
     if (resync) lastFxSeq = s.fxSeq || 0;
     else if (s.fx && s.fx.length) {
+      let noteStack = 0; // vertical stack offset so multiple per-wave notes don't overlap
       for (const f of s.fx) {
         if (f.seq <= lastFxSeq) continue;
         const fx = tx(f.x),
@@ -386,6 +392,16 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
         if (s.atkMode === 'lightning' && (f.gold || f.coin)) spawnBolt(hsx, hsy, fx, fy);
         if (cfg.goldOnKill && f.gold) spawnFloat(fx, fy, '+' + f.gold, '#ffd24a', 12);
         if (cfg.coinOnKill && f.coin) spawnFloat(fx, fy - 12, '+' + f.coin, '#ff2e4e', 13);
+        // Per-wave info notes (each gated by its own Display toggle). Stacked above the tower so
+        // several in one wave don't overlap. Absent/disabled notes simply never appear.
+        if (f.note) {
+          const v = f.noteVal || 0;
+          const ny = hsy - 58 - noteStack * 18;
+          if (f.note === 'waveskip' && cfg.msgWaveSkip) { spawnNote(hsx, ny, 'Wave ' + v + ' skipped', '#9fd8ff'); noteStack++; }
+          else if (f.note === 'interest' && cfg.msgInterest) { spawnNote(hsx, ny, '+' + v + ' interest', '#ffd24a'); noteStack++; }
+          else if (f.note === 'hpskip' && cfg.msgEnemySkip) { spawnNote(hsx, ny, 'Enemy HP level skipped', '#7CFFB0'); noteStack++; }
+          else if (f.note === 'dmgskip' && cfg.msgEnemySkip) { spawnNote(hsx, ny, 'Enemy attack level skipped', '#ffae4a'); noteStack++; }
+        }
       }
       lastFxSeq = s.fxSeq;
     }

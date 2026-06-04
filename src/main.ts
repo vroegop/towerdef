@@ -5,6 +5,7 @@ import './hud/hud.css';
 import type { EarnSummary, HudHandlers, Meta, Settings, State } from './types';
 import { DT, catchUp } from './sim/offline';
 import { Sim, tickDying } from './sim/core';
+import { requestActiveSkill } from './sim/cards-active';
 import { createState } from './sim/state';
 import { migrateMeta, reconcileResearch, claimCheckIn, startResearch, cancelResearch, rushResearch, buyLabSlot, gameSpeed, setGameSpeed, availableSpeeds, LABS, MAX_SLOTS } from './sim/labs';
 import { buyRunUpgradeBulk, buyPermBulk, unlockGroup, claimMilestone, claimAllMilestones, buyCard, buyCardSlot, setActiveCard, FIRST_PERM_COST, UPGRADES, SKILL_GROUPS, upgradeCap, CARD_ORDER, MAX_STARS, MAX_CARD_SLOTS } from './sim/skills';
@@ -38,6 +39,9 @@ function loadSettings(): Settings {
     damageNumbers: s.damageNumbers !== false,
     showTutorials: s.showTutorials !== false,
     showOfflineReward: s.showOfflineReward !== false,
+    msgWaveSkip: s.msgWaveSkip !== false,
+    msgInterest: s.msgInterest !== false,
+    msgEnemySkip: s.msgEnemySkip !== false,
   };
 }
 function saveSettings(): void {
@@ -106,6 +110,9 @@ const handlers: HudHandlers = {
   settings,
   onSaveSettings: saveSettings,
   onSaveMeta: () => saveMeta(),
+  onActivateSkill: (id) => {
+    if (sim) requestActiveSkill(sim.s, id);
+  },
   onBuyRun: (stat, qty = 1) => {
     if (sim) buyRunUpgradeBulk(sim.s, stat, qty, sim.rng);
   },

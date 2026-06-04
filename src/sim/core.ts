@@ -1,6 +1,6 @@
 /* src/sim/core.ts — the Sim. ONE step() drives both live play and offline catch-up.
    No DOM, no canvas, no Date.now() inside a step. Time = the tick counter only. */
-import type { Enemy, Rng, State, Stats } from '../types';
+import type { Enemy, FxEvent, Rng, State, Stats } from '../types';
 import { makeRng } from './rng';
 import { ageSurvivors, makeEnemy } from './enemies';
 import { TYPES } from './registries';
@@ -97,9 +97,20 @@ export class Sim {
       if (gain > 0) {
         this.s.econ.gold += gain;
         this.s.econ.goldEarned += gain;
-        this.s.fx.push({ seq: ++this.s.fxSeq, x: this.s.hero.x, y: this.s.hero.y, gold: gain });
-        if (this.s.fx.length > 32) this.s.fx.shift();
+        this._note('interest', gain);
       }
+    }
+    // Skip Enemy Health / Attack utilities: roll ONCE per stat at each wave start (only when the skill
+    // is owned, so players without it keep the exact legacy spawn stream). A hit drops that stat's
+    // effective wave by one for the rest of the run and posts a note. Deterministic (seeded rng).
+    const run = this.s.run;
+    if (st.skipEnemyHp > 0 && this.rng.next() < st.skipEnemyHp) {
+      run.hpSkip = (run.hpSkip || 0) + 1;
+      this._note('hpskip', run.hpSkip);
+    }
+    if (st.skipEnemyDmg > 0 && this.rng.next() < st.skipEnemyDmg) {
+      run.dmgSkip = (run.dmgSkip || 0) + 1;
+      this._note('dmgskip', run.dmgSkip);
     }
     // Continuous top-up: no roster is built. The wave is a difficulty/composition window — its
     // size emerges from concurrentCap(n) (alive cap) × spawnRate(n) (release rate) over time.
@@ -107,6 +118,12 @@ export class Sim {
     w.spawnTimer = 0;
     w.bossSpawned = false;
     ageSurvivors(this.s, n); // survivors get stronger as the new wave begins (reads tier mult itself)
+  }
+
+  // Push a transient per-wave info note (rendered as on-screen text, gated by a Display toggle).
+  private _note(note: NonNullable<FxEvent['note']>, val: number): void {
+    this.s.fx.push({ seq: ++this.s.fxSeq, x: this.s.hero.x, y: this.s.hero.y, note, noteVal: val });
+    if (this.s.fx.length > 32) this.s.fx.shift();
   }
 
   // Wave Skip: cancel this wave's pending spawns and bank a reward = the wave's expected spoils ×1.10
@@ -133,6 +150,7 @@ export class Sim {
       s.fx.push({ seq: ++s.fxSeq, x: s.hero.x, y: s.hero.y, gold, coin: coins });
       if (s.fx.length > 32) s.fx.shift();
     }
+    this._note('waveskip', w.n); // "Wave N skipped"
   }
 
   private _spawnOne(): void {
@@ -144,8 +162,9 @@ export class Sim {
     const bossPending = isBossWave(w.n) && !w.bossSpawned;
     const type = rollEnemyType(this.rng, w.n, tier, bossPending);
     if (type === 'boss') w.bossSpawned = true;
-    // Stats scale with the REAL wave × the tier's flat HP/damage multiplier (s.difficultyMult).
-    s.enemies.push(makeEnemy(s.nextId++, type, w.n, this.rng, s.arena, s.hero.x, s.hero.y, s.difficultyMult || 1, this.stats.range * 1.4));
+    // Stats scale with the REAL wave × the tier's flat HP/damage multiplier (s.difficultyMult), minus
+    // any enemy-skip levels accrued this run (HP and attack scale down independently).
+    s.enemies.push(makeEnemy(s.nextId++, type, w.n, this.rng, s.arena, s.hero.x, s.hero.y, s.difficultyMult || 1, this.stats.range * 1.4, s.run.hpSkip || 0, s.run.dmgSkip || 0));
   }
 
   // First run only: a scripted, deliberately lethal trickle of weak melee.
@@ -499,7 +518,7 @@ export class Sim {
         // processed this tick, which would suppress splits before the real cap.
         if (e.splits > 0 && keep.length + spawned.length < this._screenCap()) {
           for (let i = 0; i < 2; i++) {
-            const c = makeEnemy(s.nextId++, e.type, e.bornWave, this.rng, s.arena);
+            const c = makeEnemy(s.nextId++, e.type, e.bornWave, this.rng, s.arena); // stats are copied from the parent below, so spawn args don't matter
             const a = this.rng.next() * Math.PI * 2;
             c.x = e.x + Math.cos(a) * 14;
             c.y = e.y + Math.sin(a) * 14;
