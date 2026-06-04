@@ -343,6 +343,18 @@
 /* a slight tilt + gentle bob so the letter feels pinned to the board rather than docked to the UI */
 @keyframes cr-bob { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(-2deg); } }
 @keyframes cr-glow { 0%,100% { opacity: .5; } 50% { opacity: 1; } }
+/* fly IN from the left while growing (paper sailing in from behind), then hand off to the idle bob;
+   claiming flies it back OUT through the left while shrinking. Both end/start on the bob's rest pose
+   (translate 0, rotate -2deg) so the handoff to/from cr-bob is seamless. */
+.hud .checkin-reward.cr-entering { animation: cr-fly-in .55s cubic-bezier(.16,.84,.3,1) both; }
+.hud .checkin-reward.cr-leaving { animation: cr-fly-out .42s cubic-bezier(.5,0,.78,.34) both; }
+@keyframes cr-fly-in {
+  0%   { transform: translateX(-170%) scale(.32) rotate(-7deg); opacity: 0; }
+  55%  { opacity: 1; }
+  100% { transform: translateX(0) scale(1) rotate(-2deg); opacity: 1; } }
+@keyframes cr-fly-out {
+  0%   { transform: translateX(0) scale(1) rotate(-2deg); opacity: 1; }
+  100% { transform: translateX(-175%) scale(.28) rotate(-7deg); opacity: 0; } }
 
 /* ---- LAB tab (research rows + progress bars) ---- */
 /* ---- Labs: each slot is a sideways VIAL with a description + actions below ---- */
@@ -620,11 +632,13 @@
 /* respect reduced-motion: keep the static facets/bevels, drop the moving sweeps and pulses */
 @media (prefers-reduced-motion: reduce) {
   .hud .msdot::after, .hud .mn-claim::after { animation: none; opacity: 0; }
-  .hud .checkin-reward { animation: none; }
   .hud .msrow.reached .msrail::before { animation: none; }
   .hud .msrow.can .msdot { animation: none; }
-  /* the coffer keeps its glow (held steady) but stops bobbing/breathing */
-  .hud .checkin-reward { animation: none; transform: none; }
+  /* the letter keeps its glow (held steady) but stops bobbing/breathing/flying — it just appears and,
+     on claim, a JS timer still hides it (see playCheckinExit) so no motion is needed for the handoff */
+  .hud .checkin-reward,
+  .hud .checkin-reward.cr-entering,
+  .hud .checkin-reward.cr-leaving { animation: none; transform: none; }
   .hud .checkin-reward .cr-glow { animation: none; opacity: .8; }
 }
 
