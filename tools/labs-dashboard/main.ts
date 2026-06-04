@@ -207,7 +207,14 @@ function sampleLevels(max: number): number[] {
 }
 
 // ── state ─────────────────────────────────────────────────────────────────────────────────────────────
-let labs: LabModel[] = [...currentModels(), ...suggestedModels()];
+// Suggestions that have since shipped (their id now appears in the live LABS) are dropped, so a lab
+// never shows up under both "Current" and "Suggested".
+function initialLabs(): LabModel[] {
+  const cur = currentModels();
+  const have = new Set(cur.map((m) => m.id));
+  return [...cur, ...suggestedModels().filter((m) => !have.has(m.id))];
+}
+let labs: LabModel[] = initialLabs();
 
 // ── render (inputs built once; derived displays refreshed on every edit) ──────────────────────────────
 function makeInput(value: string | number, on: (v: string) => void, attrs: Record<string, string> = {}): HTMLInputElement {
@@ -502,7 +509,7 @@ $('#add').onclick = () => {
   });
   render();
 };
-$('#reset').onclick = () => { labs = [...currentModels(), ...suggestedModels()]; render(); toast('Reset to game defaults'); };
+$('#reset').onclick = () => { labs = initialLabs(); render(); toast('Reset to game defaults'); };
 $('#importCancel').onclick = () => $('#importOverlay').classList.remove('show');
 $('#importLoad').onclick = () => {
   try { fromImport(JSON.parse(($('#importText') as HTMLTextAreaElement).value)); $('#importOverlay').classList.remove('show'); }

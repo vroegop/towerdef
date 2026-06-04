@@ -2111,6 +2111,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       return 'Raises ' + stat + ' workshop value (×' + (1 + per * lv).toFixed(2) + ' at lv ' + lv + ') and lifts its max cap.';
     }
     if (unit === 'meters') return 'Adds +' + Math.round(per * lv) + 'm attack range (+' + per + 'm per level).';
+    if (target === 'gemMult') return 'Gem rewards ×' + (1 + per * lv).toFixed(2) + ' at lv ' + lv + ' (+' + (per * 100).toFixed(1) + '% per level, on milestones & check-ins).';
     if (unit === 'pct') return 'Adds +' + Math.round(per * lv * 100) + '% ' + label.replace(/ Lab$/, '') + ' (+' + Math.round(per * 100) + '% per level).';
     if (unit === 'gold') return 'Begin each run with +' + per * lv + ' gold (+' + per + ' per level).';
     if (unit === 'tierpct') return '+' + Math.round(per * lv * 100) + '% coins from runs (+' + Math.round(per * 100) + '% per level).';
