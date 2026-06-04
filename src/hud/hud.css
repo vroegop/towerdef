@@ -316,8 +316,8 @@
    heading and no button — so the whole letter is the affordance and clicking it claims. The structure
    is theme-agnostic here; the D&D skin paints the parchment/pin treatment. */
 .hud .checkin-reward { position: fixed; left: 14px; bottom: 150px; z-index: 60; pointer-events: auto;
-  display: flex; flex-direction: column; align-items: center; gap: 8px; width: max-content; min-width: 100px;
-  padding: 20px 22px 18px; cursor: pointer; color: #eef2fb; background: none; border: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 6px; width: max-content; min-width: 82px;
+  padding: 12px 14px 11px; cursor: pointer; color: #eef2fb; background: none; border: 0;
   animation: cr-bob 3.8s ease-in-out infinite; }
 .hud .checkin-reward.hide { display: none; }
 /* the parchment SHEET: a layer BEHIND the content whose edges are torn into an organic, hand-ripped

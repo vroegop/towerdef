@@ -24,12 +24,15 @@ export default defineConfig({
     outDir: 'dist',
     target: 'es2021',
     sourcemap: true,
-    // Multi-page build: the game at the site root, plus the Super Weapons design dashboard (and its
-    // static art gallery) under /tools/ so they ship to GitHub Pages alongside the game. base:'./'
-    // keeps every page's asset URLs relative, so each works from its own sub-path.
+    // Multi-page build: the game at the site root, plus the dev dashboards (labs balancing + Super
+    // Weapons design, and the latter's static art gallery) under /tools/ so they ship to GitHub Pages
+    // alongside the game. Listing inputs explicitly means the root index.html must be included here
+    // too (it's no longer auto-discovered). base:'./' keeps every page's asset URLs relative, so each
+    // works from its own sub-path.
     rollupOptions: {
       input: {
         main: r('./index.html'),
+        labsDashboard: r('./tools/labs-dashboard/index.html'),
         superweapons: r('./tools/superweapons-dashboard/index.html'),
         superweaponsGallery: r('./tools/superweapons-dashboard/art-gallery.html'),
       },
