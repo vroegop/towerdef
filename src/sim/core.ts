@@ -6,7 +6,7 @@ import { ageSurvivors, makeEnemy } from './enemies';
 import { TYPES } from './registries';
 import { FIRST_RUN, COIN_DECAY_FACTOR, COIN_DECAY_WAVES, WAVE, concurrentCap, spawnRate, lullDuration, rollEnemyType, isBossWave } from './waves';
 import { applyHit, fireProjectile, tickProjectiles } from './projectiles';
-import { computeStats, PX_PER_METER, RAPID_CHECK, RAPID_MULT } from './skills';
+import { computeStats, PX_PER_METER, RAPID_CHECK, RAPID_MULT, GREED_CAP } from './skills';
 import { tickActiveCards, trySecondWind, heroInvuln } from './cards-active';
 import { tickSuperpowers, moatSlowFactor, bossEnergy, crystalKillMult } from './superpowers';
 import { ARENA_W, ARENA_H } from './state';
@@ -240,12 +240,15 @@ export class Sim {
     }
     // Demon Mode / Second Wind shield: ignore all incoming damage while invincible.
     if (heroInvuln(this.s)) return;
+    // Dodge: a chance to fully evade the hit — no damage taken, and the Greed kill streak is preserved.
+    if (st.dodge > 0 && this.rng.next() < st.dodge) return;
     // Defense % scales the hit FIRST, then Armor soaks a flat amount off the remainder (so flat
     // armor is more effective, not less). Never below 0.
     const amt = amount * (1 - (st.defPct || 0)) - (st.armor || 0);
     if (amt <= 0) return;
     this.s.econ.hitsTaken++; // instrumentation: a hit that actually dealt damage
     this.s.econ.dmgTaken += amt;
+    this.s.run.streak = 0; // taking real damage breaks the Greed kill streak
     h.sinceHit = 0;
     h.hp -= amt;
     if (h.hp <= 0) {
@@ -331,7 +334,25 @@ export class Sim {
         e.rendT -= dt;
         if (e.rendT <= 0) e.rend = 0;
       } // Amp stacks decay over time
-      if (e.slowT > 0) e.slowT -= dt; // knockback slow on a too-heavy enemy wears off
+      if (e.slowT > 0) e.slowT -= dt; // knockback / Frostbite slow wears off
+      // Poison: damage-over-time burn (keeps ticking while stunned). Attributed to the hero's damage channel.
+      if ((e.poisonT || 0) > 0) {
+        e.poisonT = (e.poisonT || 0) - dt;
+        const burn = (e.poison || 0) * dt;
+        if (burn > 0) {
+          e.hp -= burn;
+          e.lastHurt = 'dmg';
+          this.s.econ.dmgDealt += burn;
+        }
+        if (e.poisonT <= 0) e.poison = 0;
+      }
+      if (e.hp <= 0) continue; // poisoned to death this tick → leave the corpse for _cleanup
+      // Stun: a frozen enemy neither moves nor attacks until the timer elapses.
+      if ((e.stunT || 0) > 0) {
+        e.stunT = (e.stunT || 0) - dt;
+        e.state = 'stun';
+        continue;
+      }
       const dx = h.x - e.x,
         dy = h.y - e.y,
         d = Math.hypot(dx, dy) || 1;
@@ -499,7 +520,10 @@ export class Sim {
         // Superpower reward ×: Golden Lightning window (all kills) × Crystal gold track (crystal kills
         // only). Both gold AND coins ride it, so "all numbers multiply" holds end-to-end.
         const superMult = (s.run.goldenMult || 1) * (e.lastHurt === 'crystal' ? crystalKillMult(s.meta) : 1);
-        const g = Math.round(rewardBase * this.stats.goldFind * (this.stats.cashMult || 1) * ebMult * superMult);
+        // Greed: each kill in an unbroken (no-damage) streak ramps a gold multiplier, capped at GREED_CAP.
+        s.run.streak = (s.run.streak || 0) + 1;
+        const greedMult = this.stats.greed > 0 ? 1 + Math.min(s.run.streak * this.stats.greed, GREED_CAP) : 1;
+        const g = Math.round(rewardBase * this.stats.goldFind * (this.stats.cashMult || 1) * ebMult * superMult * greedMult);
         s.econ.gold += g;
         s.econ.goldEarned += g;
         const coinMult = this.stats.coinsPerKill || 1; // Coins/Kill upgrade is a global ×multiplier

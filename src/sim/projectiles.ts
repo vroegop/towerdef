@@ -2,7 +2,7 @@
    so it replays identically during offline catch-up. Bullets carry the damage snapshotted
    at fire time and deal it ONLY on collision; they expire after a travel-distance budget. */
 import type { Enemy, Hero, Projectile, Rng, State, Stats } from '../types';
-import { MAX_REND, REND_DECAY, PX_PER_METER } from './skills';
+import { MAX_REND, REND_DECAY, PX_PER_METER, FROST_DURATION, POISON_DURATION, STUN_DURATION, SPLASH_RADIUS } from './skills';
 
 export const BULLET_SPEED = 416; // px/s — ~20% slower than the old 520 so the shot's travel reads clearly; still well above enemy speeds so only lateral movers slip past
 export const BULLET_R = 4;
@@ -89,6 +89,41 @@ export function applyHit(state: State, e: Enemy, baseDmg: number, stats: Stats, 
   e.hitFlash = 0.12;
   e.hitDmg = Math.round(dealt);
   if (stats && stats.lifesteal && state.hero) state.hero.hp = Math.min(state.hero.hpMax, state.hero.hp + dealt * stats.lifesteal);
+  // ---- on-hit status effects: Frostbite (slow), Poison (DoT), Stun (freeze), Splash (collateral) ----
+  // Frostbite: each hit chills the target, slowing it for FROST_DURATION (strongest chill + longest timer win).
+  if (stats && stats.frostbite > 0) {
+    const f = 1 - stats.frostbite;
+    if ((e.slowT || 0) > 0) {
+      if (f < e.slow) e.slow = f;
+      if (FROST_DURATION > e.slowT) e.slowT = FROST_DURATION;
+    } else {
+      e.slow = f;
+      e.slowT = FROST_DURATION;
+    }
+  }
+  // Poison: refresh a venom burning (poison × this hit's damage)/s for POISON_DURATION; the strongest hit wins.
+  if (stats && stats.poison > 0 && dealt > 0) {
+    e.poison = Math.max(e.poison || 0, dealt * stats.poison);
+    e.poisonT = POISON_DURATION;
+  }
+  // Stun: a chance each hit freezes the enemy (no move/attack) for STUN_DURATION. Bosses are immune.
+  if (rng && stats && stats.stun > 0 && e.type !== 'boss' && rng.next() < stats.stun) e.stunT = STUN_DURATION;
+  // Splash: deal (splash × this hit's damage) to OTHER enemies within SPLASH_RADIUS (direct, no re-procs).
+  if (stats && stats.splash > 0 && dealt > 0) {
+    const sd = dealt * stats.splash,
+      r2 = SPLASH_RADIUS * SPLASH_RADIUS;
+    for (const o of state.enemies) {
+      if (o === e || o.hp <= 0) continue;
+      if ((o.x - e.x) ** 2 + (o.y - e.y) ** 2 <= r2) {
+        o.hp -= sd;
+        o.lastHurt = 'dmg';
+        o.hitFlash = 0.1;
+        o.hitDmg = Math.round(sd);
+        state.econ.dmgDealt += sd;
+        if (stats.lifesteal && state.hero) state.hero.hp = Math.min(state.hero.hpMax, state.hero.hp + sd * stats.lifesteal);
+      }
+    }
+  }
   applyKnockback(state, e, stats, rng, dirX, dirY);
   if (e.behavior === 'bounce') e.kb = Math.max(e.kb, 0.25);
   return dealt;

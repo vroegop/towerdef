@@ -123,8 +123,11 @@ export interface Enemy {
   rendT: number;
   splits: number;
   mass: number; // resists knockback
-  slow: number; // active slow multiplier (1 = none) from knockback on a too-heavy enemy
+  slow: number; // active slow multiplier (1 = none) from knockback / Frostbite on the enemy
   slowT: number; // seconds the slow remains
+  poison?: number; // active Poison burn in HP/second (0 / undefined = none)
+  poisonT?: number; // seconds the Poison burn remains (refreshed by each hit)
+  stunT?: number; // seconds the enemy is stunned (frozen: no moving or attacking)
   bornWave: number;
   veteran: boolean;
   agedWaves: number;
@@ -199,6 +202,7 @@ export interface Run {
   demonUsed?: boolean;      // Dark Wiz fires only once per run
   hpSkip?: number;          // enemy HEALTH levels skipped so far this run (Skip Enemy Health utility)
   dmgSkip?: number;         // enemy ATTACK levels skipped so far this run (Skip Enemy Attack utility)
+  streak?: number;          // consecutive kills since the hero last took damage (powers the Greed skill)
   // ---- Superpowers (per-run timers, reset each run) ----
   superCd?: Record<string, number>;     // seconds until each power may fire again
   superActive?: Record<string, number>; // seconds the power's window is currently live
