@@ -1,6 +1,10 @@
 /* hud/hud.css — in-game HUD (top stats + bottom 3-tab bar) and the between-games MENU
    (5 mobile bottom tabs + framed Hero avatar). */
 .hud { position: fixed; inset: 0; pointer-events: none; font: 14px 'Roboto', system-ui, sans-serif; color: #d8deea; z-index: 20; }
+/* Clip wrapper inserted by overscroll.ts around scroll panels: the panel translates for the
+   rubber-band overscroll, this masks the moved-out content so the bounce reveals a clean gap
+   instead of overlapping siblings. Layout-role styles are applied inline per panel. */
+.os-clip { overflow: hidden; min-width: 0; min-height: 0; }
 
 /* ---- in-game top header (no box: just icon + value over the arena) ----
    nowrap + reserved widths keep every control in a fixed spot across devices and themes (whose

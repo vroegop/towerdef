@@ -23,6 +23,7 @@ import {
   SUPERPOWERS, superUnlocked, superEnabled, superLevel, trackValue, trackCost, trackAtMax, nextUnlockCost,
 } from '../sim/superpowers';
 import { drawTowerSkin } from '../render/towers';
+import { attachOverscrollBounce, attachOverscrollBounceAll } from './overscroll';
 import { cardArt } from './card-art';
 
 // The HUD is a single themeable core: identical structure + wiring for every theme, restyled
@@ -693,6 +694,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   // ---------- in-game tab bar (3 icon subtabs: attack / defense / economic) ----------
   const tabsEl = $('#h-tabs'),
     contentEl = $('#h-tabcontent');
+  attachOverscrollBounce(contentEl); // rubber-band overscroll on the upgrade dock
   const rowEls: Record<string, { btn: HTMLElement; cur: HTMLElement; nxt: HTMLElement; cost: HTMLElement; lv: HTMLElement; mult: HTMLElement }> = {};
   // ---- bulk-buy multiplier (the 1x/5x/25x/100x/Max toggle left of each upgrade's buy button) ----
   // Per-upgrade selected quantity, tracked separately for the in-run HUD and the Workshop menu so a
@@ -1381,6 +1383,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     lastMeta = meta; // shared card helpers (equipCard / openCardModal) read lastMeta
     cardsModalInner.innerHTML = mgmtHead('Cards', 'h-cardsmodal-close') + '<div class="mgmt-body">' + cardsPaneHtml(meta) + '</div>';
     $('#h-cardsmodal-close').addEventListener('click', () => cardsModal.classList.add('hide'));
+    attachOverscrollBounceAll(cardsModalInner, '.mgmt-body');
     wireCardsPane(cardsModalInner, renderCardsModal);
   }
   function renderLabsModal(): void {
@@ -1389,6 +1392,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     lastMeta = meta; // openLabPicker / labSlotsHtml read lastMeta
     labsModalInner.innerHTML = mgmtHead('Labs', 'h-labsmodal-close') + '<div class="mgmt-body">' + labsPaneHtml(meta) + '</div>';
     $('#h-labsmodal-close').addEventListener('click', () => labsModal.classList.add('hide'));
+    attachOverscrollBounceAll(labsModalInner, '.mgmt-body');
     wireLabsPane(labsModalInner, renderLabsModal);
   }
   cardsModal.addEventListener('click', (e) => { if (e.target === cardsModal) cardsModal.classList.add('hide'); });
@@ -1533,6 +1537,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         '<div class="upd-title"><b>Choose a Lab</b><span>Research scales workshop stats &amp; raises caps</span></div>' +
         '<button class="iconclose" id="h-labpick-close">' + icon('close', 18) + '</button></div>' +
       '<div class="labpick-list">' + rows + '</div>';
+    attachOverscrollBounceAll(updmodalInner, '.labpick-list');
     $('#h-labpick-close').addEventListener('click', () => { labInfoOpen = null; updmodal.classList.add('hide'); });
     updmodalInner.querySelectorAll<HTMLElement>('[data-info]').forEach((b) =>
       b.addEventListener('click', () => { labInfoOpen = labInfoOpen === b.dataset.info ? null : b.dataset.info!; openLabPicker(onChange); }),
@@ -1574,6 +1579,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     topEl = $('#h-top');
   const modal = $('#h-modal'),
     modalInner = $('#h-modal-inner');
+  attachOverscrollBounce(menuContent); // rubber-band overscroll on the between-games menu body
   // click the dimmed backdrop (not the card) to dismiss — same idiom as the settings/upgrade modals
   modal.addEventListener('click', (e) => {
     if (e.target === modal) modal.classList.add('hide');
@@ -1892,6 +1898,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       (claimable > 0 ? '<b class="ms-ready">' + claimable + ' reward' + (claimable > 1 ? 's' : '') + ' ready</b>' : '<span>reach further to unlock rewards</span>') +
       '</p></div>' +
       '<div class="mspath">' + rows + '</div>';
+    attachOverscrollBounceAll(modalInner, '.mspath');
     // Paint any tower-skin reward medallions (same skin art the picker + avatar use).
     modalInner.querySelectorAll<HTMLCanvasElement>('canvas[data-twc]').forEach((cv) => {
       drawTowerSkin(cv.getContext('2d')!, cv.dataset.twc!, cv.width / 2, cv.height / 2, Math.min(cv.width, cv.height) * 0.34, 0.7);
@@ -2030,6 +2037,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       html += '<div class="locked-tab">' + icon('lock', 46) + '<div class="lockmsg">Unlocks later</div></div>';
     }
     menuContent.innerHTML = html;
+    attachOverscrollBounceAll(menuContent, '.activecards'); // horizontal rubber-band on the equipped-cards strip
 
     if (menuTab === 'hero') {
       drawAvatar($<HTMLCanvasElement>('#h-avatar'), meta);
