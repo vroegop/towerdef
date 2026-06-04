@@ -108,6 +108,17 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     crystal: '<path d="M12 2l4 6-4 14-4-14z"/><path d="M8 8h8"/>', // a tall shard, matching the Crystal Circle art
     // atom = Energy. Nucleus (static) + 3 orbit ellipses in a group that slowly spins (see .ic.atom .orbits)
     atom: '<circle class="nuc" cx="12" cy="12" r="2" fill="currentColor" stroke="none"/><g class="orbits"><ellipse cx="12" cy="12" rx="10" ry="4.2"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(120 12 12)"/></g>',
+    // ---- new mechanic-skill glyphs (Frostbite / Poison / Splash / Dodge / Stun) ----
+    // frost = a 6-spoke snowflake (vertical + two diagonals) with chevron barbs top & bottom
+    frost: 'M12 2v20 M3.34 7l17.32 10 M20.66 7l-17.32 10 M9 5l3-2 3 2 M9 19l3 2 3-2',
+    // poison = a venom droplet with two little X "eyes"
+    poison: 'M12 3c0 0 5.5 6.5 5.5 10.5a5.5 5.5 0 0 1-11 0C6.5 9.5 12 3 12 3z M9.5 12l1.8 1.8 M11.3 12l-1.8 1.8 M12.7 12l1.8 1.8 M14.5 12l-1.8 1.8',
+    // splash = an upward spray over two concentric ripple arcs
+    splash: 'M12 9V6 M12 9l2.6-1.6 M12 9l-2.6-1.6 M6 13a6 6 0 0 0 12 0 M3 13a9 9 0 0 0 18 0',
+    // dodge = a double chevron leaning aside (evading)
+    dodge: 'M15 4l-7 8 7 8 M10 4l-7 8 7 8',
+    // stun = a dazed face: head ring, two X eyes, a wavy mouth
+    stun: 'M12 12 m-9 0 a9 9 0 1 0 18 0 a9 9 0 1 0 -18 0 M8.5 10.5l2 1.5-2 1.5 M15.5 10.5l-2 1.5 2 1.5 M9 16q3 2 6 0',
   };
   function icon(name: string, size?: number, cls?: string): string {
     size = size || 16;

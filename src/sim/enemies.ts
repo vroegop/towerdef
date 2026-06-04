@@ -53,7 +53,7 @@ export function makeEnemy(id: number, type: string, waveN: number, rng: Rng, are
     strMult, dmgMult, hpMax: hp, hp, dmg,
     speed, range: def.range, state: 'approach', atkCd: 0, kb: 0, hitFlash: 0, hitDmg: 0,
     rend: 0, rendT: 0,
-    splits: def.splits || 0, mass: def.mass, slow: 1, slowT: 0,
+    splits: def.splits || 0, mass: def.mass, slow: 1, slowT: 0, poison: 0, poisonT: 0, stunT: 0,
     bornWave: waveN, veteran: false, agedWaves: 0, heat: 0,
   };
 }
