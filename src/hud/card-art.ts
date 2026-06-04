@@ -59,12 +59,17 @@ const CARD_ART: Record<string, string> = {
     '<circle cx="9.4" cy="14.6" r="4.3" stroke="#9a7416" stroke-opacity=".45" stroke-width=".9"/>' +
     '</g>',
 
-  // Coins — a stack of coins with a glinting sparkle.
+  // Coins — a stack of sideways coins, the top one stamped with the compass-rose face (matching the
+  // coin currency glyph), with a glinting sparkle.
   coins:
     '<path d="M4.5 10.6v6M19.5 10.6v6" stroke="#9a7416" stroke-opacity=".5"/>' +
     '<ellipse cx="12" cy="16.6" rx="7.5" ry="3" fill="currentColor" fill-opacity=".82" stroke="#9a7416" stroke-width="1.1"/>' +
     '<ellipse cx="12" cy="13.6" rx="7.5" ry="3" fill="currentColor" fill-opacity=".9" stroke="#9a7416" stroke-width="1.1"/>' +
     '<ellipse cx="12" cy="10.6" rx="7.5" ry="3" fill="currentColor" stroke="#9a7416" stroke-width="1.1"/>' +
+    '<g transform="translate(12 10.6) scale(1 .4)" stroke="none">' +
+    '<path transform="rotate(45)" fill="#9a7416" fill-opacity=".45" d="M0 -3.1 L0.8 -0.8 L3.1 0 L0.8 0.8 L0 3.1 L-0.8 0.8 L-3.1 0 L-0.8 -0.8 Z"/>' +
+    '<path fill="#9a7416" fill-opacity=".85" d="M0 -5 L1.3 -1.3 L5 0 L1.3 1.3 L0 5 L-1.3 1.3 L-5 0 L-1.3 -1.3 Z"/>' +
+    '</g>' +
     '<g transform="translate(17.6 6.4)"><g class="spark"><path d="M0-2.6.7-.7 2.6 0 .7.7 0 2.6-.7.7-2.6 0-.7-.7Z" fill="#fff" stroke="none"/></g></g>',
 
   // Slow Aura — a frost crystal turning slowly inside a cold ring.

@@ -51,11 +51,15 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     // gold = two solid gold coins (currentColor, tinted by the 'gold' class). Each coin has a slight
     // shadow; the front coin's shadow is drawn after the back coin so it casts onto it at the overlap.
     coin: '<g class="ccspin"><circle cx="15.3" cy="10.6" r="6" fill="rgba(8,10,16,.4)" stroke="none"/><circle cx="14.5" cy="9.5" r="6" fill="currentColor" stroke="none"/><circle cx="10.3" cy="15.6" r="6" fill="rgba(8,10,16,.4)" stroke="none"/><circle cx="9.5" cy="14.5" r="6" fill="currentColor" stroke="none"/></g>',
-    // out-run coins = a struck COPPER coin with a star. Explicit metallic palette (copper body, dark
-    // rim, lighter star) + a slight offset shadow so it reads as a real coin, not a flat outline.
+    // out-run coins = a struck COPPER coin stamped with a COMPASS ROSE (matching the spoils letter's
+    // emblem): copper body + dark rim, a thin bezel ring, a long cardinal star over a shorter darker
+    // intercardinal star, and a hub. A slight offset shadow gives it real-coin depth.
     coinstar: '<g class="ccspin"><circle cx="12.9" cy="12.9" r="8.5" fill="rgba(8,10,16,.28)" stroke="none"/>' +
       '<circle cx="12" cy="12" r="8.5" fill="#c47f3c" stroke="#6e3f12" stroke-width="1"/>' +
-      '<path transform="translate(12 12) scale(.46) translate(-11.8 -11.4)" fill="#e8b06a" stroke="none" d="M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6z"/></g>',
+      '<circle cx="12" cy="12" r="6.7" fill="none" stroke="#6e3f12" stroke-width=".7" stroke-opacity=".6"/>' +
+      '<path transform="rotate(45 12 12)" fill="#a9692e" stroke="none" d="M12 7.4 L12.95 11.05 L16.6 12 L12.95 12.95 L12 16.6 L11.05 12.95 L7.4 12 L11.05 11.05 Z"/>' +
+      '<path fill="#e8b06a" stroke="none" d="M12 5 L13.5 10.5 L19 12 L13.5 13.5 L12 19 L10.5 13.5 L5 12 L10.5 10.5 Z"/>' +
+      '<circle cx="12" cy="12" r="1" fill="#6e3f12" stroke="none"/></g>',
     // gems = faceted brilliant-cut gem (card currency)
     // gems = faceted brilliant-cut gem + a sparkle that glimmers (see .ic .gemtw)
     gem: '<path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/>' +
@@ -867,11 +871,35 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   checkinFloat.title = 'Claim your spoils';
   root.appendChild(checkinFloat);
   checkinFloat.addEventListener('click', () => {
+    if (checkinFloat.classList.contains('cr-leaving')) return; // already claimed → mid fly-out
     if (handlers.onCheckIn && handlers.onCheckIn()) {
-      refreshCheckinFloat();
+      // claimed: zoom the letter back out through the left, then hide (see playCheckinExit).
+      playCheckinExit();
+      lastCheckinPend = 0; // a later accrual re-triggers the fly-in
       if (menuEl.classList.contains('show')) renderMenu();
     }
   });
+  // Entrance/exit motion: the letter flies IN from the left while growing (as if the paper came sailing
+  // in from behind), then settles into its idle bob; claiming flies it back OUT through the left while
+  // shrinking. Driven by the cr-entering / cr-leaving classes (keyframes in hud.css). A timer (rather
+  // than animationend) drives the handoff so prefers-reduced-motion — which disables the keyframes —
+  // still cleans up and hides.
+  let crMotionTimer = 0;
+  function playCheckinEnter(): void {
+    clearTimeout(crMotionTimer);
+    checkinFloat.classList.remove('cr-leaving', 'hide');
+    checkinFloat.classList.add('cr-entering');
+    crMotionTimer = window.setTimeout(() => checkinFloat.classList.remove('cr-entering'), 600);
+  }
+  function playCheckinExit(): void {
+    clearTimeout(crMotionTimer);
+    checkinFloat.classList.remove('cr-entering');
+    checkinFloat.classList.add('cr-leaving');
+    crMotionTimer = window.setTimeout(() => {
+      checkinFloat.classList.add('hide');
+      checkinFloat.classList.remove('cr-leaving');
+    }, 460);
+  }
   // Cache the last-rendered pending count: the letter is refreshed on a 1s tick but its contents only
   // change every 15 minutes, so we rebuild the DOM only when the count actually changes — otherwise the
   // glow/bob animations would restart every second and flicker.
@@ -880,13 +908,15 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     const meta = boundMeta || lastMeta || (lastS ? lastS.meta : null);
     const pend = meta ? checkInPending(meta, Date.now()) : 0;
     if (pend <= 0) {
+      if (checkinFloat.classList.contains('cr-leaving')) return; // let the fly-out finish — it hides itself
       checkinFloat.classList.add('hide');
       lastCheckinPend = 0;
       return;
     }
     if (pend === lastCheckinPend && !checkinFloat.classList.contains('hide')) return; // unchanged → no rebuild
+    const reappearing = checkinFloat.classList.contains('hide'); // hidden → now claimable: play the fly-in
     lastCheckinPend = pend;
-    // The letter holds only a treasure-chest seal and the spoils chips — no title, no claim button.
+    // The letter holds only a compass-rose seal and the spoils chips — no title, no claim button.
     checkinFloat.innerHTML =
       '<span class="cr-glow" aria-hidden="true"></span>' +
       '<span class="cr-emblem">' + icon('compassHand', 46) + '</span>' +
@@ -895,6 +925,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         '<span class="cr-chip">' + icon('gem', 13, 'gem') + '<b>+' + pend * CHECKIN_GEMS + '</b></span>' +
       '</span>';
     checkinFloat.classList.remove('hide');
+    if (reappearing) playCheckinEnter();
   }
 
   // ---- battle-speed toggle (top bar): cycles through the currently-selectable speeds ----
