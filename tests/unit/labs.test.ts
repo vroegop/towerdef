@@ -4,6 +4,7 @@ import { describe, it, expect } from 'vitest';
 import {
   migrateMeta, reconcileResearch, applyLabBoost, labBoostCost, labBoostMult,
   labBoostRemaining, labCoinCost, labLevel, LAB_BY_ID,
+  startResearch, rushResearch, rushVialCost, researchProgress, researchOf,
 } from '../../src/sim/labs';
 import type { Meta } from '../../src/types';
 
@@ -144,5 +145,58 @@ describe('per-lab boost isolation', () => {
     const m = freshMeta({ vials: 10_000, research: [{ id: 'dmgLab', cost: 0, endsAt: now + 100 * H }] });
     expect(applyLabBoost(m, 'dmgLab', 2, 7 * 86400, now)).toBe(true);
     expect(m.research[0].endsAt - now).toBeCloseTo(50 * H, -1);
+  });
+});
+
+describe('rushResearch settles the finish immediately', () => {
+  it('completes the level and auto-starts a FRESH next level (no lingering 100% / 1-gem state)', () => {
+    const T = 1_000_000;
+    const m = freshMeta({ coins: 1e9, gems: 1000, labs: { dmgLab: 4 } });
+    startResearch(m, 'dmgLab', T); // researching level 5 (lots of work left)
+    const fresh = rushVialCost(m, 'dmgLab', T);
+    expect(fresh).toBeGreaterThan(1); // a fresh level costs many gems to finish
+
+    expect(rushResearch(m, 'dmgLab', T)).toBe(true);
+    expect(m.gems).toBe(1000 - fresh); // charged exactly once, for the level that was in progress
+    expect(labLevel(m, 'dmgLab')).toBe(5); // the rushed level COMPLETED right away
+
+    // the slot now holds a genuinely fresh next level — not a finished one stuck at 100% / 1 gem
+    const r = researchOf(m, 'dmgLab');
+    expect(r).not.toBeNull();
+    expect(r!.waiting).toBeFalsy();
+    expect(r!.endsAt).toBeGreaterThan(T);
+    const now2 = T + 1; // the HUD renders a moment later
+    expect(researchProgress(m, 'dmgLab', now2)).toBeLessThan(0.01);
+    expect(rushVialCost(m, 'dmgLab', now2)).toBeGreaterThan(1);
+  });
+
+  it('does not charge a second gem for an already-finished level', () => {
+    const T = 1_000_000;
+    const m = freshMeta({ coins: 1e9, gems: 1000, labs: { dmgLab: 4 } });
+    startResearch(m, 'dmgLab', T);
+    rushResearch(m, 'dmgLab', T);
+    const afterFirst = m.gems;
+    // a fresh next level is in progress; rushing it pays its OWN (full) cost, never a stray 1-gem charge
+    const nextCost = rushVialCost(m, 'dmgLab', T);
+    expect(nextCost).toBeGreaterThan(1);
+    rushResearch(m, 'dmgLab', T);
+    expect(m.gems).toBe(afterFirst! - nextCost);
+    expect(labLevel(m, 'dmgLab')).toBe(6); // it advanced again — two distinct levels, two real charges
+  });
+});
+
+describe('Speed Up boost settles a finished level before boosting', () => {
+  it('boosts the LIVE level, not a just-elapsed one that would sit at 100% / 1 gem', () => {
+    const now = 5_000_000;
+    // dmgLab level 5 finished 1s ago but has not been reconciled yet; the player hits "Speed Up".
+    const m = freshMeta({ coins: 1e9, vials: 10_000, labs: { dmgLab: 5 },
+      research: [{ id: 'dmgLab', cost: 0, endsAt: now - 1000 }] });
+    expect(applyLabBoost(m, 'dmgLab', 3, 86400, now)).toBe(true);
+    expect(labLevel(m, 'dmgLab')).toBe(6); // the elapsed level completed instead of lingering
+    const r = researchOf(m, 'dmgLab')!;
+    expect(r.endsAt).toBeGreaterThan(now);                    // a real, in-progress next level
+    expect(researchProgress(m, 'dmgLab', now)).toBeLessThan(0.01);
+    expect(rushVialCost(m, 'dmgLab', now)).toBeGreaterThan(1); // not a 1-gem freebie
+    expect(labBoostMult(m, 'dmgLab', now)).toBe(3);           // and the boost landed on it
   });
 });

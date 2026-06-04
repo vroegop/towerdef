@@ -267,8 +267,11 @@ export function applyLabBoost(meta: Meta, id: string, mult: number, durationSec:
   if (mult < 2 || mult > MAX_BOOST_MULT) return false;
   if (durationSec <= 0 || durationSec > MAX_BOOST_DAYS * 86400) return false;
   if (labBoostMult(meta, id, nowMs) > 1) return false; // one boost per lab — no stacking
+  // Settle any level whose timer has already elapsed first, so we re-project the LIVE level rather than a
+  // finished one (whose remaining work is 0 → it would collapse to endsAt=nowMs and sit at 100% / 1 gem).
+  reconcileResearch(meta, nowMs);
   const r = researchOf(meta, id);
-  if (!r) return false; // the lab isn't being researched — nothing to boost
+  if (!r) return false; // the lab isn't being researched (or it just maxed out) — nothing to boost
   const cost = labBoostCost(mult, durationSec);
   if ((meta.vials || 0) < cost) return false;
   meta.vials = (meta.vials || 0) - cost;
@@ -341,7 +344,11 @@ export function rushResearch(meta: Meta, id: string, nowMs: number): boolean {
   const cost = rushVialCost(meta, id, nowMs);
   if ((meta.gems || 0) < cost) return false;
   meta.gems -= cost;
-  r.endsAt = nowMs; // finishes on the next reconcile.
+  r.endsAt = nowMs;
+  // Settle the finish NOW — complete this level and auto-start the next — instead of leaving it for the
+  // next reconcile tick. Otherwise the just-paid-for level lingers on screen at 100% with a "Finish · 1
+  // gem" button (its remaining work is 0), so a second click would charge another gem for nothing.
+  reconcileResearch(meta, nowMs);
   return true;
 }
 
