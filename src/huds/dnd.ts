@@ -212,11 +212,24 @@ const CSS = `
    no heading, no button — matching the weathered "wanted poster" look of the rest of the skin. */
 .hud.theme-dnd .checkin-reward {
   background:
-    radial-gradient(circle at 26% 12%, rgba(255,251,235,.85), rgba(255,251,235,0) 55%),
-    linear-gradient(165deg, #ece0c2 0%, #e3d4ac 55%, #d2bd8e 100%);
-  border: 1px solid #b89a64; border-radius: 2px; color: var(--ink); font-family: 'Roboto', system-ui, sans-serif;
-  /* a warm paper sheen inside + a deep drop shadow so the letter floats above the board */
-  box-shadow: inset 0 0 22px rgba(120,86,40,.18), 0 16px 30px rgba(0,0,0,.5), 0 5px 12px rgba(0,0,0,.34);
+    /* folds: a horizontal crease + a vertical crease — a thin shadow line beside a paper highlight */
+    linear-gradient(180deg, transparent calc(43% - 2px), rgba(86,58,24,.20) 43%, rgba(255,250,233,.5) calc(43% + 1px), transparent calc(43% + 4px)),
+    linear-gradient(90deg, transparent calc(57% - 2px), rgba(86,58,24,.16) 57%, rgba(255,250,233,.42) calc(57% + 1px), transparent calc(57% + 4px)),
+    /* age stains / blotches scattered across the sheet so it reads as weathered, not flat */
+    radial-gradient(circle at 20% 24%, rgba(120,82,38,.24), rgba(120,82,38,0) 14%),
+    radial-gradient(circle at 80% 30%, rgba(140,100,54,.20), rgba(140,100,54,0) 16%),
+    radial-gradient(circle at 66% 74%, rgba(110,74,32,.22), rgba(110,74,32,0) 18%),
+    radial-gradient(circle at 30% 82%, rgba(150,112,60,.16), rgba(150,112,60,0) 20%),
+    radial-gradient(circle at 88% 60%, rgba(110,74,32,.16), rgba(110,74,32,0) 13%),
+    /* soft centre warmth + darker, aged edges (vignette) */
+    radial-gradient(circle at 50% 42%, rgba(255,249,231,.45), rgba(255,249,231,0) 58%),
+    radial-gradient(125% 120% at 50% 48%, rgba(120,86,40,0) 58%, rgba(92,62,26,.30) 100%),
+    /* uneven base tone */
+    linear-gradient(158deg, #e8d9b4 0%, #dcc89d 48%, #cab17f 100%);
+  border: 1px solid #ab8f5c; border-radius: 2px; color: var(--ink); font-family: 'Roboto', system-ui, sans-serif;
+  /* only the inner paper sheen here — the floating drop shadow lives on the base .checkin-reward as a
+     drop-shadow filter so it follows the torn clip-path silhouette */
+  box-shadow: inset 0 0 26px rgba(120,86,40,.24);
 }
 .hud.theme-dnd .checkin-reward:hover { border-color: var(--gold-ink); }
 /* the iron pin tacking the letter to the board */

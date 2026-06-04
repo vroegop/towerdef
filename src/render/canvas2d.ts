@@ -157,7 +157,8 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     // Player-set camera zoom (Settings slider): >1 magnifies the tower, <1 pulls back to reveal more
     // of the field. Defaults to 1 so the framing is unchanged unless the player moves the slider.
     const zoom = cfg.zoom && cfg.zoom > 0 ? cfg.zoom : 1;
-    const scale = (Math.min(W, availH) / (2 * range * (1 + RANGE_PAD))) * zoom;
+    const baseScale = Math.min(W, availH) / (2 * range * (1 + RANGE_PAD)); // the zoom-1 fit
+    const scale = baseScale * zoom;
     const hp = ipos(HERO_ID, s.hero.x, s.hero.y);
     let shx = 0,
       shy = 0;
@@ -167,10 +168,16 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
       shy = (Math.random() - 0.5) * amp;
       shakeT = Math.max(0, shakeT - rdt);
     }
-    // Hero is a stationary tower at the arena centre, and the arena always exceeds the viewport, so
-    // no edge-clamping is needed — we just centre horizontally and within the top 60% vertically.
+    // Hero is a stationary tower at the arena centre, and the arena always exceeds the viewport, so no
+    // edge-clamping is needed — we centre horizontally and anchor vertically. We keep the TOP of the
+    // range ring at the same screen-y for any zoom: as the player zooms IN (the ring grows) the tower
+    // slides down toward the screen centre so the margin above the ring stays about the same, rather
+    // than the ring spilling off the top. (At zoom 1 this resolves to availH/2, the old framing.)
+    const ringTopY = availH / 2 - range * baseScale; // fixed top-of-ring line, independent of zoom
+    let towerY = ringTopY + range * scale;            // tower centre = ring top + current ring radius
+    towerY = Math.min(towerY, H - 8);                 // safety: never let the tower slide off the bottom
     const ox = W / 2 - hp.x * scale + shx,
-      oy = availH / 2 - hp.y * scale + shy;
+      oy = towerY - hp.y * scale + shy;
     const tx = (x: number): number => ox + x * scale,
       ty = (y: number): number => oy + y * scale;
 

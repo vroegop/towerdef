@@ -319,16 +319,21 @@
   display: flex; flex-direction: column; align-items: center; gap: 8px; width: max-content; min-width: 96px;
   padding: 16px 18px 14px; border-radius: 3px; cursor: pointer; color: #eef2fb;
   background: linear-gradient(180deg, #20283a, #161c2a); border: 1px solid #2d3344;
-  /* a deep, soft drop shadow so the letter reads as floating above the game */
-  box-shadow: 0 14px 28px rgba(0,0,0,.55), 0 4px 10px rgba(0,0,0,.4); animation: cr-bob 3.8s ease-in-out infinite; }
+  /* a chipped top-right corner + small bites out of the edges → weathered, torn paper */
+  clip-path: polygon(0 0, 84% 0, 100% 15%, 100% 63%, 95% 70%, 100% 77%, 100% 100%, 4% 100%, 0 94%);
+  /* drop-shadow (not box-shadow) so the floating shadow follows the torn silhouette, not the box */
+  filter: drop-shadow(0 12px 16px rgba(0,0,0,.5)) drop-shadow(0 3px 5px rgba(0,0,0,.38));
+  animation: cr-bob 3.8s ease-in-out infinite; }
 .hud .checkin-reward.hide { display: none; }
 .hud .checkin-reward:hover { border-color: #3a4256; }
 /* the "reward" halo: a warm glow behind the seal that gently breathes to draw the eye */
-.hud .checkin-reward .cr-glow { position: absolute; inset: -8px; z-index: 0; border-radius: 8px; pointer-events: none;
+.hud .checkin-reward .cr-glow { position: absolute; inset: 3px; z-index: 0; border-radius: 6px; pointer-events: none;
   background: radial-gradient(circle at 50% 40%, rgba(255,210,90,.4), rgba(255,180,60,0) 70%);
   animation: cr-glow 2.6s ease-in-out infinite; }
 .hud .checkin-reward > *:not(.cr-glow) { position: relative; z-index: 1; }
 .hud .checkin-reward .cr-chest { line-height: 0; color: #ffcf5a; filter: drop-shadow(0 2px 3px rgba(0,0,0,.4)); }
+/* the chest reads as hand-inked: the #cr-rough turbulence filter wavers its strokes */
+.hud .checkin-reward .cr-chest .ic { filter: url(#cr-rough); }
 .hud .checkin-reward .cr-loot { display: flex; gap: 6px; }
 .hud .checkin-reward .cr-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px;
   background: rgba(255,255,255,.06); font: 700 12px 'Roboto', system-ui, sans-serif; white-space: nowrap; }
