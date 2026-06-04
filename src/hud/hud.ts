@@ -17,7 +17,7 @@ import {
   LABS, LAB_BY_ID, labLevel, labUnlocked, labsTabUnlocked, labCoinCost, labTimeSec, labAtMax, researchOf, researchRemaining,
   researchProgress, freeSlots, rushVialCost, labSlotCost, MAX_SLOTS, checkInPending, CHECKIN_VIALS, CHECKIN_GEMS,
   availableSpeeds, gameSpeed, speedAtLevel, SPEED_LAB,
-  labBoostMult, labBoostRemaining, labBoostCost, boostLabCount, MAX_BOOST_MULT, MAX_BOOST_DAYS,
+  labBoostMult, labBoostRemaining, labBoostCost, MAX_BOOST_MULT, MAX_BOOST_DAYS,
 } from '../sim/labs';
 import { cosmeticsOf, isCosmeticUnlocked, selectedCosmeticId, buffText, cosmeticById } from '../sim/cosmetics';
 import {
@@ -87,6 +87,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     gear: '<circle cx="12" cy="12" r="3.2"/><path d="M19.4 13a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.7 8.6a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
     eye: '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/>',
+    // zoom = magnifying glass with a + lens (the camera-zoom Settings slider)
+    zoom: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/><path d="M8 11h6M11 8v6"/>',
     // treasure chest = the check-in reward coffer (domed lid, seam, lock plate)
     chest: '<path d="M3 11v7a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-7"/><path d="M3 11a9 9 0 0 1 18 0"/><path d="M3 11h18"/><path d="M11 10.5h2v3.5h-2z"/>',
     // refresh = cooldown; stopwatch = duration (both feather-style, 24×24 stroked)
@@ -592,24 +594,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     const slotChip = '<span class="chip cur-slot">' + icon('flask', 13) + ' <b>' + used + '/' + slots + '</b></span>';
     let html = '<div class="cur-with-slot">' + curChips(meta, ['coins', 'gems', 'vials'], slotChip) + '</div>';
     html += '<div class="labslots">' + labSlotsHtml(meta) + '</div>';
-    html += labBoostBtnHtml(meta);
     const sc = labSlotCost(meta),
       canSlot = slots < MAX_SLOTS;
     if (canSlot) html += '<button class="slotbtn' + ((meta.gems || 0) < sc ? ' cant' : '') + '" id="h-buyslot">+1 Slot · ' + sc + ' ' + icon('gem', 13, 'gem') + '</button>';
     return html;
-  }
-  // The "Speed Up" control: when a boost is live it shows the rate + time left; otherwise a button
-  // that opens the boost modal (disabled when no labs are assigned — nothing to speed up).
-  function labBoostBtnHtml(meta: Meta): string {
-    const now = Date.now();
-    const m = labBoostMult(meta, now);
-    if (m > 1) {
-      return '<div class="labboost-active">' + icon('ffwd', 14) + ' <b>' + fmtSpeed(m) +
-        '</b> boost · ' + fmtTime(labBoostRemaining(meta, now)) + ' left</div>';
-    }
-    const cant = boostLabCount(meta) <= 0;
-    return '<button class="labboost-btn' + (cant ? ' cant' : '') + '" id="h-labboost"' + (cant ? ' disabled' : '') +
-      '>' + icon('ffwd', 14) + ' Speed Up Labs</button>';
   }
   function wireLabsPane(scope: HTMLElement, rerender: () => void): void {
     // Clicking an empty vial slot opens the lab picker modal.
@@ -631,8 +619,13 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         else shake(b);
       }),
     );
-    const bst = scope.querySelector<HTMLElement>('#h-labboost');
-    if (bst) bst.addEventListener('click', () => openLabBoostModal(rerender));
+    // per-lab "Speed Up": open the boost modal scoped to this lab.
+    scope.querySelectorAll<HTMLElement>('[data-boostlab]').forEach((b) =>
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openLabBoostModal(rerender, b.dataset.boostlab!);
+      }),
+    );
     const sb = scope.querySelector<HTMLElement>('#h-buyslot');
     if (sb) sb.addEventListener('click', () => {
       if (handlers.onBuyLabSlot && handlers.onBuyLabSlot()) rerender();
@@ -840,11 +833,11 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   let lastS: State | null = null;
   renderTabContent();
 
-  // Check-in REWARD COFFER: a fixed treasure prompt pinned bottom-left, shown in BOTH the menu and
-  // in-game but ONLY when a reward is actually claimable. It deliberately reads as found loot — a
-  // glowing chest spilling its spoils with a wax-seal "Claim" — rather than a utility button. There
-  // is no idle countdown: the 15-minute cadence lives entirely in the sim (checkInPending). Clicking
-  // claims the banked spoils, after which it has nothing to show and hides itself again.
+  // Check-in REWARD LETTER: a fixed parchment note that floats over the game (menu + in-game), shown
+  // ONLY when a reward is actually claimable. It reads as a pinned letter on the board — just the
+  // treasure-chest seal and the spoils it holds, no heading and no button — so the whole letter is the
+  // affordance: clicking it claims the banked spoils, after which it hides itself again. There is no
+  // idle countdown; the 15-minute cadence lives entirely in the sim (checkInPending).
   const checkinFloat = document.createElement('button');
   checkinFloat.id = 'h-checkin-float';
   checkinFloat.className = 'checkin-reward hide';
@@ -856,23 +849,28 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       if (menuEl.classList.contains('show')) renderMenu();
     }
   });
+  // Cache the last-rendered pending count: the letter is refreshed on a 1s tick but its contents only
+  // change every 15 minutes, so we rebuild the DOM only when the count actually changes — otherwise the
+  // glow/bob animations would restart every second and flicker.
+  let lastCheckinPend = -1;
   function refreshCheckinFloat(): void {
     const meta = boundMeta || lastMeta || (lastS ? lastS.meta : null);
     const pend = meta ? checkInPending(meta, Date.now()) : 0;
     if (pend <= 0) {
       checkinFloat.classList.add('hide');
+      lastCheckinPend = 0;
       return;
     }
-    // Treasure coffer: a gilt glow halo, the chest itself, then the loot it holds and a Claim seal.
+    if (pend === lastCheckinPend && !checkinFloat.classList.contains('hide')) return; // unchanged → no rebuild
+    lastCheckinPend = pend;
+    // The letter holds only a treasure-chest seal and the spoils chips — no title, no claim button.
     checkinFloat.innerHTML =
       '<span class="cr-glow" aria-hidden="true"></span>' +
-      '<span class="cr-chest">' + icon('chest', 34) + '</span>' +
-      '<span class="cr-title">Spoils await!</span>' +
+      '<span class="cr-chest">' + icon('chest', 40) + '</span>' +
       '<span class="cr-loot">' +
         '<span class="cr-chip">' + icon('vial', 13, 'vial') + '<b>+' + pend * CHECKIN_VIALS + '</b></span>' +
         '<span class="cr-chip">' + icon('gem', 13, 'gem') + '<b>+' + pend * CHECKIN_GEMS + '</b></span>' +
-      '</span>' +
-      '<span class="cr-claim">Claim</span>';
+      '</span>';
     checkinFloat.classList.remove('hide');
   }
 
@@ -1348,20 +1346,46 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         '<div class="set-sec"><div class="set-sec-t">' + sec.title + '</div>' +
         '<div class="set-grid">' + sec.rows.map(settingsRowHtml).join('') + '</div></div>',
     ).join('');
-  const wireSettingsRows = (el: HTMLElement): void =>
+  // Camera-zoom slider: a continuous control (not a toggle) read live by the renderer. <1 pulls back to
+  // reveal more of the field; >1 magnifies the tower. The shared `settings` object IS the renderer's,
+  // so moving the slider re-frames the live view immediately.
+  const ZOOM_MIN = 0.5, ZOOM_MAX = 2;
+  const zoomVal = (): number => {
+    const z = typeof settings.zoom === 'number' ? settings.zoom : 1;
+    return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+  };
+  const settingsSliderHtml = (): string => {
+    const z = zoomVal();
+    return '<div class="set-sec"><div class="set-sec-t">Camera</div>' +
+      '<div class="set-slider"><span class="ss-ic">' + icon('zoom', 16) + '</span>' +
+      '<span class="ss-label">Tower zoom</span>' +
+      '<input class="ss-range" type="range" id="h-zoom" min="' + ZOOM_MIN + '" max="' + ZOOM_MAX + '" step="0.1" value="' + z + '">' +
+      '<span class="ss-val" id="h-zoomval">' + z.toFixed(1) + 'x</span></div></div>';
+  };
+  const wireSettingsRows = (el: HTMLElement): void => {
     el.querySelectorAll<HTMLElement>('[data-set]').forEach((b) =>
       b.addEventListener('click', () => {
         const k = b.dataset.set as keyof Settings;
-        settings[k] = !settings[k];
+        // toggle rows only ever target boolean settings; treat as a boolean record for the write.
+        (settings as Record<string, boolean>)[k] = !settings[k];
         b.classList.toggle('on', !!settings[k]);
         handlers.onSaveSettings && handlers.onSaveSettings();
       }),
     );
+    const zr = el.querySelector<HTMLInputElement>('#h-zoom');
+    const zv = el.querySelector<HTMLElement>('#h-zoomval');
+    if (zr) zr.addEventListener('input', () => {
+      const v = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Number(zr.value) || 1));
+      settings.zoom = v;
+      if (zv) zv.textContent = v.toFixed(1) + 'x';
+      handlers.onSaveSettings && handlers.onSaveSettings();
+    });
+  };
   function openSettings(): void {
-    // On-screen indicators (read by the renderer) + which guided popups to play. No sim state.
+    // On-screen indicators (read by the renderer) + which guided popups to play + camera zoom. No sim state.
     setmodalInner.innerHTML =
       '<div class="statshead"><h2>Show info</h2><button class="iconclose" id="h-set-close" title="Close">' +
-      icon('close', 18) + '</button></div><div class="setbody">' + settingsRowsHtml() + '</div>';
+      icon('close', 18) + '</button></div><div class="setbody">' + settingsRowsHtml() + settingsSliderHtml() + '</div>';
     $('#h-set-close').addEventListener('click', () => setmodal.classList.add('hide'));
     wireSettingsRows(setmodalInner);
     setmodal.classList.remove('hide');
@@ -1417,7 +1441,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       b.addEventListener('click', () => {
         const off = !b.classList.contains('on'); // checked = "don't show" → the setting goes OFF
         b.classList.toggle('on', off);
-        settings[dsa.key] = !off;
+        // "don't show again" only flips boolean settings; treat as a boolean record for the write.
+        (settings as Record<string, boolean>)[dsa.key] = !off;
         handlers.onSaveSettings && handlers.onSaveSettings();
       });
     }
@@ -1710,7 +1735,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     updmodal.classList.remove('hide');
   }
 
-  // ---- "Speed Up" modal: buy a timed global lab boost (duration × multiplier, paid in vials) ----
+  // ---- "Speed Up" modal: buy a timed boost for ONE lab (duration × multiplier, paid in vials) ----
   const BOOST_DURATIONS: { label: string; sec: number }[] = [
     { label: '1h', sec: 3600 }, { label: '6h', sec: 6 * 3600 }, { label: '12h', sec: 12 * 3600 },
     { label: '1d', sec: 86400 }, { label: '2d', sec: 2 * 86400 }, { label: '3d', sec: 3 * 86400 },
@@ -1718,26 +1743,27 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   ];
   let boostDurSel = 86400;   // default 1 day
   let boostMultSel = 2;      // default 2×
-  function openLabBoostModal(onChange: () => void): void {
+  function openLabBoostModal(onChange: () => void, labId: string): void {
     if (!lastMeta) return;
     const meta = lastMeta;
     const now = Date.now();
-    // Already boosting? Show the live status and bail (no stacking).
-    if (labBoostMult(meta, now) > 1) {
+    const L = LAB_BY_ID[labId];
+    const labName = L ? L.label : 'Lab';
+    // Already boosting THIS lab? Show the live status and bail (no stacking on the same lab).
+    if (labBoostMult(meta, labId, now) > 1) {
       updmodalInner.innerHTML =
         '<div class="upd-head"><div class="upd-icon">' + icon('ffwd', 20) + '</div>' +
-          '<div class="upd-title"><b>Labs Boosted</b><span>' + fmtSpeed(labBoostMult(meta, now)) +
-            ' speed · ' + fmtTime(labBoostRemaining(meta, now)) + ' left</span></div>' +
+          '<div class="upd-title"><b>' + labName + ' Boosted</b><span>' + fmtSpeed(labBoostMult(meta, labId, now)) +
+            ' speed · ' + fmtTime(labBoostRemaining(meta, labId, now)) + ' left</span></div>' +
           '<button class="iconclose" id="h-boost-close">' + icon('close', 18) + '</button></div>' +
-        '<div class="boost-body"><p class="boost-note">A boost is already running. Wait for it to finish before buying another.</p></div>';
+        '<div class="boost-body"><p class="boost-note">This lab is already boosted. Wait for it to finish before boosting it again.</p></div>';
       $('#h-boost-close').addEventListener('click', () => updmodal.classList.add('hide'));
       updmodal.classList.remove('hide');
       return;
     }
     const render = (): void => {
-      const nLabs = boostLabCount(meta);
-      const cost = labBoostCost(meta, boostMultSel, boostDurSel);
-      const afford = (meta.vials || 0) >= cost && nLabs > 0;
+      const cost = labBoostCost(boostMultSel, boostDurSel);
+      const afford = (meta.vials || 0) >= cost;
       const durChips = BOOST_DURATIONS.map((d) =>
         '<button class="boost-chip' + (d.sec === boostDurSel ? ' on' : '') + '" data-dur="' + d.sec + '">' + d.label + '</button>').join('');
       const multChips = [];
@@ -1745,18 +1771,18 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         multChips.push('<button class="boost-chip' + (m === boostMultSel ? ' on' : '') + '" data-mult="' + m + '">' + m + 'x</button>');
       updmodalInner.innerHTML =
         '<div class="upd-head"><div class="upd-icon">' + icon('ffwd', 20) + '</div>' +
-          '<div class="upd-title"><b>Speed Up Labs</b><span>All labs run faster for a fixed time</span></div>' +
+          '<div class="upd-title"><b>Speed Up ' + labName + '</b><span>This lab runs faster for a fixed time</span></div>' +
           '<button class="iconclose" id="h-boost-close">' + icon('close', 18) + '</button></div>' +
         '<div class="boost-body">' +
           '<div class="boost-sec">' + icon('stopwatch', 13) + ' <span>Duration</span></div>' +
           '<div class="boost-chips">' + durChips + '</div>' +
           '<div class="boost-sec">' + icon('ffwd', 13) + ' <span>Speed</span></div>' +
           '<div class="boost-chips">' + multChips.join('') + '</div>' +
-          '<p class="boost-note">Banks <b>' + fmtTime(boostDurSel * boostMultSel) + '</b> of lab time across ' +
-            '<b>' + nLabs + '</b> lab' + (nLabs === 1 ? '' : 's') + ' over <b>' + fmtTime(boostDurSel) + '</b> of real time.</p>' +
+          '<p class="boost-note">Banks <b>' + fmtTime(boostDurSel * boostMultSel) + '</b> of lab time over ' +
+            '<b>' + fmtTime(boostDurSel) + '</b> of real time.</p>' +
         '</div>' +
         '<button class="boost-buy' + (afford ? '' : ' cant') + '" id="h-boost-buy"' + (afford ? '' : ' disabled') + '>' +
-          (nLabs <= 0 ? 'No labs to boost' : 'Boost · ' + cost.toLocaleString() + ' ' + icon('vial', 14, 'vial')) + '</button>';
+          'Boost · ' + cost.toLocaleString() + ' ' + icon('vial', 14, 'vial') + '</button>';
       $('#h-boost-close').addEventListener('click', () => updmodal.classList.add('hide'));
       updmodalInner.querySelectorAll<HTMLElement>('[data-dur]').forEach((b) =>
         b.addEventListener('click', () => { boostDurSel = Number(b.dataset.dur); render(); }));
@@ -1764,7 +1790,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         b.addEventListener('click', () => { boostMultSel = Number(b.dataset.mult); render(); }));
       const buy = $('#h-boost-buy');
       buy.addEventListener('click', () => {
-        if (handlers.onApplyLabBoost && handlers.onApplyLabBoost(boostMultSel, boostDurSel)) {
+        if (handlers.onApplyLabBoost && handlers.onApplyLabBoost(labId, boostMultSel, boostDurSel)) {
           updmodal.classList.add('hide');
           onChange();
         } else shake(buy);
@@ -2061,11 +2087,18 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
           rem = researchRemaining(meta, r.id, now);
         const gc = rushVialCost(meta, r.id, now),
           canRush = (meta.gems || 0) >= gc;
-        h += '<div class="labslot running">' +
+        const bm = labBoostMult(meta, r.id, now);
+        // Per-lab "Speed Up": a compact button per running lab, or a live boost chip while one is active.
+        const boostCtl = bm > 1
+          ? '<span class="labboost-active" title="This lab is boosted">' + icon('ffwd', 12) + ' ' + fmtSpeed(bm) +
+            ' · <b class="lab-boost-rem">' + fmtTime(labBoostRemaining(meta, r.id, now)) + '</b></span>'
+          : '<button class="labboost-btn" data-boostlab="' + r.id + '" title="Speed up this lab">' + icon('ffwd', 12) + ' Speed Up</button>';
+        h += '<div class="labslot running" data-lab="' + r.id + '">' +
           vialHtml(L.label, 'lv ' + lv + '→' + (lv + 1), prog, 'running') +
           '<div class="labdesc">' + labDesc(L, lv + 1) + '</div>' +
           '<div class="labactions">' +
           '<span class="labrem">' + fmtTime(rem) + ' left</span>' +
+          boostCtl +
           '<button class="rushlab' + (canRush ? '' : ' cant') + '" data-rushlab="' + r.id + '" title="Finish instantly with gems">' +
           icon('ffwd', 12) + ' Finish · ' + icon('gem', 12, 'gem') + ' ' + gc + '</button>' +
           '<button class="changelab" data-changelab="' + r.id + '" title="Switch to a different research">' + icon('swap', 14) + ' Change</button>' +
@@ -2360,7 +2393,37 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
         menuSpotText = 'Buy your first upgrade — unlike in-run boosts, these are <b>permanent</b>, and each purchase unlocks more to choose from.';
       }
     }
+    // Record the labs structure we just rendered, so the 1s tick can patch progress in place (instead
+    // of a full re-render that resets the currency + vial-bubble animations) until the structure changes.
+    lastLabsSig = menuTab === 'labs' ? labsSig(meta) : '';
     startMenuSpot();
+  }
+
+  // ---- labs tab: cheap "structure" signature + in-place progress patcher (see the 1s tick below) ----
+  // A renderMenu is only needed when the labs STRUCTURE changes (a level completes, a slot resumes from
+  // waiting, a boost starts/expires). The signature captures exactly that; everything else (the fill
+  // bars, time-left and boost countdowns) is patched in place so the animated UI never flickers.
+  let lastLabsSig = '';
+  function labsSig(meta: Meta): string {
+    const now = Date.now();
+    const r = (meta.research || []).map((x) =>
+      x.id + ':' + labLevel(meta, x.id) + ':' + (x.waiting ? 'w' : 'r') + ':' + (labBoostMult(meta, x.id, now) > 1 ? 'b' : ''),
+    ).join('|');
+    return (meta.labSlots || 1) + ';' + r;
+  }
+  function patchLabProgress(meta: Meta): void {
+    const now = Date.now();
+    menuContent.querySelectorAll<HTMLElement>('.labslot.running[data-lab]').forEach((el) => {
+      const id = el.dataset.lab!;
+      const r = researchOf(meta, id);
+      if (!r || r.waiting) return;
+      const gold = el.querySelector<HTMLElement>('.vgold');
+      if (gold) gold.style.width = (researchProgress(meta, id, now) * 100).toFixed(1) + '%';
+      const rem = el.querySelector<HTMLElement>('.labrem');
+      if (rem) rem.textContent = fmtTime(researchRemaining(meta, id, now)) + ' left';
+      const brem = el.querySelector<HTMLElement>('.lab-boost-rem');
+      if (brem) brem.textContent = fmtTime(labBoostRemaining(meta, id, now));
+    });
   }
 
   function showMenu(meta: Meta, opts: MenuOpts): void {
@@ -2433,16 +2496,18 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     $('#h-stats').classList.add('hide');
   }
 
-  // 1s tick: keep the check-in reward coffer current (menu AND in-game) and advance research bars on
+  // 1s tick: keep the check-in reward letter current (menu AND in-game) and advance research bars on
   // the Lab tab. The Hero tab holds nothing time-driven (the avatar animates on its own rAF loop), so we
-  // do NOT re-render it here — doing so rebuilt the DOM every second, flashing the UI and resetting hover.
+  // do NOT re-render it here. The Lab tab only re-renders when its STRUCTURE changes — otherwise we patch
+  // the fill bars + countdowns in place, so the currency chips and rising vial bubbles never reset.
   setInterval(() => {
     refreshCheckinFloat();
     if (!menuEl.classList.contains('show') || !lastMeta) return;
     if (menuTab === 'labs') {
-      const had = (lastMeta.research || []).length;
-      if (handlers.onReconcileLabs) handlers.onReconcileLabs();
-      if (had) renderMenu();
+      if (handlers.onReconcileLabs) handlers.onReconcileLabs(); // a completed level re-renders via refreshMenu
+      if (menuTab !== 'labs') return; // (reconcile may have navigated away)
+      if (labsSig(lastMeta) !== lastLabsSig) renderMenu(); // structure changed (resume / boost edge) → full render
+      else patchLabProgress(lastMeta); // steady state → just advance the bars + timers
     }
   }, 1000);
 

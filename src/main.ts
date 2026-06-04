@@ -42,6 +42,8 @@ function loadSettings(): Settings {
     msgWaveSkip: s.msgWaveSkip !== false,
     msgInterest: s.msgInterest !== false,
     msgEnemySkip: s.msgEnemySkip !== false,
+    // camera zoom on the tower: clamp to the slider's range; default 1 (untouched view).
+    zoom: typeof s.zoom === 'number' && isFinite(s.zoom) ? Math.min(2, Math.max(0.5, s.zoom)) : 1,
   };
 }
 function saveSettings(): void {
@@ -72,6 +74,9 @@ function loadMeta(): Meta {
     totalWaves: m.totalWaves || 0,
     labs: m.labs || {},
     research: Array.isArray(m.research) ? m.research : [],
+    // per-lab speed boosts persist across reloads so auto-chained levels + offline catch-up keep honouring
+    // an active boost window (their endsAt is projected against it). migrateMeta defaults this too.
+    labBoosts: m.labBoosts && typeof m.labBoosts === 'object' ? m.labBoosts : {},
     labSlots: m.labSlots || 1,
     vials: m.vials || 0,
     lastCheckIn: m.lastCheckIn || Date.now(),
@@ -188,8 +193,8 @@ const handlers: HudHandlers = {
     if (ok) saveMeta();
     return ok;
   },
-  onApplyLabBoost: (mult, durationSec) => {
-    const ok = applyLabBoost(meta, mult, durationSec, Date.now());
+  onApplyLabBoost: (id, mult, durationSec) => {
+    const ok = applyLabBoost(meta, id, mult, durationSec, Date.now());
     if (ok) saveMeta();
     return ok;
   },
