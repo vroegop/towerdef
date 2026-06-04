@@ -13,7 +13,12 @@
    then spring the transform back to 0. Wrapping the parent rather than the children means
    this survives the frequent `el.innerHTML = …` rebuilds the HUD does: those only replace
    the element's children, leaving the element and its clip wrapper (and the live transform)
-   untouched. */
+   untouched.
+
+   The clip inherits the panel's background colour so the revealed gap reads as the panel's
+   own edge, not a black hole behind it. With `alwaysBounce` (the default) a panel that the
+   player would *expect* to scroll bounces even when its content currently fits, so it feels
+   like "there's nothing more here" instead of a dead, broken scroll. */
 
 const MAX_PULL = 110; // hard cap (px) on how far content can be pulled past an edge
 const TOUCH_RESIST = 0.5; // base fraction of finger travel applied while overscrolling
@@ -22,9 +27,33 @@ const WHEEL_IDLE_MS = 90; // spring back this long after the last wheel tick
 // A touch of overshoot past 0 on the return reads as a "bounce" rather than a slide.
 const SPRING = 'transform .42s cubic-bezier(.22,1.2,.36,1)';
 
-export function attachOverscrollBounce(el: HTMLElement | null): void {
+interface BounceOpts {
+  // Bounce even when the content currently fits (not scrollable). True by default: panels the
+  // player expects to scroll should still rubber-band so a full list and a short one feel the
+  // same. Pass false for incidental scrollers (e.g. a 1-card horizontal strip) that shouldn't
+  // wobble when there's nothing to scroll.
+  alwaysBounce?: boolean;
+}
+
+// The nearest ancestor background colour, so the gap revealed behind a pulled panel matches the
+// panel instead of showing black/canvas through it. Walks up from `node` until a non-transparent
+// colour is found.
+function nearestBg(node: HTMLElement | null): string {
+  for (let n = node; n; n = n.parentElement) {
+    const bg = getComputedStyle(n).backgroundColor;
+    const m = /^rgba?\(([^)]+)\)/.exec(bg);
+    if (!m) continue;
+    const parts = m[1].split(',');
+    const alpha = parts.length === 4 ? parseFloat(parts[3]) : 1;
+    if (alpha > 0) return bg;
+  }
+  return '';
+}
+
+export function attachOverscrollBounce(el: HTMLElement | null, opts: BounceOpts = {}): void {
   if (!el || el.dataset.osBounce) return;
   el.dataset.osBounce = '1';
+  const alwaysBounce = opts.alwaysBounce !== false;
 
   const cs = getComputedStyle(el);
   // Bounce along whichever axis actually scrolls (the horizontal active-cards strip vs. the
@@ -37,22 +66,29 @@ export function attachOverscrollBounce(el: HTMLElement | null): void {
   clip.className = 'os-clip';
   clip.style.overflow = 'hidden';
   // Preserve the element's layout role. Stretch-fill flex items (flex-grow>0, e.g. the menu
-  // body and modal bodies) need the clip to take their place in the flex line and the element
-  // to fill the clip; plain block panels (e.g. the tab dock, sized by its own max-height) are
-  // simply wrapped as-is.
+  // body and modal bodies) need the clip to take their exact place in the flex line; the
+  // element then keeps its OWN flex (crucially flex-basis) so a content-sized modal still sizes
+  // to its content rather than collapsing. Plain block panels (e.g. the tab dock, sized by its
+  // own max-height) are simply wrapped as-is.
   if (parseFloat(cs.flexGrow) > 0) {
-    clip.style.flex = cs.flex;
-    clip.style.alignSelf = cs.alignSelf;
     clip.style.display = 'flex';
     clip.style.flexDirection = horizontal ? 'row' : 'column';
+    clip.style.flexGrow = cs.flexGrow;
+    clip.style.flexShrink = cs.flexShrink;
+    clip.style.flexBasis = cs.flexBasis;
+    clip.style.alignSelf = cs.alignSelf;
     clip.style.minWidth = '0';
     clip.style.minHeight = '0';
-    el.style.flex = '1 1 0';
+    // Let both the clip and the element shrink below their content so overflow scrolling still
+    // engages inside the cap. The element keeps its own flex shorthand untouched.
     el.style.minWidth = '0';
     el.style.minHeight = '0';
   }
   el.parentNode!.insertBefore(clip, el);
   clip.appendChild(el);
+  // Fill the gap behind the panel with the panel's own backdrop colour (computed now that the
+  // clip is in the tree), so pulling never reveals black canvas behind it.
+  clip.style.background = nearestBg(clip.parentElement);
 
   let offset = 0; // current rubber-band translate (px), signed
   let springTimer = 0;
@@ -70,16 +106,24 @@ export function attachOverscrollBounce(el: HTMLElement | null): void {
   // negative at the end edge) while pinned at an edge, with resistance that grows toward the cap
   // so the pull feels heavier the further you go. Returns true if it consumed the gesture.
   function pull(delta: number, resist: number): boolean {
+    const max = maxPos();
+    const scrollable = max > 0;
     const atStart = pos() <= 0;
-    const atEnd = pos() >= maxPos() - 1;
-    const canStart = maxPos() > 0 && ((atStart && delta > 0) || (atEnd && delta < 0));
+    const atEnd = pos() >= max - 1;
+    const canStart = (atStart && delta > 0) || (atEnd && delta < 0);
+    // Don't bounce a non-scrollable panel unless it's explicitly opted in.
+    if (!scrollable && !alwaysBounce) return false;
     if (offset === 0 && !canStart) return false;
     const c = cap();
     const f = resist * (1 - Math.min(1, Math.abs(offset) / c));
     offset += delta * f;
-    // A reversing gesture must not drag past 0 into the wrong direction — hand back to native.
-    if (atStart && offset < 0) offset = 0;
-    if (atEnd && offset > 0) offset = 0;
+    // While there's still scroll room on one side, a reversing gesture must hand back to native
+    // rather than drag past 0 into the wrong direction. When the panel can't scroll at all both
+    // edges are "live", so we let the offset cross 0 freely (top bounce ↔ bottom bounce).
+    if (scrollable) {
+      if (atStart && offset < 0) offset = 0;
+      if (atEnd && offset > 0) offset = 0;
+    }
     offset = Math.max(-c, Math.min(c, offset));
     el!.style.transition = 'none';
     apply();
@@ -139,6 +183,6 @@ export function attachOverscrollBounce(el: HTMLElement | null): void {
 }
 
 /** Attach the bounce to every matching scroll container under `root` (idempotent). */
-export function attachOverscrollBounceAll(root: ParentNode, selector: string): void {
-  root.querySelectorAll<HTMLElement>(selector).forEach(attachOverscrollBounce);
+export function attachOverscrollBounceAll(root: ParentNode, selector: string, opts: BounceOpts = {}): void {
+  root.querySelectorAll<HTMLElement>(selector).forEach((el) => attachOverscrollBounce(el, opts));
 }

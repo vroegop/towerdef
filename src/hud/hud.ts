@@ -2037,7 +2037,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       html += '<div class="locked-tab">' + icon('lock', 46) + '<div class="lockmsg">Unlocks later</div></div>';
     }
     menuContent.innerHTML = html;
-    attachOverscrollBounceAll(menuContent, '.activecards'); // horizontal rubber-band on the equipped-cards strip
+    attachOverscrollBounceAll(menuContent, '.activecards', { alwaysBounce: false }); // horizontal rubber-band on the equipped-cards strip (only when it actually overflows)
 
     if (menuTab === 'hero') {
       drawAvatar($<HTMLCanvasElement>('#h-avatar'), meta);
