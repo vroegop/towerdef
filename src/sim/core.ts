@@ -11,6 +11,10 @@ import { tickActiveCards, trySecondWind, heroInvuln } from './cards-active';
 import { tickSuperpowers, moatSlowFactor, bossEnergy, crystalKillMult } from './superpowers';
 import { ARENA_W, ARENA_H } from './state';
 
+// Detonate card: blast radius (px) of the on-death eruption. ~half the base range ring, so it
+// clears a tight cluster without nuking the whole screen.
+const DETONATE_RADIUS = 60;
+
 export class Sim {
   s: State;
   rng: Rng;
@@ -112,6 +116,12 @@ export class Sim {
       run.dmgSkip = (run.dmgSkip || 0) + 1;
       this._note('dmgskip', run.dmgSkip);
     }
+    // Aegis card: each wave begins with a damage-soaking shield = a fraction of max HP. Refreshed
+    // (never shrunk) at every wave start so a fresh wave always opens fully shielded.
+    if (st.aegis > 0) run.shield = Math.max(run.shield || 0, st.maxHp * st.aegis);
+    // Ascetic card: a wave with no in-run gold/free-up buy is "frugal" and grows max HP. The counter
+    // freezes for the rest of the run once an in-run upgrade is bought (run.asceticBroken).
+    if (!run.asceticBroken) run.asceticWaves = (run.asceticWaves || 0) + 1;
     // Continuous top-up: no roster is built. The wave is a difficulty/composition window — its
     // size emerges from concurrentCap(n) (alive cap) × spawnRate(n) (release rate) over time.
     // Reset the per-wave spawn pacing and the boss-once flag; the first spawn fires immediately.
@@ -242,8 +252,16 @@ export class Sim {
     if (heroInvuln(this.s)) return;
     // Defense % scales the hit FIRST, then Armor soaks a flat amount off the remainder (so flat
     // armor is more effective, not less). Never below 0.
-    const amt = amount * (1 - (st.defPct || 0)) - (st.armor || 0);
+    let amt = amount * (1 - (st.defPct || 0)) - (st.armor || 0);
     if (amt <= 0) return;
+    // Aegis shield (refreshed each wave) soaks damage before it reaches HP. A fully-absorbed hit
+    // costs no HP and is NOT counted as damage taken, so it can't feed Vengeance.
+    if ((this.s.run.shield || 0) > 0) {
+      const soak = Math.min(this.s.run.shield!, amt);
+      this.s.run.shield! -= soak;
+      amt -= soak;
+      if (amt <= 0) return;
+    }
     this.s.econ.hitsTaken++; // instrumentation: a hit that actually dealt damage
     this.s.econ.dmgTaken += amt;
     h.sinceHit = 0;
@@ -267,6 +285,18 @@ export class Sim {
     // Active-ability damage boost (Super Tower ×dmg, Demon Mode ×3) applied to every shot.
     const boost = this.s.run.dmgBoost || 1;
     if (boost !== 1) dmg *= boost;
+    // Last Stand card: the more HP you are missing, the harder you hit (peaks near death).
+    if (st.lastStand > 0) {
+      const h = this.s.hero,
+        missing = h.hpMax > 0 ? 1 - h.hp / h.hpMax : 0;
+      if (missing > 0) dmg *= 1 + st.lastStand * missing;
+    }
+    // Vengeance card: cumulative damage taken fuels offense — +1% dmg per 1% of max HP suffered,
+    // capped so the total multiplier never exceeds st.vengeance (e.g. ×3.0 at max level).
+    if (st.vengeance > 1) {
+      const amp = Math.min(st.vengeance - 1, (this.s.econ.dmgTaken || 0) / (this.s.hero.hpMax || 1));
+      if (amp > 0) dmg *= 1 + amp;
+    }
     return dmg;
   }
 
@@ -304,7 +334,20 @@ export class Sim {
           if (s.atkMode === 'lightning') applyHit(s, t, dmg, st, this.rng);
           else fireProjectile(s, h, t, st, dmg, this.rng); // travelling bullet: damage lands on impact
         }
-        h.atkCd = 1 / Math.max(0.1, st.fireRate * (burst ? RAPID_MULT : 1));
+        // Berserk card: attack speed climbs with the crowd. Per-enemy rate is the cap/50, so it
+        // reaches the cap (st.berserk) at ~50 foes inside range — both scale together with level.
+        let speedMult = burst ? RAPID_MULT : 1;
+        if (st.berserk > 0) {
+          let crowd = 0;
+          const rr = h.range * h.range;
+          for (const e of s.enemies) {
+            const dx = e.x - h.x,
+              dy = e.y - h.y;
+            if (dx * dx + dy * dy <= rr) crowd++;
+          }
+          speedMult *= 1 + Math.min(st.berserk, (st.berserk / 50) * crowd);
+        }
+        h.atkCd = 1 / Math.max(0.1, st.fireRate * speedMult);
       }
     }
   }
@@ -479,9 +522,13 @@ export class Sim {
     const s = this.s,
       keep: Enemy[] = [],
       spawned: Enemy[] = [];
+    const det = this.stats.detonate || 0; // Detonate card: on-death blast fraction (0 = no card)
+    const blasts: { x: number; y: number; dmg: number }[] = [];
     for (const e of s.enemies) {
       if (e.hp <= 0) {
         s.econ.kills++;
+        // Detonate card: the slain enemy erupts for a share of its OWN max HP onto nearby foes.
+        if (det > 0) blasts.push({ x: e.x, y: e.y, dmg: e.hpMax * det });
         if (e.lastHurt === 'reflect') s.econ.killsByReflect++;
         else s.econ.killsByDamage++;
         const decay = (e.agedWaves || 0) >= COIN_DECAY_WAVES ? COIN_DECAY_FACTOR : 1; // anti-kite
@@ -539,7 +586,26 @@ export class Sim {
         if (s.fx.length > 32) s.fx.shift();
       } else keep.push(e);
     }
-    s.enemies = spawned.length ? keep.concat(spawned) : keep;
+    const out = spawned.length ? keep.concat(spawned) : keep;
+    // Apply Detonate blasts to the survivors. Damage lands now; anything pushed to ≤0 HP dies on the
+    // next tick's cleanup (paying its rewards and, if Detonate is up, chaining its own blast).
+    if (blasts.length) {
+      const r2 = DETONATE_RADIUS * DETONATE_RADIUS;
+      for (const b of blasts) {
+        for (const e of out) {
+          if (e.hp <= 0 || e.type === 'boss') continue; // bosses shrug off the blast
+          const dx = e.x - b.x,
+            dy = e.y - b.y;
+          if (dx * dx + dy * dy <= r2) {
+            e.hp -= b.dmg;
+            e.lastHurt = 'dmg';
+            e.hitFlash = 0.12;
+            s.econ.dmgDealt += b.dmg;
+          }
+        }
+      }
+    }
+    s.enemies = out;
   }
 }
 

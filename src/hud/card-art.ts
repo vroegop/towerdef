@@ -152,6 +152,33 @@ const CARD_ART: Record<string, string> = {
     '<path d="M9 4.4h6" stroke="#9a7416" stroke-width="1.2"/>' +
     '<g transform="translate(12 13)" stroke="none"><path fill="#9a7416" fill-opacity=".7" d="M0 -3.4 L1 -1 L3.4 0 L1 1 L0 3.4 L-1 1 L-3.4 0 L-1 -1 Z"/></g>',
 
+  // Ambush — a dagger striking out of hiding into a full, unsuspecting target ring.
+  ambush:
+    '<circle cx="9.5" cy="14.5" r="5.4" stroke-opacity=".45"/>' +
+    '<circle cx="9.5" cy="14.5" r="2" fill="currentColor" fill-opacity=".5" stroke="none"/>' +
+    '<g class="spark">' +
+    '<path d="M20 4 11 13" stroke-width="2.2"/>' +
+    '<path d="M20 4 15.4 4.6 19.4 8.6Z" fill="currentColor" stroke="none"/>' +
+    '<path d="M11 13 12.9 12.3 11.7 11.1Z" fill="#fff" fill-opacity=".85" stroke="none"/>' +
+    '</g>',
+
+  // Last Stand — a battered heart, only its lowest ebb still beating, with a defiant blade behind.
+  lastStand:
+    '<path d="M5 4 18.5 17.5" stroke-width="1.8" stroke-opacity=".45"/>' +
+    '<path d="M18.5 17.5 15.9 17.6 17.6 15.9Z" fill="currentColor" stroke="none"/>' +
+    '<path d="M12 20.5C5.6 16.4 4 12.4 4 9.6A3.8 3.8 0 0 1 12 7.4a3.8 3.8 0 0 1 8 2.2c0 2.8-1.6 6.8-8 10.9Z" stroke-width="1.5"/>' +
+    '<g class="beat"><path d="M5.9 13.4C7.7 16 9.6 17.8 12 19.6 14.4 17.8 16.3 16 18.1 13.4Z" fill="currentColor" fill-opacity=".82" stroke="none"/></g>',
+
+  // Berserk — crossed swords clashing, sparking at the cross, with motion flecks (the faster you swing
+  // the more the horde feeds it).
+  berserk:
+    '<path d="M4.5 19.5 13 11" stroke-width="2"/>' +
+    '<path d="M19.5 19.5 11 11" stroke-width="2"/>' +
+    '<path d="M13 11 18 5.5 19 8.4 15.6 9.4Z" fill="currentColor" stroke="none"/>' +
+    '<path d="M11 11 6 5.5 5 8.4 8.4 9.4Z" fill="currentColor" stroke="none"/>' +
+    '<path d="M3.4 18.4 5.8 19.4 4.8 21.8M20.6 18.4 18.2 19.4l1 2.4" stroke-width="1.1" stroke-opacity=".55"/>' +
+    '<g class="spark"><path d="M12 9.4 12.8 11.2 14.6 12 12.8 12.8 12 14.6 11.2 12.8 9.4 12 11.2 11.2Z" fill="#fff" stroke="none"/></g>',
+
   // ---- RARE ----
   // Free Upgrades — a rising upgrade arrow with a sparkle of "free".
   freeUpgrades:
@@ -201,6 +228,38 @@ const CARD_ART: Record<string, string> = {
     '<ellipse cx="8" cy="11.8" rx="4.6" ry="1.8" fill="currentColor" stroke="#9a7416" stroke-width="1"/>' +
     '<path d="M13 13.6 16.6 9.6 18.4 11.4 21.4 7" stroke-width="1.7"/>' +
     '<path d="M21.4 7h-3M21.4 7v3" stroke-width="1.7"/>',
+
+  // Execute — an executioner's broad axe poised over a doomed, near-dead target.
+  execute:
+    '<path d="M12 20.4V9.2" stroke-width="1.8"/>' +
+    '<g class="lift"><path d="M5.6 4.4C9.6 2.9 14.4 2.9 18.4 4.4 16.8 7.5 14.6 9.2 12 9.6 9.4 9.2 7.2 7.5 5.6 4.4Z" fill="currentColor" fill-opacity=".85" stroke-width="1.2"/></g>' +
+    '<circle cx="12" cy="20" r="2" fill="currentColor" stroke="none"/>',
+
+  // Detonate — an eruption: burst rays + an expanding shock ring around a hot core.
+  detonate:
+    '<g class="spark"><path d="M12 12V3M12 12h9M12 12v9M12 12H3M12 12 18.4 5.6M12 12 5.6 18.4M12 12l6.4 6.4M12 12 5.6 5.6" stroke-width="1.4"/></g>' +
+    '<g class="r1"><circle cx="12" cy="12" r="6" stroke-width="1.6" stroke-opacity=".7"/></g>' +
+    '<circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/>',
+
+  // Aegis — a shield wrapped in a pulsing barrier ring, sheening as it forms each wave.
+  aegis:
+    '<g class="aura"><circle cx="12" cy="12" r="9.6" stroke-opacity=".4" stroke-width="1.3" stroke-dasharray="2 3"/></g>' +
+    '<path d="M12 2.8 19.5 5.4v5.6c0 5.2-3.4 8.1-7.5 9.9-4.1-1.8-7.5-4.7-7.5-9.9V5.4Z" fill="currentColor" fill-opacity=".25" stroke-width="1.7"/>' +
+    '<g class="sheen"><path d="M12 4 6 6v5c0 3.8 2 6.2 4.4 7.8" stroke="#eafff2" stroke-width="1.3"/></g>',
+
+  // Vengeance — a downward sword pommelled by a beating heart: suffering forged into a strike.
+  vengeance:
+    '<path d="M12 3 12 14.6" stroke-width="2.2"/>' +
+    '<path d="M12 3 13.4 5 12 6.6 10.6 5Z" fill="#fff" fill-opacity=".7" stroke="none"/>' +
+    '<path d="M7.8 13.6h8.4" stroke-width="1.6"/>' +
+    '<g class="beat"><path d="M12 21.6c-3-2-4.6-3.9-4.6-5.7A2.3 2.3 0 0 1 12 14.4a2.3 2.3 0 0 1 4.6 1.5c0 1.8-1.6 3.7-4.6 5.7Z" fill="currentColor" fill-opacity=".85" stroke="none"/></g>',
+
+  // Ascetic — a lotus blooming over still water, a single drop rising (discipline grown into life).
+  ascetic:
+    '<path d="M4 15.4c2.2 1.9 5 2.9 8 2.9s5.8-1 8-2.9" stroke-width="1.4" stroke-opacity=".55"/>' +
+    '<path d="M12 11.2C9.4 9.8 6.6 9.8 5 11.2c1 2.3 3.6 3.3 7 3.3M12 11.2c2.6-1.4 5.4-1.4 7 0-1 2.3-3.6 3.3-7 3.3" fill="currentColor" fill-opacity=".42" stroke-width="1.1"/>' +
+    '<g class="pop pop3"><path d="M12 4.2c1.6 2 1.6 5 0 7-1.6-2-1.6-5 0-7Z" fill="currentColor" fill-opacity=".8" stroke-width="1"/></g>' +
+    '<g class="beat"><path d="M12 14.6c-.9 1-1.4 2.2-1.4 3.1a1.4 1.4 0 0 0 2.8 0c0-.9-.5-2.1-1.4-3.1Z" fill="#eafff2" stroke="none"/></g>',
 
   // ---- EPIC ----
   // Super Tower — a turret with a pulsing power core inside a charged aura.

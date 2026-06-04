@@ -28,9 +28,11 @@ const CARD_STAT: Record<string, keyof Stats> = {
   critChance: 'critChance', enemyBalance: 'enemyBalance', extraDefense: 'defPct', fortress: 'armor',
   overrun: 'lullReduce', critPower: 'critMult', frenzy: 'rapidChance', volley: 'msChance',
   lifesteal: 'lifesteal', thorns: 'thorns', bounty: 'goldPerWave',
+  ambush: 'ambush', lastStand: 'lastStand', berserk: 'berserk',
   freeUpgrades: 'cardFreeUp', plasmaCanon: 'plasmaCanon',
   criticalCoin: 'criticalCoin', waveSkip: 'waveSkip',
   amplify: 'rendChance', overload: 'superCrit', onslaught: 'waveAccel', investor: 'interest',
+  execute: 'execute', detonate: 'detonate', aegis: 'aegis', vengeance: 'vengeance', ascetic: 'ascetic',
   superTower: 'superTower', secondWind: 'secondWind', demonMode: 'demonMode',
 };
 
