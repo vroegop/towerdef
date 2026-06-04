@@ -241,7 +241,10 @@ export class Sim {
     // Demon Mode / Second Wind shield: ignore all incoming damage while invincible.
     if (heroInvuln(this.s)) return;
     // Dodge: a chance to fully evade the hit — no damage taken, and the Greed kill streak is preserved.
-    if (st.dodge > 0 && this.rng.next() < st.dodge) return;
+    if (st.dodge > 0 && this.rng.next() < st.dodge) {
+      this._note('dodge', 0); // render-only "Dodge!" pop (gameplay state untouched)
+      return;
+    }
     // Defense % scales the hit FIRST, then Armor soaks a flat amount off the remainder (so flat
     // armor is more effective, not less). Never below 0.
     const amt = amount * (1 - (st.defPct || 0)) - (st.armor || 0);

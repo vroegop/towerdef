@@ -160,7 +160,7 @@ export interface FxEvent {
   gold?: number;
   coin?: number;
   // Per-wave info message (rendered as a transient on-screen note, gated by a Display toggle).
-  note?: 'waveskip' | 'interest' | 'hpskip' | 'dmgskip';
+  note?: 'waveskip' | 'interest' | 'hpskip' | 'dmgskip' | 'dodge';
   noteVal?: number; // the number that goes with the note (wave number, interest gold, or skip count)
 }
 // A transient superpower render event (shatter burst at x,y with a payout currency tag for floats).
@@ -380,6 +380,7 @@ export interface Settings {
   msgWaveSkip: boolean;       // "Wave N skipped"
   msgInterest: boolean;       // "+X interest"
   msgEnemySkip: boolean;      // "Enemy HP/Attack level skipped"
+  msgDodge: boolean;          // "Dodge!" when the hero evades a hit
 }
 // Spoils accrued while a survived run was simulated offline — shown in the offline-reward modal.
 // The modal shows the currency gains (gold + coins) as hexagon chips; kills/waves are progress, kept

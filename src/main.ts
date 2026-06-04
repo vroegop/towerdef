@@ -42,6 +42,7 @@ function loadSettings(): Settings {
     msgWaveSkip: s.msgWaveSkip !== false,
     msgInterest: s.msgInterest !== false,
     msgEnemySkip: s.msgEnemySkip !== false,
+    msgDodge: s.msgDodge !== false,
     // camera zoom on the tower: clamp to the slider's range; default 1 (untouched view).
     zoom: typeof s.zoom === 'number' && isFinite(s.zoom) ? Math.min(2, Math.max(0.5, s.zoom)) : 1,
   };
