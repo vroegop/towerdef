@@ -675,8 +675,6 @@
 .hud .card-img::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--tint); opacity: .16; }
 .hud .card-img::after { content: ''; position: absolute; inset: -3px; border-radius: 50%; box-shadow: 0 0 16px -3px var(--tint); }
 .hud .card-img .ic { position: relative; filter: drop-shadow(0 0 5px currentColor); }
-/* the Gold card's two-coin art reads cleaner on the bright medallion without its dark separator rim */
-.hud [data-card="cash"] .ic circle { stroke: none; }
 .hud .card .stars { display: flex; justify-content: center; align-items: flex-start; gap: 3px; min-height: 24px; margin-top: 2px; }
 .hud .starwrap { display: inline-flex; }
 .hud .star { display: block; }
@@ -1094,10 +1092,94 @@
 .hud .ic.coinicon { border-radius: 50%; -webkit-backdrop-filter: contrast(0.8); backdrop-filter: contrast(0.8); }
 .hud .cur-with-slot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .hud .cur-with-slot .chips { margin: 0; }
-/* atom (Energy) icon — orbit group spins slowly */
+/* atom (Energy) icon — orbit group spins slowly; nucleus pulses (energizing) */
 .hud .ic.atom .orbits { transform-box: fill-box; transform-origin: center; animation: atom-spin 9s linear infinite; }
 @keyframes atom-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .hud .ic.atom .orbits { animation: none; } }
+.hud .ic.atom .nuc { transform-box: fill-box; transform-origin: center; animation: cur-energize 2.4s ease-in-out infinite; }
+@keyframes cur-energize { 0%,100% { transform: scale(.8); opacity: .7; } 50% { transform: scale(1.3); opacity: 1; } }
+
+/* ============================================================================
+   Subtle currency-icon animations: the coin turns, the gem glimmers, the vial
+   bubbles, the energy pulses (atom above). Built into the inline SVG glyphs, so
+   they read the same wherever the currency icon appears. Kept low-key on purpose.
+   ============================================================================ */
+/* coin / coinstar — a slow turn that flips edge-on once per cycle */
+.hud .ic .ccspin { transform-box: fill-box; transform-origin: center; animation: cur-coinspin 6s ease-in-out infinite; }
+@keyframes cur-coinspin { 0%,70%,100% { transform: scaleX(1); } 84% { transform: scaleX(.46); } }
+/* gem — a sparkle that twinkles and rotates */
+.hud .ic .gemtw { transform-box: fill-box; transform-origin: center; animation: cur-glimmer 3.2s ease-in-out infinite; }
+@keyframes cur-glimmer { 0%,100% { opacity: .25; transform: scale(.55) rotate(0deg); } 50% { opacity: 1; transform: scale(1.1) rotate(45deg); } }
+/* vial — carbonation bubbles drift up and fade */
+.hud .ic .vb { transform-box: fill-box; transform-origin: center; animation: cur-bubble 2.6s ease-in infinite; }
+.hud .ic .vb2 { animation-delay: .8s; }
+.hud .ic .vb3 { animation-delay: 1.6s; }
+@keyframes cur-bubble { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: .9; } 100% { transform: translateY(-5px); opacity: 0; } }
+
+/* ============================================================================
+   Per-card bespoke art animations (see src/hud/card-art.ts). Each card drives ONE
+   subtle motion via a classed <g> inside its SVG. All gentle, all looping.
+   ============================================================================ */
+.hud .cart .beat, .hud .cart .spark, .hud .cart .spark2, .hud .cart .spk, .hud .cart .spincoin,
+.hud .cart .orb, .hud .cart .core, .hud .cart .lift, .hud .cart .rush, .hud .cart .arrow,
+.hud .cart .skip { transform-box: fill-box; transform-origin: center; }
+
+.hud .cart-damage .arrow { animation: cart-nock 2.4s ease-in-out infinite; }
+.hud .cart-attackSpeed .hand { transform-box: view-box; transform-origin: 12px 12px; animation: cart-spin 2.6s linear infinite; }
+.hud .cart-health .beat { animation: cart-beat 1.7s ease-in-out infinite; }
+.hud .cart-healthRegen .ring { transform-box: view-box; transform-origin: 12px 12px; animation: cart-spin 7s linear infinite; }
+.hud .cart-range .r1, .hud .cart-range .r2 { transform-box: view-box; transform-origin: 12px 12px; animation: cart-ripple 2.8s ease-out infinite; }
+.hud .cart-range .r2 { animation-delay: 1.4s; }
+.hud .cart-cash .spincoin { animation: cart-coin 5s ease-in-out infinite; }
+.hud .cart-coins .spark { animation: cart-twinkle 3s ease-in-out infinite; }
+.hud .cart-slowAura .flake { transform-box: view-box; transform-origin: 12px 12px; animation: cart-spin 16s linear infinite; }
+.hud .cart-critChance .spark { animation: cart-twinkle 2.4s ease-in-out infinite; }
+.hud .cart-critChance .spark2 { animation: cart-twinkle 2.4s ease-in-out 1.1s infinite; transform-box: fill-box; transform-origin: center; }
+.hud .cart-enemyBalance .scale { transform-box: view-box; transform-origin: 12px 6px; animation: cart-tip 3.4s ease-in-out infinite; }
+.hud .cart-extraDefense .sheen { animation: cart-flick 2.4s ease-in-out infinite; }
+.hud .cart-fortress .flag { transform-box: view-box; transform-origin: 16px 5px; animation: cart-flag 1.7s ease-in-out infinite; }
+.hud .cart-overrun .rush { animation: cart-rush 1.5s ease-in-out infinite; }
+.hud .cart-overrun .rush2 { animation-delay: .22s; }
+.hud .cart-overrun .rush3 { animation-delay: .44s; }
+.hud .cart-freeUpgrades .lift { animation: cart-bob 2s ease-in-out infinite; }
+.hud .cart-freeUpgrades .spark { animation: cart-twinkle 2.2s ease-in-out .4s infinite; }
+.hud .cart-plasmaCanon .orb { animation: cart-pulse 1.8s ease-in-out infinite; }
+.hud .cart-plasmaCanon .orb2 { transform-box: view-box; transform-origin: 17.4px 6.6px; animation: cart-ripple 1.8s ease-out infinite; }
+.hud .cart-criticalCoin .spincoin { animation: cart-coin 5s ease-in-out infinite; }
+.hud .cart-criticalCoin .spk { animation: cart-twinkle 2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.hud .cart-waveSkip .skip { animation: cart-skip 1.6s ease-in-out infinite; }
+.hud .cart-superTower .aura { transform-box: view-box; transform-origin: 12px 12px; animation: cart-aura 2.6s ease-in-out infinite; }
+.hud .cart-superTower .core { animation: cart-pulse 2s ease-in-out infinite; }
+.hud .cart-waveAccelerator .needle { transform-box: view-box; transform-origin: 12px 17px; animation: cart-needle 3s ease-in-out infinite; }
+.hud .cart-secondWind .wingL { transform-box: view-box; transform-origin: 9px 11px; animation: cart-wing 1.8s ease-in-out infinite; }
+.hud .cart-secondWind .wingR { transform-box: view-box; transform-origin: 15px 11px; animation: cart-wing 1.8s ease-in-out infinite; }
+.hud .cart-demonMode .flare { animation: cart-flick 1.3s ease-in-out infinite; }
+
+@keyframes cart-spin { to { transform: rotate(360deg); } }
+@keyframes cart-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+@keyframes cart-beat { 0%,32%,100% { transform: scale(1); } 12% { transform: scale(1.17); } 22% { transform: scale(1.04); } 40% { transform: scale(1.11); } 52% { transform: scale(1); } }
+@keyframes cart-twinkle { 0%,100% { opacity: .2; transform: scale(.6); } 50% { opacity: 1; transform: scale(1.15); } }
+@keyframes cart-bob { 0%,100% { transform: translateY(1px); } 50% { transform: translateY(-1.5px); } }
+@keyframes cart-flick { 0%,100% { opacity: .2; } 50% { opacity: .85; } }
+@keyframes cart-coin { 0%,66%,100% { transform: scaleX(1); } 84% { transform: scaleX(.44); } }
+@keyframes cart-ripple { 0% { transform: scale(.45); opacity: .85; } 100% { transform: scale(1.4); opacity: 0; } }
+@keyframes cart-rush { 0% { transform: translateX(-3px); opacity: .15; } 45% { opacity: 1; } 100% { transform: translateX(4px); opacity: .15; } }
+@keyframes cart-flag { 0%,100% { transform: skewX(0) scaleX(1); } 50% { transform: skewX(-12deg) scaleX(.94); } }
+@keyframes cart-needle { 0%,100% { transform: rotate(-34deg); } 55% { transform: rotate(40deg); } }
+@keyframes cart-tip { 0%,100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+@keyframes cart-aura { 0%,100% { transform: scale(.85); opacity: .25; } 50% { transform: scale(1.05); opacity: .6; } }
+@keyframes cart-wing { 0%,100% { transform: scaleX(1); } 50% { transform: scaleX(.55); } }
+@keyframes cart-nock { 0%,100% { transform: translateX(1.5px); } 45% { transform: translateX(-2.5px); } }
+@keyframes cart-skip { 0%,100% { transform: translateX(-1px); } 50% { transform: translateX(2px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .hud .ic.atom .nuc, .hud .ic .ccspin, .hud .ic .gemtw, .hud .ic .vb,
+  .hud .cart .beat, .hud .cart .hand, .hud .cart .ring, .hud .cart .r1, .hud .cart .r2,
+  .hud .cart .spincoin, .hud .cart .spark, .hud .cart .spark2, .hud .cart .spk, .hud .cart .flake,
+  .hud .cart .scale, .hud .cart .sheen, .hud .cart .flag, .hud .cart .rush, .hud .cart .lift,
+  .hud .cart .orb, .hud .cart .orb2, .hud .cart .core, .hud .cart .aura, .hud .cart .needle,
+  .hud .cart .wingL, .hud .cart .wingR, .hud .cart .flare, .hud .cart .arrow, .hud .cart .skip
+  { animation: none !important; transform: none !important; opacity: 1 !important; }
+}
 /* the cards-tab Draw button hugs its content so the cost sits next to the text, not pushed away */
 .hud .cards-top .cardbtn { flex: 0 0 auto; }
 .hud .cards-top .cardbtn .cb-tx { flex: 0 1 auto; }
