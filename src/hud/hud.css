@@ -911,16 +911,46 @@
   background: rgba(6,8,14,.6); pointer-events: auto; }
 .hud .setmodal.hide { display: none; }
 .hud .setmodal-inner { margin-top: 64px; width: min(340px, 90vw); background: #11151f; border: 1px solid #2a3550; border-radius: 6px; overflow: hidden; }
-.hud .setbody { padding: 8px 12px 12px; }
-.hud .setrow { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 12px;
-  background: transparent; border: 0; color: #d8deea; font: inherit; cursor: pointer; padding: 10px 4px; border-bottom: 1px solid #1f2740; }
-.hud .setrow:last-child { border-bottom: 0; }
-.hud .setrow .sl { display: inline-flex; align-items: center; gap: 9px;
+.hud .setbody { padding: 6px 12px 12px; }
+/* compact, titled sections */
+.hud .set-sec { margin-top: 8px; }
+.hud .set-sec:first-child { margin-top: 2px; }
+.hud .set-sec-t { font-size: 10.5px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase;
+  color: #6b7488; margin: 0 2px 2px; }
+.hud .set-grid { display: flex; flex-direction: column; }
+.hud .setrow { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 10px;
+  background: transparent; border: 0; color: #d8deea; font: inherit; cursor: pointer; padding: 6px 4px; border-bottom: 1px solid #1a2236; }
+.hud .set-grid .setrow:last-child { border-bottom: 0; }
+.hud .setrow .sl { display: inline-flex; align-items: center; gap: 8px; font-size: 13px;
   background: transparent; border: 0; border-radius: 0; padding: 0; cursor: inherit; }
-.hud .setrow .switch { flex: 0 0 auto; width: 38px; height: 22px; border-radius: 11px; background: #2a3142; position: relative; transition: background .15s; }
-.hud .setrow .switch i { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #8b93a7; transition: left .15s, background .15s; }
+.hud .setrow .switch { flex: 0 0 auto; width: 34px; height: 20px; border-radius: 10px; background: #2a3142; position: relative; transition: background .15s; }
+.hud .setrow .switch i { position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #8b93a7; transition: left .15s, background .15s; }
 .hud .setrow.on .switch { background: #1f5e3a; }
-.hud .setrow.on .switch i { left: 19px; background: #3ddc84; }
+.hud .setrow.on .switch i { left: 17px; background: #3ddc84; }
+
+/* ---- in-run active-skill rail (left edge): equipped active cards as status chips ---- */
+.hud .actives { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); z-index: 6;
+  display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.hud .actives.hide { display: none; }
+.hud .actchip { pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  width: 58px; padding: 6px 4px 5px; border-radius: 12px; cursor: default;
+  background: rgba(13,16,25,.72); border: 1px solid #2a3245; color: #cfd6e6;
+  font: 700 10px 'Roboto', system-ui; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.hud .actchip .ac-ic { width: 30px; height: 30px; border-radius: 50%; position: relative; color: var(--tint);
+  display: flex; align-items: center; justify-content: center; }
+.hud .actchip .ac-ic::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--tint); opacity: .16; }
+.hud .actchip .ac-ic .ic { position: relative; filter: drop-shadow(0 0 4px currentColor); }
+.hud .actchip .ac-s { font-variant-numeric: tabular-nums; letter-spacing: .2px; }
+.hud .actchip.armed { cursor: pointer; border-color: #e64cff; animation: actpulse 1.4s ease-in-out infinite; }
+.hud .actchip.armed:hover { background: rgba(40,20,52,.9); }
+.hud .actchip.armed .ac-s { color: #f0b6ff; }
+.hud .actchip.active { border-color: #3ddc84; box-shadow: 0 0 12px rgba(61,220,132,.38); }
+.hud .actchip.active .ac-s { color: #5dffa0; }
+.hud .actchip.ready .ac-s { color: #9fd8ff; }
+.hud .actchip.cooldown { opacity: .82; } .hud .actchip.cooldown .ac-s { color: #8b93a7; }
+.hud .actchip.spent { opacity: .5; } .hud .actchip.spent .ac-ic { filter: grayscale(.7); }
+@keyframes actpulse { 0%,100% { box-shadow: 0 0 0 1px rgba(230,76,255,.4), 0 0 10px rgba(230,76,255,.22); } 50% { box-shadow: 0 0 0 1px rgba(230,76,255,.7), 0 0 18px rgba(230,76,255,.5); } }
+@media (prefers-reduced-motion: reduce) { .hud .actchip.armed { animation: none; } }
 
 /* ---- floating "Skip tutorial" button (shown during the in-run guided tutorial) ---- */
 .hud .tut-skip { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 62;
@@ -1126,7 +1156,9 @@
 .hud .cart-damage .arrow { animation: cart-nock 2.4s ease-in-out infinite; }
 .hud .cart-attackSpeed .hand { transform-box: view-box; transform-origin: 12px 12px; animation: cart-spin 2.6s linear infinite; }
 .hud .cart-health .beat { animation: cart-beat 1.7s ease-in-out infinite; }
-.hud .cart-healthRegen .ring { transform-box: view-box; transform-origin: 12px 12px; animation: cart-spin 7s linear infinite; }
+.hud .cart-healthRegen .pop { transform-box: fill-box; transform-origin: center; animation: cart-pop 2.4s ease-out infinite; }
+.hud .cart-healthRegen .pop2 { animation-delay: .8s; }
+.hud .cart-healthRegen .pop3 { animation-delay: 1.6s; }
 .hud .cart-range .r1, .hud .cart-range .r2 { transform-box: view-box; transform-origin: 12px 12px; animation: cart-ripple 2.8s ease-out infinite; }
 .hud .cart-range .r2 { animation-delay: 1.4s; }
 .hud .cart-cash .spincoin { animation: cart-coin 5s ease-in-out infinite; }
@@ -1149,7 +1181,6 @@
 .hud .cart-waveSkip .skip { animation: cart-skip 1.6s ease-in-out infinite; }
 .hud .cart-superTower .aura { transform-box: view-box; transform-origin: 12px 12px; animation: cart-aura 2.6s ease-in-out infinite; }
 .hud .cart-superTower .core { animation: cart-pulse 2s ease-in-out infinite; }
-.hud .cart-waveAccelerator .needle { transform-box: view-box; transform-origin: 12px 17px; animation: cart-needle 3s ease-in-out infinite; }
 .hud .cart-secondWind .wingL { transform-box: view-box; transform-origin: 9px 11px; animation: cart-wing 1.8s ease-in-out infinite; }
 .hud .cart-secondWind .wingR { transform-box: view-box; transform-origin: 15px 11px; animation: cart-wing 1.8s ease-in-out infinite; }
 .hud .cart-demonMode .flare { animation: cart-flick 1.3s ease-in-out infinite; }
@@ -1164,7 +1195,7 @@
 @keyframes cart-ripple { 0% { transform: scale(.45); opacity: .85; } 100% { transform: scale(1.4); opacity: 0; } }
 @keyframes cart-rush { 0% { transform: translateX(-3px); opacity: .15; } 45% { opacity: 1; } 100% { transform: translateX(4px); opacity: .15; } }
 @keyframes cart-flag { 0%,100% { transform: skewX(0) scaleX(1); } 50% { transform: skewX(-12deg) scaleX(.94); } }
-@keyframes cart-needle { 0%,100% { transform: rotate(-34deg); } 55% { transform: rotate(40deg); } }
+@keyframes cart-pop { 0% { opacity: 0; transform: translateY(2px) scale(.3); } 25% { opacity: 1; transform: translateY(-1px) scale(1); } 100% { opacity: 0; transform: translateY(-7px) scale(.7); } }
 @keyframes cart-tip { 0%,100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
 @keyframes cart-aura { 0%,100% { transform: scale(.85); opacity: .25; } 50% { transform: scale(1.05); opacity: .6; } }
 @keyframes cart-wing { 0%,100% { transform: scaleX(1); } 50% { transform: scaleX(.55); } }
@@ -1173,7 +1204,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .hud .ic.atom .nuc, .hud .ic .ccspin, .hud .ic .gemtw, .hud .ic .vb,
-  .hud .cart .beat, .hud .cart .hand, .hud .cart .ring, .hud .cart .r1, .hud .cart .r2,
+  .hud .cart .beat, .hud .cart .hand, .hud .cart .pop, .hud .cart .r1, .hud .cart .r2,
   .hud .cart .spincoin, .hud .cart .spark, .hud .cart .spark2, .hud .cart .spk, .hud .cart .flake,
   .hud .cart .scale, .hud .cart .sheen, .hud .cart .flag, .hud .cart .rush, .hud .cart .lift,
   .hud .cart .orb, .hud .cart .orb2, .hud .cart .core, .hud .cart .aura, .hud .cart .needle,

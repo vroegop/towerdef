@@ -9,14 +9,15 @@
 // Each entry is the inner SVG body; the animated layer carries a class the CSS targets.
 const CARD_ART: Record<string, string> = {
   // ---- COMMON ----
-  // Damage — a drawn bow; the arrow nocks back and releases.
+  // Damage — a drawn bow; the single-pointed arrow nocks back and releases. The rear is crossed
+  // fletching (feathers), NOT a second arrowhead.
   damage:
     '<path d="M8 3a11 11 0 0 1 0 18"/>' +
     '<path d="M8 3 13 12 8 21" stroke-width="1.2"/>' +
     '<g class="arrow">' +
     '<path d="M5.5 12H19" stroke-width="1.8"/>' +
     '<path d="M16.4 9.2 20 12l-3.6 2.8"/>' +
-    '<path d="M5.5 12 7.9 10.2M5.5 12 7.9 13.8" stroke-width="1.4"/>' +
+    '<path d="M6.2 10.4 8.6 12.8M6.2 13.6 8.6 11.2" stroke-width="1.2"/>' +
     '</g>',
 
   // Attack Speed — a dial with a fast-sweeping hand.
@@ -33,15 +34,12 @@ const CARD_ART: Record<string, string> = {
     '<path d="M8.4 9.6A3.2 3.2 0 0 1 12 7.6" stroke="#fff" stroke-opacity=".55" stroke-width="1.3"/>' +
     '</g>',
 
-  // Health Regen — a heart wrapped in two orbiting recovery arrows.
+  // Health Regen — a heart with small hearts popping out and rising.
   healthRegen:
-    '<path d="M12 18.4C8 15.9 6.3 13.2 6.3 11.1A2.6 2.6 0 0 1 12 9.3a2.6 2.6 0 0 1 5.7 1.8c0 2.1-1.7 4.8-5.7 7.3Z" fill="currentColor" fill-opacity=".8"/>' +
-    '<g class="ring">' +
-    '<path d="M4.6 12A7.4 7.4 0 0 1 16.7 6.6" stroke="#bfffd9" stroke-width="1.5"/>' +
-    '<path d="M16.9 3.3l.3 3.5-3.5-.1" stroke="#bfffd9" stroke-width="1.5"/>' +
-    '<path d="M19.4 12A7.4 7.4 0 0 1 7.3 17.4" stroke="#bfffd9" stroke-width="1.5"/>' +
-    '<path d="M7.1 20.7l-.3-3.5 3.5.1" stroke="#bfffd9" stroke-width="1.5"/>' +
-    '</g>',
+    '<path d="M12 19C7.6 16 5.8 13 5.8 10.6A3 3 0 0 1 12 8.4a3 3 0 0 1 6.2 2.2c0 2.4-1.8 5.4-6.2 8.4Z" fill="currentColor" fill-opacity=".85"/>' +
+    '<g class="pop pop1"><path d="M6.6 9.4c-.8-.6-2-.05-2 .95 0 .8 1 1.6 2 2.25 1-.65 2-1.45 2-2.25 0-1-1.2-1.55-2-.95Z" fill="#bfffd9" stroke="none"/></g>' +
+    '<g class="pop pop2"><path d="M17.4 8.8c-.7-.5-1.75-.05-1.75.85 0 .7.9 1.4 1.75 2 .85-.6 1.75-1.3 1.75-2 0-.9-1.05-1.35-1.75-.85Z" fill="#bfffd9" stroke="none"/></g>' +
+    '<g class="pop pop3"><path d="M12 5c-.6-.45-1.5-.05-1.5.75 0 .6.75 1.2 1.5 1.7.75-.5 1.5-1.1 1.5-1.7 0-.8-.9-1.2-1.5-.75Z" fill="#eafff2" stroke="none"/></g>',
 
   // Range — radar: static rings + a centre, with two ripples pulsing outward.
   range:
@@ -51,12 +49,14 @@ const CARD_ART: Record<string, string> = {
     '<g class="r1"><circle cx="12" cy="12" r="6" stroke-width="1.6"/></g>' +
     '<g class="r2"><circle cx="12" cy="12" r="6" stroke-width="1.6"/></g>',
 
-  // Gold — a single struck coin that turns on its edge.
+  // Gold — two overlapping struck coins (matching the coin currency glyph), gently turning. No symbol
+  // on the face: this is gold, not dollars.
   cash:
     '<g class="spincoin">' +
-    '<circle cx="12" cy="12" r="8.5" fill="currentColor" fill-opacity=".92" stroke="#9a7416" stroke-width="1.2"/>' +
-    '<circle cx="12" cy="12" r="6.3" stroke="#9a7416" stroke-opacity=".5" stroke-width="1"/>' +
-    '<path d="M12 7.3v9.4M9.8 9.2c0-1 1-1.6 2.2-1.6s2.2.7 2.2 1.7c0 2.2-4.4 1.2-4.4 3.4 0 1 1 1.7 2.2 1.7s2.2-.6 2.2-1.6" stroke="#6e520f" stroke-width="1.3"/>' +
+    '<circle cx="14.6" cy="9.4" r="6.4" fill="currentColor" fill-opacity=".92" stroke="#9a7416" stroke-width="1.1"/>' +
+    '<circle cx="14.6" cy="9.4" r="4.3" stroke="#9a7416" stroke-opacity=".45" stroke-width=".9"/>' +
+    '<circle cx="9.4" cy="14.6" r="6.4" fill="currentColor" stroke="#9a7416" stroke-width="1.1"/>' +
+    '<circle cx="9.4" cy="14.6" r="4.3" stroke="#9a7416" stroke-opacity=".45" stroke-width=".9"/>' +
     '</g>',
 
   // Coins — a stack of coins with a glinting sparkle.
@@ -146,20 +146,13 @@ const CARD_ART: Record<string, string> = {
     '<path d="M8.4 13.4h7.2M10 21v-4.4h4V21" stroke-opacity=".6" stroke-width="1.2"/>' +
     '<g class="core"><circle cx="12" cy="8.6" r="2.2" fill="#fff" fill-opacity=".92" stroke-width="1.2"/></g>',
 
-  // Accelerator — a speedometer with a needle sweeping into the red.
-  waveAccelerator:
-    '<path d="M4 17a8 8 0 0 1 16 0" stroke-width="1.7"/>' +
-    '<path d="M4 17h1.7M18.3 17H20M6.6 9.6l1.1 1.2M17.4 9.6l-1.1 1.2M12 6v1.7" stroke-width="1.3"/>' +
-    '<g class="needle"><path d="M12 17 16.3 10.8" stroke-width="2"/></g>' +
-    '<circle cx="12" cy="17" r="1.7" fill="currentColor" stroke="none"/>',
-
-  // Second Wind — a winged heart, the wings beating as it revives.
+  // Revive (Second Wind) — a winged heart, the wings beating as it revives.
   secondWind:
     '<path d="M12 19.2c-3.7-2.5-5.2-5-5.2-7A2.6 2.6 0 0 1 12 10.4a2.6 2.6 0 0 1 5.2 1.8c0 2-1.5 4.5-5.2 7Z" fill="currentColor" fill-opacity=".88"/>' +
     '<g class="wingL"><path d="M9 11.4C6.4 8.8 3.2 8.6 1.6 9.7c1.9.4 2.3 1.5 2.5 2.8 1.1-.7 2.6-.5 3.4.4Z" fill="#ffd2d8" stroke="none"/></g>' +
     '<g class="wingR"><path d="M15 11.4c2.6-2.6 5.8-2.8 7.4-1.7-1.9.4-2.3 1.5-2.5 2.8-1.1-.7-2.6-.5-3.4.4Z" fill="#ffd2d8" stroke="none"/></g>',
 
-  // Demon Mode — a horned demon head with eyes that flare.
+  // Dark Wiz (Demon Mode) — a horned dark-wizard head with eyes that flare.
   demonMode:
     '<path d="M6.4 7.4C5.2 5.3 5.1 3.6 5.6 2.4c1.3 1 2.2 2.2 2.8 3.7M17.6 7.4c1.2-2.1 1.3-3.8.8-5-1.3 1-2.2 2.2-2.8 3.7" fill="currentColor" fill-opacity=".5" stroke-width="1.2"/>' +
     '<path d="M12 6.6c4 0 6.6 2.6 6.6 6 0 4-3 6.6-6.6 8.6C8.4 19.2 5.4 16.6 5.4 12.6c0-3.4 2.6-6 6.6-6Z" fill="currentColor" fill-opacity=".75" stroke-width="1.4"/>' +

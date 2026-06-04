@@ -6,7 +6,9 @@ import { makeRng } from '../../src/sim/rng';
 import { createState } from '../../src/sim/state';
 import { migrateMeta } from '../../src/sim/labs';
 import { fireProjectile, tickProjectiles, applyHit } from '../../src/sim/projectiles';
-import { computeStats, RAPID_MULT } from '../../src/sim/skills';
+import { computeStats, RAPID_MULT, UP_BY_ID, skillUnlockCost } from '../../src/sim/skills';
+import { makeEnemy } from '../../src/sim/enemies';
+import { waveHp } from '../../src/sim/waves';
 import { Sim } from '../../src/sim/core';
 import type { Enemy, Meta, State, Stats } from '../../src/types';
 
@@ -401,5 +403,39 @@ describe('crit', () => {
     // critChance < 1 → floor = 0 (no guaranteed crit); the 0.8 is an 80% chance of a single crit.
     expect(Math.floor(st.critChance)).toBe(0);
     expect(st.critChance - Math.floor(st.critChance)).toBeCloseTo(0.8, 5);
+  });
+});
+
+describe('Skip Enemy Health / Attack utilities', () => {
+  it('cost mirrors the Damage coin cost read at 10× the level', () => {
+    const dmg = UP_BY_ID.rangedDamage;
+    for (const id of ['skipEnemyHp', 'skipEnemyDmg']) {
+      const up = UP_BY_ID[id];
+      expect(up.coin.cost(0)).toBe(dmg.coin.cost(10)); // skip L1 == Damage L10
+      expect(up.coin.cost(599)).toBe(dmg.coin.cost(6000)); // skip L600 == Damage L6000
+      // past L600 the cost grows linearly by a constant step (Damage 5990→6000 per-level gap)
+      const step = dmg.coin.cost(6000) - up.coin.cost(598);
+      expect(up.coin.cost(600) - up.coin.cost(599)).toBeCloseTo(step, 0);
+    }
+  });
+  it('chance is +0.05%/level, capped near 35% at the 699 level cap; unlocks for 500M', () => {
+    const up = UP_BY_ID.skipEnemyHp;
+    expect(up.max).toBe(699);
+    expect(up.value(1)).toBeCloseTo(0.0005, 6);
+    expect(up.value(699)).toBeCloseTo(0.3495, 6);
+    expect(up.value(700)).toBeCloseTo(0.3495, 6); // capped beyond the table
+    expect(skillUnlockCost('skipEnemyHp')).toBe(500_000_000);
+    expect(skillUnlockCost('skipEnemyDmg')).toBe(500_000_000);
+  });
+  it('makeEnemy treats a skipped enemy as that many waves weaker for the stat', () => {
+    const arena = { w: 960, h: 640 };
+    const rng = makeRng(1);
+    const wave = 200;
+    const base = makeEnemy(1, 'melee', wave, rng, arena, 0, 0, 1, 100, 0, 0);
+    const skipped = makeEnemy(2, 'melee', wave, makeRng(1), arena, 0, 0, 1, 100, 8, 0);
+    // 8 HP levels skipped → HP scales off wave 192, strictly less than the full wave-200 value
+    expect(skipped.strMult).toBeCloseTo(waveHp(wave - 8), 5);
+    expect(skipped.strMult).toBeLessThan(base.strMult);
+    expect(skipped.dmgMult).toBeCloseTo(base.dmgMult, 5); // attack untouched when only HP is skipped
   });
 });

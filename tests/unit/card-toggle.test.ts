@@ -28,7 +28,7 @@ const CARD_STAT: Record<string, keyof Stats> = {
   critChance: 'critChance', enemyBalance: 'enemyBalance', extraDefense: 'defPct', fortress: 'armor',
   overrun: 'lullReduce', freeUpgrades: 'cardFreeUp', plasmaCanon: 'plasmaCanon',
   criticalCoin: 'criticalCoin', waveSkip: 'waveSkip', superTower: 'superTower',
-  waveAccelerator: 'waveAccel', secondWind: 'secondWind', demonMode: 'demonMode',
+  secondWind: 'secondWind', demonMode: 'demonMode',
 };
 
 // Seed in-run upgrade levels so every base stat the cards touch is non-zero (regen/coinsPerKill/armor

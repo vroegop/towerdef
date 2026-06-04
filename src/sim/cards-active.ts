@@ -16,8 +16,7 @@ import { firePlasma } from './projectiles';
 // fixed cooldowns/durations not data-driven by the card value table (those values ARE the magnitude).
 export const SUPER_TOWER_DUR = 15;   // seconds Super Tower stays up
 export const SUPER_TOWER_CD = 30;    // seconds between Super Tower activations
-export const DEMON_MODE_CD = 310;    // seconds between Demon Mode activations
-export const DEMON_MODE_DMG = 3;     // Demon Mode multiplies outgoing damage by 3
+export const DEMON_MODE_DMG = 3;     // Dark Wiz (Demon Mode) multiplies outgoing damage by 3
 
 // Advance every active-card timer for one tick and apply their continuous effects. Must run BEFORE
 // the hero attacks so run.dmgBoost is current for this tick's shots. _rng_ is the seeded Sim PRNG.
@@ -42,20 +41,21 @@ export function tickActiveCards(s: State, dt: number, st: Stats, _rng: Rng): voi
     }
   }
 
-  // ---- Demon Mode: auto-activates when ready; ×3 dmg + invincible for [value]s, 310s cooldown. ----
+  // ---- Dark Wiz (Demon Mode): PLAYER-TRIGGERED, ONCE PER RUN. ×3 dmg + invincible for [value]s.
+  // The HUD sets run.demonReq when the player taps the button; we consume it here so activation stays
+  // inside the deterministic tick. No cooldown — it simply can't fire again once used this run. ----
   if (st.demonMode > 0) {
-    const dur = run.actActive.demonMode || 0;
-    const cd = run.actCd.demonMode || 0;
-    if (cd <= 0 && dur <= 0) run.actActive.demonMode = st.demonMode; // ready → fire this tick (value = duration)
+    if (run.demonReq && !run.demonUsed && (run.actActive.demonMode || 0) <= 0) {
+      run.actActive.demonMode = st.demonMode; // value = duration in seconds
+      run.demonUsed = true;
+    }
     if ((run.actActive.demonMode || 0) > 0) {
       dmgBoost *= DEMON_MODE_DMG;
       invuln = Math.max(invuln, run.actActive.demonMode || 0);
       run.actActive.demonMode = Math.max(0, (run.actActive.demonMode || 0) - dt);
-      if (run.actActive.demonMode <= 0) run.actCd.demonMode = DEMON_MODE_CD;
-    } else if (cd > 0) {
-      run.actCd.demonMode = Math.max(0, cd - dt);
     }
   }
+  run.demonReq = false; // a tap with nothing to fire (wrong state / not equipped) is simply dropped
 
   // ---- Plasma Canon: when a boss appears, lob ONE homing plasma orb at it for a share of its MAX
   // hp. Each boss is struck exactly once in its lifetime (tracked in run.plasmaDone). ----
@@ -92,3 +92,9 @@ export function trySecondWind(s: State, st: Stats): boolean {
 
 // Is the hero currently invincible (Demon Mode or Second Wind shield)?
 export const heroInvuln = (s: State): boolean => (s.run.invuln || 0) > 0;
+
+// Player requested an active skill from the HUD. Only Dark Wiz (Demon Mode) is manually triggered;
+// the request is a flag consumed on the next deterministic tick (see tickActiveCards).
+export function requestActiveSkill(s: State, id: string): void {
+  if (id === 'demonMode') s.run.demonReq = true;
+}

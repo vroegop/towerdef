@@ -133,6 +133,9 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     '  <button class="sideitem" id="h-rail-labs" title="Labs">' + icon('flask', 20) + '</button>' +
     '  <button class="sideitem danger" id="h-rail-exit" title="End run">' + icon('close', 20) + '</button>' +
     '</aside>' +
+    // Active-skill rail: equipped active cards surface here during a run (auto ones as status chips,
+    // Dark Wiz as a tap-to-fire button, Revive as an armed/used indicator). Empty → hidden.
+    '<div class="actives hide" id="h-actives"></div>' +
     '<div class="statswrap hide" id="h-stats"><div class="statscard" id="h-statscard"></div></div>' +
     '<div class="ghint hide" id="h-ghint"></div>' +
     // Tab dock: two stat panels (our stats | enemy stats) sit as the dock's top row, above the
@@ -1005,8 +1008,59 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     }
   }
 
+  // In-run active-skill rail. Surfaces each EQUIPPED active card as a status chip; only Dark Wiz is
+  // tappable (it's the lone manually-triggered skill). Rebuilds only when the rail's content actually
+  // changes (tracked via a signature) so taps aren't interrupted by per-frame DOM churn.
+  const ACTIVE_RAIL = ['superTower', 'plasmaCanon', 'secondWind', 'demonMode'];
+  let lastActivesSig = '';
+  function activeChip(id: string, s: State): { cls: string; label: string } {
+    const run = s.run || ({} as State['run']);
+    const act = (run.actActive || {})[id] || 0;
+    const cd = (run.actCd || {})[id] || 0;
+    const ceil = (v: number): string => Math.ceil(v) + 's';
+    if (id === 'demonMode') {
+      if (act > 0) return { cls: 'active', label: ceil(act) };
+      if (run.demonUsed) return { cls: 'spent', label: 'Used' };
+      return { cls: 'armed', label: 'Activate' };
+    }
+    if (id === 'secondWind') {
+      if (act > 0) return { cls: 'active', label: 'Shield ' + ceil(act) };
+      if (run.secondWindUsed) return { cls: 'spent', label: 'Used' };
+      return { cls: 'ready', label: 'Armed' };
+    }
+    if (id === 'superTower') {
+      if (act > 0) return { cls: 'active', label: ceil(act) };
+      if (cd > 0) return { cls: 'cooldown', label: ceil(cd) };
+      return { cls: 'ready', label: 'Ready' };
+    }
+    return { cls: 'ready', label: 'Auto' }; // plasmaCanon: fires automatically when a boss appears
+  }
+  function renderActives(s: State): void {
+    const equipped = activeCardIds(s.meta).filter((id) => ACTIVE_RAIL.includes(id));
+    equipped.sort((a, b) => ACTIVE_RAIL.indexOf(a) - ACTIVE_RAIL.indexOf(b));
+    if (!equipped.length) {
+      if (!activesEl.classList.contains('hide')) activesEl.classList.add('hide');
+      return;
+    }
+    const chips = equipped.map((id) => ({ id, def: CARDS[id], ...activeChip(id, s) }));
+    const sig = chips.map((c) => c.id + ':' + c.cls + ':' + c.label).join('|');
+    if (sig !== lastActivesSig) {
+      lastActivesSig = sig;
+      activesEl.innerHTML = chips
+        .map(
+          (c) =>
+            '<button class="actchip ' + c.cls + '" data-skill="' + c.id + '" title="' + (c.def ? c.def.name : c.id) + '">' +
+            '<span class="ac-ic" style="--tint:' + (c.def ? c.def.tint : '#9b8cff') + '">' + cardArt(c.id, 24) + '</span>' +
+            '<span class="ac-s">' + c.label + '</span></button>',
+        )
+        .join('');
+    }
+    activesEl.classList.remove('hide');
+  }
+
   function update(s: State): void {
     lastS = s;
+    renderActives(s);
     if (!uel)
       uel = {
         wave: $('#h-wave'), hp: $('#h-hp'), gold: $('#h-gold'),
@@ -1230,24 +1284,38 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
 
   // ---------- settings modal (visual indicators; the object is shared with the renderer) ----------
   const settings: Partial<Settings> = handlers.settings || {};
-  const SETTINGS_DEF: { key: keyof Settings; label: string; icon: string; cls?: string }[] = [
-    { key: 'goldOnKill', label: 'Gold on kill', icon: 'coin', cls: 'gold' },
-    { key: 'coinOnKill', label: 'Coins on kill', icon: 'coinstar', cls: 'coin' },
-    { key: 'enemyHp', label: 'Enemy health bars', icon: 'heart', cls: 'hp' },
-    { key: 'damageNumbers', label: 'Damage numbers', icon: 'burst' },
-    { key: 'showTutorials', label: 'Show tutorials', icon: 'upgrades' },
-    { key: 'showOfflineReward', label: 'Offline summary', icon: 'best' },
+  type SetRow = { key: keyof Settings; label: string; icon: string; cls?: string };
+  // Grouped into titled sections (the modal renders one block per section, in a compact 2-col grid).
+  const SETTINGS_SECTIONS: { title: string; rows: SetRow[] }[] = [
+    { title: 'On-screen', rows: [
+      { key: 'goldOnKill', label: 'Gold on kill', icon: 'coin', cls: 'gold' },
+      { key: 'coinOnKill', label: 'Coins on kill', icon: 'coinstar', cls: 'coin' },
+      { key: 'enemyHp', label: 'Enemy HP bars', icon: 'heart', cls: 'hp' },
+      { key: 'damageNumbers', label: 'Damage numbers', icon: 'burst' },
+    ] },
+    { title: 'Wave messages', rows: [
+      { key: 'msgWaveSkip', label: 'Wave skipped', icon: 'arrow', cls: 'cyan' },
+      { key: 'msgInterest', label: 'Interest gained', icon: 'coin', cls: 'gold' },
+      { key: 'msgEnemySkip', label: 'Enemy level skipped', icon: 'shield', cls: 'green' },
+    ] },
+    { title: 'Guidance', rows: [
+      { key: 'showTutorials', label: 'Show tutorials', icon: 'upgrades' },
+      { key: 'showOfflineReward', label: 'Offline summary', icon: 'best' },
+    ] },
   ];
   const setmodal = $('#h-setmodal'),
     setmodalInner = $('#h-setmodal-inner');
   // Toggle rows are built from one source, reused by the in-game side-rail gear and the
   // between-games menu gear (both open the same centered modal, mutating the shared `settings`).
+  const settingsRowHtml = (o: SetRow): string =>
+    '<button class="setrow' + (settings[o.key] ? ' on' : '') + '" data-set="' + o.key + '">' +
+    '<span class="sl">' + icon(o.icon, 15, o.cls || '') + '<span>' + o.label + '</span></span>' +
+    '<span class="switch"><i></i></span></button>';
   const settingsRowsHtml = (): string =>
-    SETTINGS_DEF.map(
-      (o) =>
-        '<button class="setrow' + (settings[o.key] ? ' on' : '') + '" data-set="' + o.key + '">' +
-        '<span class="sl">' + icon(o.icon, 16, o.cls || '') + '<span>' + o.label + '</span></span>' +
-        '<span class="switch"><i></i></span></button>',
+    SETTINGS_SECTIONS.map(
+      (sec) =>
+        '<div class="set-sec"><div class="set-sec-t">' + sec.title + '</div>' +
+        '<div class="set-grid">' + sec.rows.map(settingsRowHtml).join('') + '</div></div>',
     ).join('');
   const wireSettingsRows = (el: HTMLElement): void =>
     el.querySelectorAll<HTMLElement>('[data-set]').forEach((b) =>
@@ -1576,7 +1644,14 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     menuContent = $('#h-menu-content'),
     menuTabsEl = $('#h-menu-tabs');
   const tabbarEl = $('#h-tabbar'),
-    topEl = $('#h-top');
+    topEl = $('#h-top'),
+    activesEl = $('#h-actives');
+  // Tap-to-fire delegation for active-skill buttons (only Dark Wiz is manually triggered today).
+  activesEl.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('[data-skill]') as HTMLElement | null;
+    if (!btn || !btn.classList.contains('armed')) return;
+    handlers.onActivateSkill && handlers.onActivateSkill(btn.dataset.skill!);
+  });
   const modal = $('#h-modal'),
     modalInner = $('#h-modal-inner');
   attachOverscrollBounce(menuContent); // rubber-band overscroll on the between-games menu body
@@ -2135,6 +2210,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     closeRunModals();
     tabbarEl.style.display = 'none';
     topEl.style.display = 'none';
+    activesEl.classList.add('hide');
   }
   function refreshMenu(meta: Meta): void {
     if (meta) lastMeta = meta;
@@ -2163,6 +2239,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     const e = earn || {};
     const offline = !!(opts && opts.offline);
     closeRunModals(); // a run just ended — don't leave an in-run modal floating over the overview
+    activesEl.classList.add('hide');
     const tier = meta.tier || 1;
     const rew = '<div class="rew"><span>Coins</span><b>+' + (e.coins || 0) + ' ' + coinsIc(16) + '</b></div>';
     const row = (label: string, val: string): string => '<div class="strow"><span>' + label + '</span><b>' + val + '</b></div>';

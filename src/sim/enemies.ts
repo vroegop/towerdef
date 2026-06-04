@@ -31,10 +31,12 @@ const ihp = (base: number, mult: number): number => Math.max(1, Math.round(base 
 // `diff` is the tier's flat HP/damage multiplier (state.difficultyMult = tierMult(tier)); 1 = tier 1.
 // HP and damage follow SEPARATE wave curves, each ×diff. strMult/dmgMult are the resolved per-enemy
 // multipliers, kept on the enemy so ageSurvivors can compound them independently.
-export function makeEnemy(id: number, type: string, waveN: number, rng: Rng, arena: Arena, cx = arena.w / 2, cy = arena.h / 2, diff = 1, spawnR = arena.w * 0.35): Enemy {
+export function makeEnemy(id: number, type: string, waveN: number, rng: Rng, arena: Arena, cx = arena.w / 2, cy = arena.h / 2, diff = 1, spawnR = arena.w * 0.35, hpSkip = 0, dmgSkip = 0): Enemy {
   const def = TYPES[type];
-  const strMult = waveHp(waveN) * diff, // HP multiplier (also the "strength" proxy for splits)
-    dmgMult = waveDmg(waveN) * diff; // damage multiplier (grows slower than HP)
+  // Skip Enemy Health/Attack utilities: treat the enemy as `skip` waves lower for that stat (HP and
+  // attack scale off the wave number), so accumulated skips keep enemies softer for the rest of the run.
+  const strMult = waveHp(Math.max(1, waveN - (hpSkip || 0))) * diff, // HP multiplier (also the "strength" proxy for splits)
+    dmgMult = waveDmg(Math.max(1, waveN - (dmgSkip || 0))) * diff; // damage multiplier (grows slower than HP)
   const speed = def.speed * waveSpeed(waveN); // tier does NOT change speed (Tower-style)
   // Spawn on a CIRCLE of radius `spawnR` (default 1.4× tower range, passed by the sim) around the
   // stationary hero at (cx, cy), at a uniformly random angle. The old rectangular arena-box edge
@@ -58,8 +60,11 @@ export function makeEnemy(id: number, type: string, waveN: number, rng: Rng, are
 
 export function ageSurvivors(state: State, newWaveN: number): void {
   const diff = state.difficultyMult || 1;
-  const baseHp = waveHp(newWaveN) * diff, // fresh same-tier HP multiplier this wave
-    baseDmg = waveDmg(newWaveN) * diff,
+  // Survivors track the same enemy-skip discount as fresh spawns (see makeEnemy).
+  const hpSkip = (state.run && state.run.hpSkip) || 0,
+    dmgSkip = (state.run && state.run.dmgSkip) || 0;
+  const baseHp = waveHp(Math.max(1, newWaveN - hpSkip)) * diff, // fresh same-tier HP multiplier this wave
+    baseDmg = waveDmg(Math.max(1, newWaveN - dmgSkip)) * diff,
     baseSpd = waveSpeed(newWaveN);
   for (const e of state.enemies) {
     const def = TYPES[e.type];
