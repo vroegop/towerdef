@@ -726,6 +726,42 @@ const CARD_SPECS: Record<string, CardSpec> = {
     effects: [{ stat: 'lullReduce', kind: 'mechanic' }],
     curve: tbl([[1, 0.3], [15, 4.5]]), // linear: 0.3s of lull cut per star (5s base → 0.5s floor at ★15)
     fmt: (v) => '-' + v.toFixed(1) + 's', desc: (v) => '-' + v.toFixed(1) + 's wave cooldown' },
+  critPower: { id: 'critPower', name: 'Critical Power', art: 'critPower', tint: '#ffd24a', rarity: 'common',
+    effects: [{ stat: 'critDamage', kind: 'mult' }],
+    curve: tbl([[1, 1.15], [3, 1.25], [5, 1.35], [7, 1.45], [9, 1.55], [11, 1.65], [13, 1.75], [15, 1.85]]),
+    fmt: xMul, desc: (v) => xMul(v) + ' crit damage' },
+  frenzy: { id: 'frenzy', name: 'Frenzy', art: 'frenzy', tint: '#ffae4a', rarity: 'common',
+    effects: [{ stat: 'rapidChance', kind: 'flat' }],
+    curve: tbl([[1, 0.03], [3, 0.04], [5, 0.05], [7, 0.06], [9, 0.07], [11, 0.08], [13, 0.09], [15, 0.10]]),
+    fmt: xPct, desc: (v) => xPct(v) + ' burst chance' },
+  volley: { id: 'volley', name: 'Volley', art: 'volley', tint: '#4aa8ff', rarity: 'common',
+    effects: [{ stat: 'msChance', kind: 'flat' }],
+    curve: tbl([[1, 0.04], [3, 0.05], [5, 0.06], [7, 0.07], [9, 0.08], [11, 0.09], [13, 0.10], [15, 0.12]]),
+    fmt: xPct, desc: (v) => xPct(v) + ' split chance' },
+  lifesteal: { id: 'lifesteal', name: 'Lifesteal', art: 'lifesteal', tint: '#ff5d6c', rarity: 'common',
+    effects: [{ stat: 'lifesteal', kind: 'flat' }],
+    curve: tbl([[1, 0.01], [3, 0.015], [5, 0.02], [7, 0.025], [9, 0.03], [11, 0.035], [13, 0.04], [15, 0.05]]),
+    fmt: (v) => '+' + (v * 100).toFixed(1) + '%', desc: (v) => '+' + (v * 100).toFixed(1) + '% lifesteal' },
+  thorns: { id: 'thorns', name: 'Thorns', art: 'thorns', tint: '#37d7ff', rarity: 'common',
+    effects: [{ stat: 'thorns', kind: 'flat' }],
+    curve: tbl([[1, 0.02], [3, 0.03], [5, 0.04], [7, 0.05], [9, 0.06], [11, 0.07], [13, 0.08], [15, 0.10]]),
+    fmt: (v) => '+' + (v * 100).toFixed(0) + '%', desc: (v) => '+' + (v * 100).toFixed(0) + '% disintegrate' },
+  bounty: { id: 'bounty', name: 'Bounty', art: 'bounty', tint: '#ffd24a', rarity: 'common',
+    effects: [{ stat: 'goldPerWave', kind: 'flat' }],
+    curve: tbl([[1, 10], [3, 15], [5, 20], [7, 25], [9, 30], [11, 40], [13, 50], [15, 60]]),
+    fmt: (v) => '+' + Math.round(v), desc: (v) => '+' + Math.round(v) + ' gold/wave' },
+  ambush: { id: 'ambush', name: 'Ambush', art: 'ambush', tint: '#ff5d6c', rarity: 'common',
+    effects: [{ stat: 'ambush', kind: 'mechanic' }],
+    curve: tbl([[1, 0.25], [3, 0.34], [5, 0.43], [7, 0.52], [9, 0.61], [11, 0.70], [13, 0.80], [15, 0.90]]),
+    fmt: xPct, desc: (v) => xPct(v) + ' vs full-HP foes' },
+  lastStand: { id: 'lastStand', name: 'Last Stand', art: 'lastStand', tint: '#ffae4a', rarity: 'common',
+    effects: [{ stat: 'lastStand', kind: 'mechanic' }],
+    curve: tbl([[1, 0.20], [3, 0.29], [5, 0.38], [7, 0.47], [9, 0.55], [11, 0.63], [13, 0.72], [15, 0.80]]),
+    fmt: xPct, desc: (v) => 'up to ' + xPct(v) + ' at low HP' },
+  berserk: { id: 'berserk', name: 'Berserk', art: 'berserk', tint: '#e64cff', rarity: 'common',
+    effects: [{ stat: 'berserk', kind: 'mechanic' }],
+    curve: tbl([[1, 0.20], [3, 0.24], [5, 0.28], [7, 0.32], [9, 0.37], [11, 0.42], [13, 0.46], [15, 0.50]]),
+    fmt: (v) => '+' + (v * 100).toFixed(0) + '%', desc: (v) => 'up to +' + (v * 100).toFixed(0) + '% atk speed in a crowd' },
 
   // ---------------- RARE ----------------
   freeUpgrades: { id: 'freeUpgrades', name: 'Free Upgrades', art: 'coins', tint: '#3ddc84', rarity: 'rare',
@@ -744,6 +780,42 @@ const CARD_SPECS: Record<string, CardSpec> = {
     effects: [{ stat: 'waveSkip', kind: 'mechanic' }],
     curve: tbl([[1, 0.09], [3, 0.10], [5, 0.11], [7, 0.13], [9, 0.15], [11, 0.17], [13, 0.19], [15, 0.21]]),
     fmt: xPct, desc: (v) => xPct(v) + ' chance to skip a wave' },
+  amplify: { id: 'amplify', name: 'Amplify', art: 'amplify', tint: '#e64cff', rarity: 'rare',
+    effects: [{ stat: 'rendChance', kind: 'flat' }, { stat: 'rendMult', kind: 'flat' }],
+    curve: tbl([[1, 0.04], [3, 0.05], [5, 0.06], [7, 0.07], [9, 0.08], [11, 0.09], [13, 0.10], [15, 0.12]]),
+    fmt: xPct, desc: (v) => xPct(v) + ' amp chance & power' },
+  overload: { id: 'overload', name: 'Overload', art: 'overload', tint: '#e64cff', rarity: 'rare',
+    effects: [{ stat: 'superCrit', kind: 'flat' }],
+    curve: tbl([[1, 0.02], [3, 0.03], [5, 0.04], [7, 0.05], [9, 0.06], [11, 0.07], [13, 0.08], [15, 0.10]]),
+    fmt: xPct, desc: (v) => xPct(v) + ' super-crit chance' },
+  onslaught: { id: 'onslaught', name: 'Onslaught', art: 'onslaught', tint: '#e64cff', rarity: 'rare',
+    effects: [{ stat: 'waveAccel', kind: 'mechanic' }],
+    curve: tbl([[1, 0.05], [3, 0.07], [5, 0.10], [7, 0.13], [9, 0.16], [11, 0.19], [13, 0.22], [15, 0.25]]),
+    fmt: (v) => '-' + (v * 100).toFixed(0) + '%', desc: (v) => '-' + (v * 100).toFixed(0) + '% wave interval' },
+  investor: { id: 'investor', name: 'Investor', art: 'investor', tint: '#3ddc84', rarity: 'rare',
+    effects: [{ stat: 'interest', kind: 'flat' }],
+    curve: tbl([[1, 0.005], [3, 0.007], [5, 0.010], [7, 0.013], [9, 0.016], [11, 0.020], [13, 0.025], [15, 0.030]]),
+    fmt: (v) => (v * 100).toFixed(1) + '%/wave', desc: (v) => '+' + (v * 100).toFixed(1) + '%/wave interest' },
+  execute: { id: 'execute', name: 'Execute', art: 'execute', tint: '#ff5d6c', rarity: 'rare',
+    effects: [{ stat: 'execute', kind: 'mechanic' }],
+    curve: tbl([[1, 0.04], [3, 0.045], [5, 0.05], [7, 0.06], [9, 0.07], [11, 0.08], [13, 0.09], [15, 0.10]]),
+    fmt: (v) => (v * 100).toFixed(0) + '%', desc: (v) => 'slay non-bosses under ' + (v * 100).toFixed(0) + '% HP' },
+  detonate: { id: 'detonate', name: 'Detonate', art: 'detonate', tint: '#ffae4a', rarity: 'rare',
+    effects: [{ stat: 'detonate', kind: 'mechanic' }],
+    curve: tbl([[1, 0.05], [3, 0.06], [5, 0.075], [7, 0.09], [9, 0.105], [11, 0.12], [13, 0.13], [15, 0.14]]),
+    fmt: (v) => (v * 100).toFixed(0) + '%', desc: (v) => 'death blast ' + (v * 100).toFixed(0) + '% of foe HP' },
+  aegis: { id: 'aegis', name: 'Aegis', art: 'aegis', tint: '#37d7ff', rarity: 'rare',
+    effects: [{ stat: 'aegis', kind: 'mechanic' }],
+    curve: tbl([[1, 0.08], [3, 0.10], [5, 0.12], [7, 0.14], [9, 0.16], [11, 0.17], [13, 0.19], [15, 0.20]]),
+    fmt: (v) => (v * 100).toFixed(0) + '%', desc: (v) => 'wave shield ' + (v * 100).toFixed(0) + '% max HP' },
+  vengeance: { id: 'vengeance', name: 'Vengeance', art: 'vengeance', tint: '#e64cff', rarity: 'rare',
+    effects: [{ stat: 'vengeance', kind: 'mechanic' }],
+    curve: tbl([[1, 1.6], [3, 1.8], [5, 2.0], [7, 2.2], [9, 2.4], [11, 2.6], [13, 2.8], [15, 3.0]]),
+    fmt: (v) => '×' + v.toFixed(1), desc: (v) => 'up to ×' + v.toFixed(1) + ' from damage taken' },
+  ascetic: { id: 'ascetic', name: 'Ascetic', art: 'ascetic', tint: '#3ddc84', rarity: 'rare',
+    effects: [{ stat: 'ascetic', kind: 'mechanic' }],
+    curve: tbl([[1, 0.006], [3, 0.007], [5, 0.008], [7, 0.009], [9, 0.010], [11, 0.012], [13, 0.013], [15, 0.015]]),
+    fmt: (v) => '+' + (v * 100).toFixed(1) + '%', desc: (v) => '+' + (v * 100).toFixed(1) + '%/wave HP while frugal' },
 
   // ---------------- EPIC (active abilities) ----------------
   superTower: { id: 'superTower', name: 'Super Tower', art: 'burst', tint: '#e64cff', rarity: 'epic',
@@ -770,7 +842,11 @@ for (const id of Object.keys(CARD_SPECS)) {
 export const CARD_ORDER = [
   'damage', 'attackSpeed', 'health', 'healthRegen', 'range', 'cash', 'coins', 'slowAura',
   'critChance', 'enemyBalance', 'extraDefense', 'fortress', 'overrun',
+  'critPower', 'frenzy', 'volley', 'lifesteal', 'thorns', 'bounty',
+  'ambush', 'lastStand', 'berserk',
   'freeUpgrades', 'plasmaCanon', 'criticalCoin', 'waveSkip',
+  'amplify', 'overload', 'onslaught', 'investor',
+  'execute', 'detonate', 'aegis', 'vengeance', 'ascetic',
   'superTower', 'secondWind', 'demonMode',
 ];
 export const CARD_SLOTS = CARD_ORDER.length; // grid size (one tile per defined card)
@@ -793,10 +869,28 @@ export const CARD_INFO: Record<string, string> = {
   extraDefense: 'Adds percentage damage reduction.',
   fortress: 'Multiplies your flat armor.',
   overrun: 'Shortens the no-spawn lull between waves, keeping pressure up.',
+  critPower: 'Multiplies your critical-hit damage.',
+  frenzy: 'Raises the chance to trigger a high fire-rate burst.',
+  volley: 'Raises the chance an attack splits to extra nearby targets.',
+  lifesteal: 'Heals you for a share of all damage you deal.',
+  thorns: 'Enemies that strike the tower lose a share of their own max HP.',
+  bounty: 'Adds bonus gold at the start of every wave.',
+  ambush: 'Deals bonus damage to enemies that are still at full health — rewarding the opening hit.',
+  lastStand: 'The lower your health, the harder you hit; the bonus peaks as you near death.',
+  berserk: 'Your attack speed climbs with every enemy crowding your range, up to a cap.',
   freeUpgrades: 'Raises the chance an in-run upgrade is free.',
   plasmaCanon: 'When a boss appears, hurls a plasma orb that strikes it once for a share of its max HP.',
   criticalCoin: 'Critical kills can drop bonus coins (base × crit damage).',
   waveSkip: 'Chance at each wave to skip it and bank coins + cash.',
+  amplify: 'Raises both the chance to apply Amp stacks and the damage each stack adds.',
+  overload: 'On a critical hit, raises the chance to apply the crit multiplier again.',
+  onslaught: 'Shortens the time between waves — faster spawns, faster spoils, faster bosses.',
+  investor: 'Earns extra gold each wave as interest on your banked gold.',
+  execute: 'Instantly slays any non-boss enemy that drops below a share of its max HP — a finisher for tanks and splitters.',
+  detonate: 'Slain enemies erupt, dealing a share of their own max HP to nearby foes (soft wave-clear).',
+  aegis: 'Begin every wave with a shield that absorbs a share of your max HP before any reaches you.',
+  vengeance: 'Damage you take fuels your offense: every 1% of your max HP suffered adds 1% damage, up to a cap.',
+  ascetic: 'Each wave you spend no gold or free upgrades grows your max HP — but the instant you buy one, it stops growing for the rest of the run. Coin upgrades are fine.',
   superTower: 'Activates for 15s of greatly boosted damage (30s cooldown).',
   secondWind: 'Auto-revives at half HP once per run with a brief shield. Stays armed until it fires.',
   demonMode: 'Tap to unleash: triple damage and invincibility for a while. Once per run.',
@@ -1012,6 +1106,14 @@ const CARD_PASSTHROUGH: Record<string, string> = {
   superTower: 'superTower',    // damage ×mult while active
   secondWind: 'secondWind',    // shield seconds on revive
   demonMode: 'demonMode',      // invincible/×3 seconds
+  ambush: 'ambush',            // +dmg fraction vs full-HP enemies
+  lastStand: 'lastStand',      // +dmg fraction at 0 HP, scaled by missing HP
+  berserk: 'berserk',          // attack-speed cap; per-enemy rate = cap/50
+  execute: 'execute',          // instakill non-bosses below this max-HP fraction
+  detonate: 'detonate',        // on-death blast = this fraction of the dead foe's max HP
+  aegis: 'aegis',              // per-wave shield = this fraction of max HP
+  vengeance: 'vengeance',      // damage ×cap fuelled by cumulative damage taken
+  ascetic: 'ascetic',          // +max-HP fraction per frugal wave (no gold/free upgrade)
 };
 export function computeStats(state: State): Stats {
   const b = (id: string) => boughtOf(state, id);
@@ -1079,6 +1181,14 @@ export function computeStats(state: State): Stats {
     secondWind: 0,     // Second Wind shield seconds (0 = card not active)
     demonMode: 0,      // Demon Mode duration seconds (0 = card not active)
     cardFreeUp: 0,     // added to the in-run free-upgrade chance
+    ambush: 0,         // Ambush: +dmg fraction vs full-HP enemies
+    lastStand: 0,      // Last Stand: +dmg fraction at 0 HP (scaled by missing HP)
+    berserk: 0,        // Berserk: attack-speed cap from crowding (per-enemy = cap/50)
+    execute: 0,        // Execute: instakill non-bosses below this max-HP fraction
+    detonate: 0,       // Detonate: on-death blast as a fraction of the dead foe's max HP
+    aegis: 0,          // Aegis: per-wave shield as a fraction of max HP
+    vengeance: 0,      // Vengeance: damage ×cap fuelled by cumulative damage taken
+    ascetic: 0,        // Ascetic: +max-HP fraction per frugal wave
   };
   // Resolve ACTIVE cards + labs into the final stats, keyed by SIM stat. Only cards placed in an
   // active slot count — merely owning a card does nothing. mult-kind card values are ABSOLUTE
@@ -1123,6 +1233,10 @@ export function computeStats(state: State): Stats {
   if (pass.cardCoinMult) out.coinsPerKill = (out.coinsPerKill || 1) * pass.cardCoinMult;
   // Free Upgrades card adds to the effective free-upgrade chance.
   if (pass.cardFreeUp) out.cardFreeUp = pass.cardFreeUp;
+  // Ascetic card: grow max HP by `ascetic` per FRUGAL wave (a wave with no gold/free-up skill buy).
+  // run.asceticWaves counts those waves; it stops climbing once run.asceticBroken is set (the first
+  // in-run upgrade). The bonus is read live here so it tracks the run without extra save state.
+  if (out.ascetic > 0 && state.run) out.maxHp *= 1 + out.ascetic * (state.run.asceticWaves || 0);
   // ---- passive COSMETIC buffs (unlocked tower/hud/background skins) ----
   // Always-on, multiplicative, and composed on TOP of cards + labs (matching their "multiply the
   // total so far" rule). Economy/wall-clock cosmetic buffs (coins / gems / lab speed) live in
@@ -1206,6 +1320,9 @@ export function buyRunUpgrade(state: State, id: string, rng?: { next(): number }
     state.econ.gold -= cost;
   }
   state.run.levels[id] = n + 1;
+  // Ascetic card: spending gold (or a free upgrade) on ANY in-run skill permanently stops its
+  // per-wave max-HP growth for this run. Coin/permanent buys (buyPerm) are deliberately exempt.
+  state.run.asceticBroken = true;
   return true;
 }
 

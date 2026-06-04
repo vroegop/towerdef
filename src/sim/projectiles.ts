@@ -82,12 +82,19 @@ export function applyHit(state: State, e: Enemy, baseDmg: number, stats: Stats, 
     e.rend = Math.min(MAX_REND, (e.rend || 0) + 1);
     e.rendT = REND_DECAY;
   }
-  const dealt = baseDmg * (1 + (e.rend || 0) * ((stats && stats.rendMult) || 0));
+  // Ambush card: a full-HP enemy (still untouched, so hp == hpMax) takes bonus damage on this hit.
+  const ambush = stats && stats.ambush > 0 && e.hp >= e.hpMax ? 1 + stats.ambush : 1;
+  const dealt = baseDmg * (1 + (e.rend || 0) * ((stats && stats.rendMult) || 0)) * ambush;
   e.hp -= dealt;
   e.lastHurt = 'dmg';
   state.econ.dmgDealt += dealt;
   e.hitFlash = 0.12;
   e.hitDmg = Math.round(dealt);
+  // Execute card: a surviving non-boss left below a fraction of its max HP is finished instantly.
+  if (stats && stats.execute > 0 && e.type !== 'boss' && e.hp > 0 && e.hp <= e.hpMax * stats.execute) {
+    state.econ.dmgDealt += e.hp;
+    e.hp = 0;
+  }
   if (stats && stats.lifesteal && state.hero) state.hero.hp = Math.min(state.hero.hpMax, state.hero.hp + dealt * stats.lifesteal);
   // ---- on-hit status effects: Frostbite (slow), Poison (DoT), Stun (freeze), Splash (collateral) ----
   // Frostbite: each hit chills the target, slowing it for FROST_DURATION (strongest chill + longest timer win).

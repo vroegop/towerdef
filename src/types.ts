@@ -202,6 +202,9 @@ export interface Run {
   demonUsed?: boolean;      // Dark Wiz fires only once per run
   hpSkip?: number;          // enemy HEALTH levels skipped so far this run (Skip Enemy Health utility)
   dmgSkip?: number;         // enemy ATTACK levels skipped so far this run (Skip Enemy Attack utility)
+  shield?: number;          // current Aegis shield HP (absorbs damage before it reaches the hero)
+  asceticWaves?: number;    // frugal waves accrued (no in-run gold/free-up buy) — drives the Ascetic card
+  asceticBroken?: boolean;  // set once an in-run upgrade is bought; freezes asceticWaves for the run
   streak?: number;          // consecutive kills since the hero last took damage (powers the Greed skill)
   // ---- Superpowers (per-run timers, reset each run) ----
   superCd?: Record<string, number>;     // seconds until each power may fire again

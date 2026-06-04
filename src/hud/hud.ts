@@ -294,10 +294,14 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   const STARP = 'M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6z';
   const STAT_ICON: Record<string, string> = { rangedDamage: 'bow', attackSpeed: 'rate', health: 'heart', regen: 'regen',
     critChance: 'crit', critDamage: 'burst', gold: 'coin',
-    thorns: 'shield', msChance: 'bolt', bounceChance: 'arrow', rendMult: 'burst', range: 'range', interest: 'coin' };
+    thorns: 'shield', msChance: 'bolt', bounceChance: 'arrow', rendMult: 'burst', range: 'range', interest: 'coin',
+    ambush: 'burst', lastStand: 'heart', berserk: 'rate', execute: 'crit', detonate: 'burst', aegis: 'shield',
+    vengeance: 'burst', ascetic: 'heart' };
   const STAT_LABEL: Record<string, string> = { rangedDamage: 'Damage', attackSpeed: 'Speed', health: 'HP', regen: 'Regen',
     critChance: 'Crit', critDamage: 'Crit Dmg', gold: 'Gold',
-    thorns: 'Disintegrate', msChance: 'Multi hit', bounceChance: 'Lightning Arc', rendMult: 'Amp', range: 'Range', interest: 'Interest' };
+    thorns: 'Disintegrate', msChance: 'Multi hit', bounceChance: 'Lightning Arc', rendMult: 'Amp', range: 'Range', interest: 'Interest',
+    ambush: 'Ambush', lastStand: 'Last Stand', berserk: 'Berserk', execute: 'Execute', detonate: 'Detonate', aegis: 'Shield',
+    vengeance: 'Vengeance', ascetic: 'Max HP/wave' };
   // currencies shown on the Hero screen
   const CURRENCIES: { key: 'coins' | 'gems' | 'vials' | 'energy'; icon: string; cls: string }[] = [
     { key: 'coins', icon: 'coinstar', cls: 'coin' },
