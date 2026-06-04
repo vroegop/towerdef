@@ -91,6 +91,13 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     zoom: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/><path d="M8 11h6M11 8v6"/>',
     // treasure chest = the check-in reward coffer (domed lid, seam, lock plate)
     chest: '<path d="M3 11v7a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-7"/><path d="M3 11a9 9 0 0 1 18 0"/><path d="M3 11h18"/><path d="M11 10.5h2v3.5h-2z"/>',
+    // compassHand = a hand-drawn compass ROSE just for the spoils LETTER, echoing the treasure-map look:
+    // an outer ring, a long 4-point cardinal star, a shorter intercardinal star (rotated 45°), and a
+    // hub. Paired with the #cr-rough ink filter for a sketched waver — see the .cr-emblem CSS.
+    compassHand: '<circle cx="12" cy="12" r="9.6"/>' +
+      '<path d="M12 2.8 L13.5 10.5 L21.2 12 L13.5 13.5 L12 21.2 L10.5 13.5 L2.8 12 L10.5 10.5 Z"/>' +
+      '<g transform="rotate(45 12 12)"><path d="M12 5.6 L12.9 11.1 L18.4 12 L12.9 12.9 L12 18.4 L11.1 12.9 L5.6 12 L11.1 11.1 Z"/></g>' +
+      '<circle cx="12" cy="12" r="1.3"/>',
     // refresh = cooldown; stopwatch = duration (both feather-style, 24×24 stroked)
     refresh: '<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3.5v5h-5"/>',
     stopwatch: '<circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9"/><path d="M9.5 2h5"/><path d="M12 2v3.5"/><path d="M18.8 6.8l1.4-1.4"/>',
@@ -194,6 +201,22 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
 
   // A themed skin ships its OWN override stylesheet, injected here.
   if (th.css) root.insertAdjacentHTML('afterbegin', '<style class="theme-style">' + th.css + '</style>');
+
+  // Turbulence-displacement SVG filters for the spoils letter, defined once here (after the root HTML is
+  // built, so they aren't wiped) so the url(#...) references resolve. Harmless if a swapped-in theme adds
+  // them again. #cr-rough: a gentle waver on the hand-drawn chest strokes (see .cr-chest CSS).
+  // #cr-paper: a much stronger, low-frequency displacement that tears the parchment SHEET's edges into an
+  // organic, hand-torn outline (applied to .checkin-reward::before, behind the crisp content).
+  root.insertAdjacentHTML('beforeend',
+    '<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">' +
+    '<filter id="cr-rough" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">' +
+    '<feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="7" result="n"/>' +
+    '<feDisplacementMap in="SourceGraphic" in2="n" scale="1.4" xChannelSelector="R" yChannelSelector="G"/>' +
+    '</filter>' +
+    '<filter id="cr-paper" x="-18%" y="-18%" width="136%" height="136%" color-interpolation-filters="sRGB">' +
+    '<feTurbulence type="fractalNoise" baseFrequency="0.013 0.018" numOctaves="3" seed="11" result="n"/>' +
+    '<feDisplacementMap in="SourceGraphic" in2="n" scale="9" xChannelSelector="R" yChannelSelector="G"/>' +
+    '</filter></svg>');
 
   const $ = <T extends HTMLElement = HTMLElement>(sel: string): T => root.querySelector(sel) as T;
   const fmt = (n: number): string => (typeof n === 'number' ? n.toLocaleString() : n);
@@ -866,7 +889,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     // The letter holds only a treasure-chest seal and the spoils chips — no title, no claim button.
     checkinFloat.innerHTML =
       '<span class="cr-glow" aria-hidden="true"></span>' +
-      '<span class="cr-chest">' + icon('chest', 40) + '</span>' +
+      '<span class="cr-emblem">' + icon('compassHand', 46) + '</span>' +
       '<span class="cr-loot">' +
         '<span class="cr-chip">' + icon('vial', 13, 'vial') + '<b>+' + pend * CHECKIN_VIALS + '</b></span>' +
         '<span class="cr-chip">' + icon('gem', 13, 'gem') + '<b>+' + pend * CHECKIN_GEMS + '</b></span>' +

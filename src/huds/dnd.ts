@@ -210,25 +210,40 @@ const CSS = `
 /* check-in reward LETTER: an aged parchment note tacked to the board with an iron pin, floating over
    the game with a drop shadow behind it. It holds only a treasure-chest seal and the gem/vial spoils —
    no heading, no button — matching the weathered "wanted poster" look of the rest of the skin. */
-.hud.theme-dnd .checkin-reward {
+.hud.theme-dnd .checkin-reward { color: var(--ink); font-family: 'Roboto', system-ui, sans-serif; }
+/* the parchment sheet itself (torn + displaced by #cr-paper on the base ::before) */
+.hud.theme-dnd .checkin-reward::before {
   background:
-    radial-gradient(circle at 26% 12%, rgba(255,251,235,.85), rgba(255,251,235,0) 55%),
-    linear-gradient(165deg, #ece0c2 0%, #e3d4ac 55%, #d2bd8e 100%);
-  border: 1px solid #b89a64; border-radius: 2px; color: var(--ink); font-family: 'Roboto', system-ui, sans-serif;
-  /* a warm paper sheen inside + a deep drop shadow so the letter floats above the board */
-  box-shadow: inset 0 0 22px rgba(120,86,40,.18), 0 16px 30px rgba(0,0,0,.5), 0 5px 12px rgba(0,0,0,.34);
+    /* small creases + two longer folds — each a thin shadow line beside a paper highlight */
+    linear-gradient(180deg, transparent calc(29% - 1px), rgba(86,58,24,.12) 29%, rgba(255,250,233,.4) calc(29% + 1px), transparent calc(29% + 2px)),
+    linear-gradient(180deg, transparent calc(64% - 1px), rgba(86,58,24,.15) 64%, rgba(255,250,233,.42) calc(64% + 1px), transparent calc(64% + 3px)),
+    linear-gradient(91deg, transparent calc(37% - 1px), rgba(86,58,24,.10) 37%, rgba(255,250,233,.32) calc(37% + 1px), transparent calc(37% + 2px)),
+    linear-gradient(89deg, transparent calc(73% - 1px), rgba(86,58,24,.12) 73%, rgba(255,250,233,.34) calc(73% + 1px), transparent calc(73% + 2px)),
+    /* age stains / blotches scattered across the sheet so it reads as weathered, not flat */
+    radial-gradient(circle at 20% 24%, rgba(120,82,38,.24), rgba(120,82,38,0) 13%),
+    radial-gradient(circle at 80% 30%, rgba(140,100,54,.20), rgba(140,100,54,0) 15%),
+    radial-gradient(circle at 66% 74%, rgba(110,74,32,.22), rgba(110,74,32,0) 17%),
+    radial-gradient(circle at 30% 82%, rgba(150,112,60,.16), rgba(150,112,60,0) 18%),
+    radial-gradient(circle at 88% 58%, rgba(110,74,32,.16), rgba(110,74,32,0) 12%),
+    radial-gradient(circle at 12% 60%, rgba(120,82,38,.16), rgba(120,82,38,0) 12%),
+    /* soft centre warmth */
+    radial-gradient(circle at 50% 44%, rgba(255,249,231,.5), rgba(255,249,231,0) 52%),
+    /* browned, burnt edges — darkens strongly toward the torn rim */
+    radial-gradient(116% 116% at 50% 48%, rgba(120,86,40,0) 46%, rgba(120,80,34,.34) 74%, rgba(86,54,20,.55) 90%, rgba(58,36,12,.68) 100%),
+    /* uneven base tone */
+    linear-gradient(158deg, #e8d9b4 0%, #dcc89d 48%, #cab17f 100%);
+  box-shadow: inset 0 0 20px rgba(96,62,24,.4);
 }
-.hud.theme-dnd .checkin-reward:hover { border-color: var(--gold-ink); }
-/* the iron pin tacking the letter to the board */
+/* the iron pin tacking the letter to the board (above the sheet + content) */
 .hud.theme-dnd .checkin-reward::after {
-  content: ''; position: absolute; top: 7px; left: 50%; width: 8px; height: 8px; margin-left: -4px; z-index: 2;
+  content: ''; position: absolute; top: 8px; left: 50%; width: 8px; height: 8px; margin-left: -4px; z-index: 3;
   border-radius: 50%; background: radial-gradient(circle at 38% 32%, #7a5a32, #2a1a0c 78%);
   box-shadow: 0 1px 2px rgba(0,0,0,.55), inset 0 1px 1px rgba(255,255,255,.35);
 }
 .hud.theme-dnd .checkin-reward .cr-glow {
   background: radial-gradient(circle at 50% 42%, rgba(212,160,60,.4), rgba(212,160,60,0) 68%);
 }
-.hud.theme-dnd .checkin-reward .cr-chest { color: #9a6a1e; filter: drop-shadow(0 1px 1px rgba(255,255,255,.5)); }
+.hud.theme-dnd .checkin-reward .cr-emblem { color: #8a5a16; filter: drop-shadow(0 1px 1px rgba(255,255,255,.5)); }
 .hud.theme-dnd .checkin-reward .cr-chip { background: rgba(122,74,26,.14); border: 1px solid rgba(122,74,26,.22); color: var(--ink); }
 .hud.theme-dnd .checkin-reward .cr-chip b { color: var(--ink); }
 .hud.theme-dnd .checkin-reward .cr-chip .ic.vial { color: #14564a; }
