@@ -263,11 +263,11 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     (k === 'coins' ? meta.coins : k === 'gems' ? meta.gems : k === 'vials' ? meta.vials : k === 'energy' ? meta.energy : 0) || 0;
   // Hexagon currency chips (the home-screen gemstone style) for any set of currency keys. Each chip
   // carries a cur-<key> class so the D&D skin tints it per currency (see dnd.ts).
-  function curChips(meta: Meta, keys: string[]): string {
+  function curChips(meta: Meta, keys: string[], extra?: string): string {
     return '<div class="chips">' + keys.map((k) => {
       const d = CUR_BY_KEY[k];
       return '<span class="chip cur-' + k + '">' + icon(d.icon, 13, d.cls) + ' <b>' + abbr(curAmount(meta, k)) + '</b></span>';
-    }).join('') + '</div>';
+    }).join('') + (extra || '') + '</div>';
   }
   function starSvg(kind: string): string {
     const fill = kind === 'white' ? '#eef2f8' : kind === 'gold' ? '#ffd24a' : 'url(#chroma)';
@@ -577,8 +577,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   function labsPaneHtml(meta: Meta): string {
     const used = (meta.research || []).length,
       slots = meta.labSlots || 1;
-    let html = '<div class="cur-with-slot">' + curChips(meta, ['coins', 'gems', 'vials']) +
-      '<span class="slotchip">' + icon('flask', 13) + ' ' + used + '/' + slots + '</span></div>';
+    // The active-labs/slots indicator is a slot chip carved into the same currency-chip frame as the
+    // card-slot indicator (a hexagon in the D&D skin), so the two read as the same kind of counter.
+    const slotChip = '<span class="chip cur-slot">' + icon('flask', 13) + ' <b>' + used + '/' + slots + '</b></span>';
+    let html = '<div class="cur-with-slot">' + curChips(meta, ['coins', 'gems', 'vials'], slotChip) + '</div>';
     html += '<div class="labslots">' + labSlotsHtml(meta) + '</div>';
     const sc = labSlotCost(meta),
       canSlot = slots < MAX_SLOTS;
@@ -1339,8 +1341,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       body: 'Your hero kept fighting in your absence and banked these spoils:',
       rewards:
         chip('coin', '+' + abbr(reward.gold || 0), 'gold') +
-        chip('burst', '+' + abbr(reward.kills || 0)) +
-        chip('tier', '+' + abbr(reward.waves || 0)),
+        chip('sword', '+' + abbr(reward.kills || 0)) +
+        chip('best', '+' + abbr(reward.waves || 0)),
       primary: 'Collect',
       dontShowAgain: { key: 'showOfflineReward', label: "Don't show this again" },
     });

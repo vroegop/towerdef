@@ -376,7 +376,6 @@ const CSS = `
 .hud.theme-dnd .lab .mbar i { background: linear-gradient(90deg, #7a4a1a, #b3331f); }
 .hud.theme-dnd .lab .rushlab { color: var(--accent); border: 1px solid var(--rule); }
 .hud.theme-dnd .lab .cancellab { color: var(--crimson); border: 1px solid var(--rule); }
-.hud.theme-dnd .coins-chip .slotchip { color: var(--ink-dim); }
 
 /* check-in proclamation */
 .hud.theme-dnd .checkin { background: var(--parch-lt); border: 1px solid var(--rule); color: var(--ink-dim); }
@@ -435,6 +434,28 @@ const CSS = `
 .hud.theme-dnd .lk-tip, .hud.theme-dnd .tut-thought { background: #c9b285; color: var(--ink); border: 1px solid #7a5a2a; }
 .hud.theme-dnd .lk-tip:after, .hud.theme-dnd .tut-thought:after { border-top-color: #c9b285; }
 .hud.theme-dnd .tut-dim { box-shadow: 0 0 0 9999px rgba(43,29,16,.5), 0 0 22px 4px rgba(154,106,26,.45) inset; border-color: rgba(154,106,26,.7); }
+
+/* centred info modal (offline "while you were away" spoils + tutorial recap) → a parchment
+   proclamation, matching the rest of the skin instead of the dark default card. */
+.hud.theme-dnd .infomodal-card {
+  background: var(--parch);
+  background-image: radial-gradient(circle at 30% 8%, var(--parch-lt), #e3d3b0 70%);
+  border: 1px solid #8a6a3a; box-shadow: inset 0 0 0 3px #8a6a3a, 0 12px 30px rgba(0,0,0,.5); color: var(--ink);
+}
+.hud.theme-dnd .im-title { color: var(--ink); font-family: 'Roboto', system-ui, sans-serif; }
+.hud.theme-dnd .im-body { color: var(--ink-dim); }
+.hud.theme-dnd .infomodal-card .im-body b { color: var(--ink); }
+/* reward stones: the same parchment-and-rule frame as the ledger chips, gold-inked figures */
+.hud.theme-dnd .im-chip { background: var(--parch-lt); border: 1px solid var(--rule); }
+.hud.theme-dnd .infomodal-card .im-chip b { color: var(--ink); }
+.hud.theme-dnd .im-chip .ic { color: var(--ink-dim); }
+.hud.theme-dnd .im-chip .ic.gold { color: var(--gold-ink); }
+.hud.theme-dnd .im-dsa { color: var(--ink-dim); }
+.hud.theme-dnd .im-dsa:hover { color: var(--ink); }
+.hud.theme-dnd .im-dsa .im-check { background: var(--parch-dk); border-color: #8a6a3a; }
+.hud.theme-dnd .im-dsa.on .im-check { background: #6a8a3a; border-color: #6a8a3a; }
+.hud.theme-dnd .im-secondary { color: var(--ink-dim); border-color: var(--rule); }
+.hud.theme-dnd .im-secondary:hover { color: var(--ink); border-color: var(--accent); }
 `;
 
 export const createDndHud = createThemedHud({ cls: 'theme-dnd', css: CSS });
