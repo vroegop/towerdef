@@ -1332,17 +1332,26 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   }
   // Public: the "while you were away" summary, shown once on return when a run survived offline.
   function showOfflineReward(reward: OfflineReward): void {
-    const chip = (ic: string, val: string, cls?: string): string =>
-      '<span class="im-chip">' + icon(ic, 18, cls) + '<b>' + val + '</b></span>';
+    // Spoils are the CURRENCIES the run banked while away, each as a gemstone hexagon (matching the
+    // home-screen currency chips). Only non-zero gains appear; kills/waves are progress, not loot,
+    // so they're not shown here. gold is the in-run purse (cur-gold tint); the rest are meta coins
+    // and — should a future run mechanic grant them — gems/vials.
+    const specs: { key: string; ic: string; cls: string; amt: number }[] = [
+      { key: 'gold', ic: 'coin', cls: 'gold', amt: reward.gold || 0 },
+      { key: 'coins', ic: 'coinstar', cls: 'coin', amt: reward.coins || 0 },
+      { key: 'gems', ic: 'gem', cls: 'gem', amt: reward.gems || 0 },
+      { key: 'vials', ic: 'vial', cls: 'vial', amt: reward.vials || 0 },
+    ];
+    const chips = specs
+      .filter((s) => s.amt > 0)
+      .map((s) => '<span class="chip cur-' + s.key + '">' + icon(s.ic, 13, s.cls) + ' <b>+' + abbr(s.amt) + '</b></span>')
+      .join('');
     showInfoModal({
       accent: 'gold',
       iconName: 'best',
       title: 'While you were away',
       body: 'Your hero kept fighting in your absence and banked these spoils:',
-      rewards:
-        chip('coin', '+' + abbr(reward.gold || 0), 'gold') +
-        chip('sword', '+' + abbr(reward.kills || 0)) +
-        chip('best', '+' + abbr(reward.waves || 0)),
+      rewards: '<div class="chips">' + chips + '</div>',
       primary: 'Collect',
       dontShowAgain: { key: 'showOfflineReward', label: "Don't show this again" },
     });

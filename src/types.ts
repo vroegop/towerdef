@@ -358,10 +358,16 @@ export interface Settings {
   showOfflineReward: boolean; // show the "while you were away" summary modal when a run survives offline
 }
 // Spoils accrued while a survived run was simulated offline — shown in the offline-reward modal.
+// The modal shows the currency gains (gold + coins) as hexagon chips; kills/waves are progress, kept
+// here for any non-currency use but not surfaced as "spoils". gems/vials are optional: nothing earns
+// them mid-run today, but the modal renders any currency that comes through > 0.
 export interface OfflineReward {
   gold: number;
+  coins: number;
   kills: number;
   waves: number;
+  gems?: number;
+  vials?: number;
 }
 export interface HudHandlers {
   settings?: Settings;
