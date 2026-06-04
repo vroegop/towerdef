@@ -16,6 +16,7 @@
     "sim:progress": "vite-node tools/progress-sim.ts",
     "sim:dashboard": "vite --open /tools/sim-dashboard/index.html",
     "labs:dashboard": "vite --open /tools/labs-dashboard/index.html",
+    "super:dashboard": "vite --open /tools/superweapons-dashboard/index.html",
     "test:watch": "vitest",
     "test:visual": "playwright test",
     "test:visual:update": "playwright test --update-snapshots",
