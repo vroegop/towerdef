@@ -290,6 +290,66 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
           ctx.fill();
         }
       }
+      // ---- status-effect overlays (the new on-hit skills, render-only) ----
+      // Poison: a faint green wash over the body + a few venom bubbles rising off it.
+      if (!fogged && (e.poisonT || 0) > 0) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = 'rgba(80,220,90,0.16)';
+        ctx.beginPath();
+        ctx.arc(esx, esy, bodyR * 0.95, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(130,245,140,0.85)';
+        for (let i = 0; i < 3; i++) {
+          const ph = (animClock * 1.3 + i * 0.66) % 1; // 0→1 rise cycle
+          const bx = esx + Math.sin(animClock * 2 + i * 2.1) * bodyR * 0.4;
+          const by = esy - bodyR * 0.2 - ph * bodyR * 1.4;
+          ctx.globalAlpha = (1 - ph) * 0.8;
+          ctx.beginPath();
+          ctx.arc(bx, by, 1.4 + (1 - ph) * 1.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+      // Frostbite / slow: a ring of cool cyan frost ticks while the enemy is chilled (also reads a knockback slow).
+      if (!fogged && e.slowT > 0 && e.slow < 1) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = 'rgba(130,215,255,0.55)';
+        ctx.lineWidth = Math.max(1, bodyR * 0.1);
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2 + animClock * 0.4;
+          const r1 = bodyR * 1.04,
+            r2 = bodyR * 1.24;
+          ctx.beginPath();
+          ctx.moveTo(esx + Math.cos(a) * r1, esy + Math.sin(a) * r1);
+          ctx.lineTo(esx + Math.cos(a) * r2, esy + Math.sin(a) * r2);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+      // Stun: two little sparkles orbiting just above the dazed enemy.
+      if (!fogged && (e.stunT || 0) > 0) {
+        ctx.save();
+        ctx.strokeStyle = '#ffe06a';
+        ctx.lineWidth = 1.4;
+        ctx.lineCap = 'round';
+        const cy = esy - bodyR - 6;
+        for (let i = 0; i < 2; i++) {
+          const a = animClock * 5 + i * Math.PI;
+          const sx = esx + Math.cos(a) * bodyR * 0.7,
+            sy = cy + Math.sin(a) * 2.2,
+            sr = 2.6;
+          ctx.beginPath();
+          ctx.moveTo(sx - sr, sy);
+          ctx.lineTo(sx + sr, sy);
+          ctx.moveTo(sx, sy - sr);
+          ctx.lineTo(sx, sy + sr);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
       if (!fogged && cfg.enemyHp && e.hp < e.hpMax && e.hp > 0) {
         const bh = 3,
           bw = Math.max(30, bodyR * 2 + 8),
@@ -411,6 +471,8 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
           else if (f.note === 'interest' && cfg.msgInterest) { spawnNote(hsx, ny, '+' + v + ' interest', '#ffd24a'); noteStack++; }
           else if (f.note === 'hpskip' && cfg.msgEnemySkip) { spawnNote(hsx, ny, 'Enemy HP level skipped', '#7CFFB0'); noteStack++; }
           else if (f.note === 'dmgskip' && cfg.msgEnemySkip) { spawnNote(hsx, ny, 'Enemy attack level skipped', '#ffae4a'); noteStack++; }
+          // Dodge is a fast combat pop (not a lingering wave note), so it uses a quick float at the tower.
+          else if (f.note === 'dodge' && cfg.msgDodge !== false) spawnFloat(fx, fy - 26, 'Dodge!', '#7fe8ff', 13);
         }
       }
       lastFxSeq = s.fxSeq;

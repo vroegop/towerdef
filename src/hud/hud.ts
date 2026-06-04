@@ -1388,6 +1388,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       { key: 'coinOnKill', label: 'Coins on kill', icon: 'coinstar', cls: 'coin' },
       { key: 'enemyHp', label: 'Enemy HP bars', icon: 'heart', cls: 'hp' },
       { key: 'damageNumbers', label: 'Damage numbers', icon: 'burst' },
+      { key: 'msgDodge', label: 'Dodge', icon: 'dodge', cls: 'cyan' },
     ] },
     { title: 'Wave messages', rows: [
       { key: 'msgWaveSkip', label: 'Wave skipped', icon: 'arrow', cls: 'cyan' },

@@ -139,6 +139,16 @@ describe('Dodge — evade an incoming hit', () => {
     expect(sim.s.hero.hp).toBe(900);
     expect(sim.s.run.streak).toBe(0);
   });
+  it('emits a render-only "dodge" note on a dodge, and none on a normal hit', () => {
+    const dodged = newSim();
+    dodged.stats.dodge = 1;
+    priv(dodged)._hurtHero(100);
+    expect(dodged.s.fx.some((f) => f.note === 'dodge')).toBe(true);
+    const hit = newSim();
+    hit.stats.dodge = 0;
+    priv(hit)._hurtHero(100);
+    expect(hit.s.fx.some((f) => f.note === 'dodge')).toBe(false);
+  });
 });
 
 describe('Stun — freeze on hit', () => {
