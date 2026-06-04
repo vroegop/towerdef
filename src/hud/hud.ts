@@ -290,10 +290,14 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     return h + '</div>';
   }
   const tierOf = (stars: number): string => (stars >= 11 ? 'chroma' : stars >= 6 ? 'gold' : 'white');
-  // one-line readable effect for a card at its current stars (e.g. "+10% attack speed")
+  // one-line readable effect for a card at its current stars (e.g. "+10% attack speed").
+  // Active-ability cards that recharge append their cooldown (data-driven from def.active.cooldown,
+  // so any card that defines one shows it — currently just Super Tower's 30s).
   function cardDescText(def: CardDef, stars: number): string {
     const v = def.value(stars || 0);
-    return def.desc ? def.desc(v) : def.fmt ? def.fmt(v) : '+' + v;
+    const base = def.desc ? def.desc(v) : def.fmt ? def.fmt(v) : '+' + v;
+    const cd = def.active && def.active.cooldown;
+    return cd ? base + ' · ' + cd + 's cooldown' : base;
   }
   // Render a card tile. Pass `slot >= 0` for the smaller ACTIVE variant: it carries its slot index
   // (tap → free the slot) and a class the CSS scales down inside the horizontal active strip.
