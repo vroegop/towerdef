@@ -34,7 +34,8 @@ export const RICH_META = {
   research: [],
   labSlots: 2,
   vials: 60,
-  // far in the past so the check-in button shows as "ready" deterministically
+  // far in the past so the check-in reward coffer is deterministically claimable (it lives outside
+  // the #h-menu / #h-top locators these snapshots capture, so it never affects the baselines)
   lastCheckIn: 0,
   ultimates: {},
   ver: 2,

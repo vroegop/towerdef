@@ -207,12 +207,29 @@ const CSS = `
 .hud.theme-dnd .enemytbl th { color: var(--ink-dim); border-bottom-color: var(--rule); font-family: 'Roboto', system-ui, sans-serif; }
 .hud.theme-dnd .enemytbl td { color: var(--ink); border-bottom-color: rgba(176,154,106,.4); }
 
-/* floating check-in: a small carved parchment tablet (no neon) matching the ability-score stones. */
-.hud.theme-dnd .checkin-float { background: var(--parch-lt); border: 1px solid #8a6a3a; color: var(--ink);
-  box-shadow: inset 0 0 0 2px var(--parch), 0 3px 8px rgba(0,0,0,.3); font-family: 'Roboto', system-ui, sans-serif; }
-.hud.theme-dnd .checkin-float:hover { border-color: var(--accent); }
-.hud.theme-dnd .checkin-float .cf-chip { background: rgba(122,74,26,.12); color: var(--ink); }
-.hud.theme-dnd .checkin-float .cf-chip .ic { color: var(--ink-dim); }
+/* check-in reward coffer: a wax-sealed parchment treasure chest with a gilt halo. It should read as
+   found loot from the campaign — gold chest, gem/vial spoils, a crimson wax "Claim" seal. */
+.hud.theme-dnd .checkin-reward {
+  background: linear-gradient(180deg, var(--parch-lt), var(--parch-dk));
+  border: 2px solid #8a6a3a; color: var(--ink); font-family: 'Roboto', system-ui, sans-serif;
+  box-shadow: inset 0 0 0 2px var(--parch-lt), 0 6px 16px rgba(0,0,0,.4);
+}
+.hud.theme-dnd .checkin-reward:hover { border-color: var(--crimson); }
+.hud.theme-dnd .checkin-reward .cr-glow {
+  background: radial-gradient(circle at 50% 36%, rgba(212,160,60,.55), rgba(212,160,60,0) 70%);
+}
+.hud.theme-dnd .checkin-reward .cr-chest { color: #a9741f; filter: drop-shadow(0 1px 1px rgba(255,255,255,.5)); }
+.hud.theme-dnd .checkin-reward .cr-title { color: var(--accent); }
+.hud.theme-dnd .checkin-reward .cr-chip { background: rgba(122,74,26,.12); color: var(--ink); }
+.hud.theme-dnd .checkin-reward .cr-chip b { color: var(--ink); }
+.hud.theme-dnd .checkin-reward .cr-chip .ic.vial { color: #14564a; }
+.hud.theme-dnd .checkin-reward .cr-chip .ic.gem { color: #1f3f6a; }
+/* the Claim affordance speaks the same wax-seal language as the Start seal */
+.hud.theme-dnd .checkin-reward .cr-claim {
+  background: radial-gradient(circle at 50% 38%, #b3331f, #7a1a10);
+  color: var(--parch-lt); border: 1px solid #5a140c;
+  box-shadow: 0 2px 0 #4a100a, inset 0 0 8px rgba(0,0,0,.25);
+}
 .hud.theme-dnd .earncard .el { color: var(--ink-dim); font-family: 'Roboto', system-ui, sans-serif; }
 .hud.theme-dnd .earncard .ev { color: var(--gold-ink); font-family: 'Roboto', system-ui, sans-serif; }
 .hud.theme-dnd .earncard .ev span, .hud.theme-dnd .earncard .es { color: var(--ink-dim); }
@@ -376,11 +393,6 @@ const CSS = `
 .hud.theme-dnd .lab .mbar i { background: linear-gradient(90deg, #7a4a1a, #b3331f); }
 .hud.theme-dnd .lab .rushlab { color: var(--accent); border: 1px solid var(--rule); }
 .hud.theme-dnd .lab .cancellab { color: var(--crimson); border: 1px solid var(--rule); }
-
-/* check-in proclamation */
-.hud.theme-dnd .checkin { background: var(--parch-lt); border: 1px solid var(--rule); color: var(--ink-dim); }
-.hud.theme-dnd .checkin.ready { color: var(--parch-lt); background: linear-gradient(90deg, #7a4a1a, #b3331f); border-color: #7a4a1a; }
-.hud.theme-dnd .checkin.ready .ic { color: var(--parch-lt); }
 
 /* shared rows / overview / settings on parchment */
 .hud.theme-dnd .strow { border-bottom: 1px dotted var(--rule); }
