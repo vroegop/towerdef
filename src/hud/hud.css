@@ -269,9 +269,11 @@
 .hud .subtabs .subtab.locked { color: #434a60; }
 .hud .subtabs .subtab .ic.lk { position: absolute; top: 3px; right: 4px; color: #434a60; }
 
-/* permanent upgrades list */
-.hud .permlist { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.hud .perm { aspect-ratio: 16/9; display: grid; grid-template-rows: auto 1fr auto;
+/* permanent upgrades list — a responsive auto-fit grid: 3 columns on a wide menu, 2 on phones, 1 on
+   the narrowest screens. Tiles are compact (no forced 16:9) so the value sits close to its header and
+   buy strip instead of floating in a tall empty band, keeping the whole list short to scroll. */
+.hud .permlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+.hud .perm { min-height: 84px; display: grid; grid-template-rows: auto 1fr auto;
   gap: 0; background: #151823; border: 1px solid #262c3d; border-radius: 6px; padding: 0; margin: 0;
   cursor: pointer; font: inherit; color: #d8deea; text-align: center; overflow: hidden; }
 .hud .perm:hover:not(:disabled):not(.cant) { border-color: #ffd24a; }
