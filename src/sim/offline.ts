@@ -10,6 +10,7 @@ interface CatchUpResult {
   simSeconds: number;
   computeMs: number;
   gold: number;
+  coins: number; // bonus coins (coins-per-wave + per-kill coins) accrued during the replay
   kills: number;
   waves: number;
   died: boolean;
@@ -21,6 +22,7 @@ export function catchUp(sim: Sim, elapsedSec: number, maxSec?: number): CatchUpR
   const ticks = Math.max(0, Math.floor(cap / DT));
   const before = {
     gold: sim.s.econ.goldEarned,
+    coins: sim.s.econ.bonusCoins,
     kills: sim.s.econ.kills,
     wave: sim.s.wave.n,
   };
@@ -39,6 +41,7 @@ export function catchUp(sim: Sim, elapsedSec: number, maxSec?: number): CatchUpR
     simSeconds: ran * DT,
     computeMs: ms,
     gold: sim.s.econ.goldEarned - before.gold,
+    coins: sim.s.econ.bonusCoins - before.coins,
     kills: sim.s.econ.kills - before.kills,
     waves: sim.s.wave.n - before.wave,
     died: !sim.s.alive,

@@ -445,11 +445,12 @@ const CSS = `
 .hud.theme-dnd .im-title { color: var(--ink); font-family: 'Roboto', system-ui, sans-serif; }
 .hud.theme-dnd .im-body { color: var(--ink-dim); }
 .hud.theme-dnd .infomodal-card .im-body b { color: var(--ink); }
-/* reward stones: the same parchment-and-rule frame as the ledger chips, gold-inked figures */
-.hud.theme-dnd .im-chip { background: var(--parch-lt); border: 1px solid var(--rule); }
-.hud.theme-dnd .infomodal-card .im-chip b { color: var(--ink); }
-.hud.theme-dnd .im-chip .ic { color: var(--ink-dim); }
-.hud.theme-dnd .im-chip .ic.gold { color: var(--gold-ink); }
+/* the spoils are currency hexagons (same gemstone chips as the home screen); give the in-run gold
+   purse its own warm gold cabochon, mirroring the coins gem. */
+.hud.theme-dnd .chip.cur-gold::before { background:
+  radial-gradient(ellipse 58% 36% at 50% 19%, rgba(255,255,255,.62), rgba(255,255,255,0) 72%),
+  radial-gradient(circle at 50% 46%, #f7e8b4, #c79a3e 92%); }
+.hud.theme-dnd .chip.cur-gold .ic { color: #6e4a12; }
 .hud.theme-dnd .im-dsa { color: var(--ink-dim); }
 .hud.theme-dnd .im-dsa:hover { color: var(--ink); }
 .hud.theme-dnd .im-dsa .im-check { background: var(--parch-dk); border-color: #8a6a3a; }
