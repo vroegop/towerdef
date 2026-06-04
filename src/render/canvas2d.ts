@@ -8,7 +8,10 @@ import { BASE_RANGE_M, PX_PER_METER } from '../sim/skills';
 import { selectedCosmeticId } from '../sim/cosmetics';
 import { drawTowerSkin } from './towers';
 import { drawEnemy } from './enemies';
-import { drawGoldenBg, goldenBoltStyle, drawGoldenRing, drawMoat, drawCrystals } from './superpowers-fx';
+import {
+  drawGoldenBg, goldenBoltStyle, drawGoldenRing, drawMoat, drawCrystals,
+  drawChronoBg, drawInfernoRing, drawBlackHole, drawSentries, drawTeslaArcs, drawAegis, drawSuperBursts,
+} from './superpowers-fx';
 
 const RANGE_PAD = 0.25; // frame out to 1.25× range so the fog edge (1.2×) and its dim silhouettes are on-screen
 const FOG_VISION = 1.2; // vision edge as a multiple of range: inside = clear, outside = fog (enemies spawn at 1.4×)
@@ -216,7 +219,10 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     ctx.stroke();
 
     drawGoldenBg(ctx, s, W, H); // Golden Lightning warm-dim tint
+    drawChronoBg(ctx, s, W, H); // Chrono Field time tint
     drawMoat(ctx, s, hsx, hsy, scale, rdt, animClock); // Moat trench + caustic water (ground layer)
+    drawInfernoRing(ctx, s, hsx, hsy, scale, animClock); // Inferno Ring fire (under the bodies)
+    drawBlackHole(ctx, s, tx, ty, scale, animClock); // Singularity void (bodies drawn on top, being pulled in)
 
     // Slime trails — a quick-fading smear of colour behind each moving enemy, drawn UNDER the
     // bodies. Per-id screen-space history; each dab fades out over TRAIL_LIFE seconds (frozen on pause).
@@ -360,6 +366,10 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     // Crystal Circle: orbiting crystals + flying shards. Drawn BEFORE the fog overlay so shards that
     // fly out past the vision edge get dimmed by the fog as they die there.
     drawCrystals(ctx, s, tx, ty, animClock);
+    drawTeslaArcs(ctx, s, tx, ty, animClock); // Chain Tesla arcs (fading)
+    drawSentries(ctx, s, tx, ty, scale, animClock); // Sentry Battery mini-turrets
+    drawAegis(ctx, s, hsx, hsy, s.hero.r * scale, scale, animClock); // Aegis shield bubble
+    drawSuperBursts(ctx, s, tx, ty, scale, range, animClock); // Frost Nova flash + Aegis shockwave rings
     // Fog overlay: veil the world beyond the vision edge with a soft, semi-transparent cloud bank. Drawn
     // AFTER the enemies (so silhouettes sit under it) but BEFORE the projectiles, tower and range ring (so
     // those always stay crisp). It's a light, see-through haze — enemies stay readable through it — that

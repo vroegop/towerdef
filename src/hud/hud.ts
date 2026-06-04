@@ -121,6 +121,13 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     dodge: 'M15 4l-7 8 7 8 M10 4l-7 8 7 8',
     // stun = a dazed face: head ring, two X eyes, a wavy mouth
     stun: 'M12 12 m-9 0 a9 9 0 1 0 18 0 a9 9 0 1 0 -18 0 M8.5 10.5l2 1.5-2 1.5 M15.5 10.5l-2 1.5 2 1.5 M9 16q3 2 6 0',
+    // ---- new superpower icons (Prestige tab); Frost Nova reuses the `frost` snowflake above ----
+    tesla: 'M13 2 5 13h4.4l-1.8 9 9.4-12.4H12z',
+    inferno: 'M12 2c1.2 4 4.2 5.2 4.2 9.2a4.2 4.2 0 0 1-8.4 0c0-2 1-3.2 2-4.4.6 2.2 2.2 2.2 2.2 4.4',
+    singularity: 'M12 12 m-3 0 a3 3 0 1 0 6 0 a3 3 0 1 0 -6 0 M5 7.5c3.2-2.2 7.4-1.2 8.4 3 M19 16.5c-3.2 2.2-7.4 1.2-8.4-3',
+    chrono: 'M12 12 m-8.2 0 a8.2 8.2 0 1 0 16.4 0 a8.2 8.2 0 1 0 -16.4 0 M12 7.5V12l3.2 2',
+    sentry: 'M8 21v-6l4-3 4 3v6z M12 12V6.5 M12 5.4 m-1.6 0 a1.6 1.6 0 1 0 3.2 0 a1.6 1.6 0 1 0 -3.2 0',
+    aegis: 'M12 3l7 2.6v5.2C19 16.4 15.6 19.4 12 21 8.4 19.4 5 16.4 5 10.8V5.6z M9 12l2 2 4-4.2',
   };
   function icon(name: string, size?: number, cls?: string): string {
     size = size || 16;

@@ -112,6 +112,16 @@ export const WEAPON_ART: Record<string, string> = {
     '<path d="M4.8 14.6h3.6M6.6 21v-3.6h1.2V21" stroke="#9fc0ff" stroke-opacity=".7"/>' +
     '<circle cx="6.6" cy="10.4" r="1.5" fill="#eaf6ff" stroke="#9fc0ff"/>',
 
+  // Sentry Battery — four little turrets ringed around a centre point.
+  sentry:
+    '<circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/>' +
+    '<g fill="#9fc0ff" stroke="#5b8cff">' +
+    '<path d="M9.4 4.6h5.2v2.4l-2.6 1.4-2.6-1.4z"/>' +
+    '<path d="M9.4 19.4h5.2v-2.4l-2.6-1.4-2.6 1.4z"/>' +
+    '<path d="M4.6 9.4v5.2h2.4l1.4-2.6-1.4-2.6z"/>' +
+    '<path d="M19.4 9.4v5.2h-2.4l-1.4-2.6 1.4-2.6z"/>' +
+    '</g>',
+
   // Soul Harvest — a glowing soul-wisp drawn down into a reaping funnel.
   soul:
     '<path d="M12 2.6c2.8 2.8 2.8 6.4 0 9.6-2.8-3.2-2.8-6.8 0-9.6z" fill="#9be7c4" fill-opacity=".55" stroke="#5fd6a0"/>' +

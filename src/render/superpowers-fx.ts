@@ -7,7 +7,7 @@
    singletons — there is exactly one renderer. None of it affects the save or the sim. */
 import type { State } from '../types';
 import { PX_PER_METER } from '../sim/skills';
-import { MOAT_INNER_M, superEnabled, trackValue } from '../sim/superpowers';
+import { MOAT_INNER_M, superEnabled, trackValue, chronoActive } from '../sim/superpowers';
 
 type Ctx = CanvasRenderingContext2D;
 const TAU = Math.PI * 2;
@@ -283,4 +283,194 @@ export function drawCrystals(ctx: Ctx, s: State, tx: (x: number) => number, ty: 
   if (s.crystalFrags && s.crystalFrags.length) {
     for (const fr of s.crystalFrags) drawShard(ctx, tx(fr.x), ty(fr.y), CRYSTAL_R * 0.6, spin, 0.95);
   }
+}
+
+// ============================ CHRONO FIELD ============================
+// A cool blue full-screen tint while the time window holds (drawn with the other backgrounds).
+export function drawChronoBg(ctx: Ctx, s: State, W: number, H: number): void {
+  if (!chronoActive(s)) return;
+  ctx.save();
+  ctx.fillStyle = 'rgba(40,90,150,0.16)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+
+// ============================ INFERNO RING ============================
+// A flickering ring of fire around the tower (radius = the live track), drawn under the bodies.
+export function drawInfernoRing(ctx: Ctx, s: State, cx: number, cy: number, scale: number, t: number): void {
+  if (!superEnabled(s.meta, 'inferno') || (s.run.superActive?.inferno || 0) <= 0) return;
+  const r = trackValue(s.meta, 'inferno', 'radius') * PX_PER_METER * scale;
+  if (r <= 0) return;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createRadialGradient(cx, cy, r * 0.55, cx, cy, r);
+  g.addColorStop(0, 'rgba(255,110,30,0)');
+  g.addColorStop(1, `rgba(255,90,20,${(0.28 + 0.08 * Math.sin(t * 9)).toFixed(3)})`);
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, TAU);
+  ctx.fill();
+  ctx.shadowColor = '#ff7a20';
+  ctx.shadowBlur = 14;
+  ctx.lineWidth = Math.max(2, r * 0.045);
+  ctx.strokeStyle = 'rgba(255,175,70,0.8)';
+  ctx.beginPath();
+  for (let i = 0; i <= 64; i++) {
+    const a = (i / 64) * TAU;
+    const rr = r * (1 + 0.04 * Math.sin(a * 9 + t * 7)); // licking flame edge
+    i ? ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr) : ctx.moveTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+  }
+  ctx.closePath();
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ============================ SINGULARITY ============================
+// The black hole: a faint pull ring + a dark accretion disc with a spinning rim. World-positioned.
+export function drawBlackHole(ctx: Ctx, s: State, tx: (x: number) => number, ty: (y: number) => number, scale: number, t: number): void {
+  if (!s.blackHole) return;
+  const bh = s.blackHole;
+  const cx = tx(bh.x),
+    cy = ty(bh.y);
+  const pull = bh.r * scale;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(150,130,255,0.22)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 7]);
+  ctx.beginPath();
+  ctx.arc(cx, cy, pull, 0, TAU);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  const core = Math.max(6, pull * 0.13);
+  const g = ctx.createRadialGradient(cx, cy, core * 0.4, cx, cy, core * 2.6);
+  g.addColorStop(0, '#000000');
+  g.addColorStop(0.5, 'rgba(70,35,110,0.82)');
+  g.addColorStop(1, 'rgba(120,80,210,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(cx, cy, core * 2.6, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = '#05030a';
+  ctx.beginPath();
+  ctx.arc(cx, cy, core, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(185,150,255,0.7)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, core * 1.35, t * 2.2, t * 2.2 + Math.PI * 1.25);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ============================ SENTRY BATTERY ============================
+const SENTRY_BODY = 15; // world-px sphere radius, matching the sim's SENTRY_R
+export function drawSentries(ctx: Ctx, s: State, tx: (x: number) => number, ty: (y: number) => number, scale: number, t: number): void {
+  if (!s.sentries) return;
+  for (const st of s.sentries) {
+    const cx = tx(st.x),
+      cy = ty(st.y);
+    const R = SENTRY_BODY * scale;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(150,190,255,0.4)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, TAU);
+    ctx.stroke();
+    const r = Math.max(5, R * 0.5);
+    ctx.fillStyle = '#2b3550';
+    ctx.strokeStyle = '#9fc0ff';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, TAU);
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = '#cfe0ff';
+    ctx.lineWidth = 2;
+    const a = t * 1.6 + (st.x + st.y); // each turret's barrel spins from its own phase
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a) * r * 1.5, cy + Math.sin(a) * r * 1.5);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// ============================ TESLA ARCS ============================
+const teslaSeen = new Map<number, number>(); // arc seq → render clock first seen (for the fade)
+export function drawTeslaArcs(ctx: Ctx, s: State, tx: (x: number) => number, ty: (y: number) => number, t: number): void {
+  if (!s.teslaArcs || !s.teslaArcs.length) return;
+  const LIFE = 0.22;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const arc of s.teslaArcs) {
+    let born = teslaSeen.get(arc.seq);
+    if (born === undefined) teslaSeen.set(arc.seq, (born = t));
+    const age = t - born;
+    if (age > LIFE || arc.pts.length < 2) continue;
+    const alpha = 1 - age / LIFE;
+    ctx.shadowColor = '#37d7ff';
+    ctx.shadowBlur = 10;
+    ctx.strokeStyle = `rgba(190,235,255,${alpha.toFixed(3)})`;
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    arc.pts.forEach((p, i) => (i ? ctx.lineTo(tx(p.x), ty(p.y)) : ctx.moveTo(tx(p.x), ty(p.y))));
+    ctx.stroke();
+  }
+  ctx.restore();
+  const live = new Set(s.teslaArcs.map((a) => a.seq));
+  for (const k of teslaSeen.keys()) if (!live.has(k)) teslaSeen.delete(k);
+}
+
+// ============================ AEGIS BULWARK ============================
+// A blue shield bubble around the tower while the pool holds (radius nudges up with the pooled HP).
+export function drawAegis(ctx: Ctx, s: State, cx: number, cy: number, rTowerPx: number, scale: number, t: number): void {
+  if (!superEnabled(s.meta, 'aegis') || (s.run.aegisPool || 0) <= 0) return;
+  const frac = Math.min(1.5, (s.run.aegisPool || 0) / (s.hero.hpMax || 1)); // pooled "max-HPs"
+  const r = rTowerPx + (10 + frac * 16) * scale + Math.sin(t * 2) * 1.5;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createRadialGradient(cx, cy, r * 0.7, cx, cy, r);
+  g.addColorStop(0, 'rgba(80,150,255,0)');
+  g.addColorStop(1, 'rgba(90,160,255,0.18)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(150,200,255,0.6)';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, TAU);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ============================ EXPANDING BURSTS (Frost Nova flash + Aegis shockwave) ============================
+// Animate an expanding ring per new superFx event of kind 'nova' / 'shock', keyed off seq.
+const burstSeen = new Map<number, number>();
+export function drawSuperBursts(ctx: Ctx, s: State, tx: (x: number) => number, ty: (y: number) => number, scale: number, range: number, t: number): void {
+  if (!s.superFx || !s.superFx.length) return;
+  ctx.save();
+  for (const fx of s.superFx) {
+    if (fx.kind !== 'nova' && fx.kind !== 'shock') continue;
+    let born = burstSeen.get(fx.seq);
+    if (born === undefined) burstSeen.set(fx.seq, (born = t));
+    const LIFE = fx.kind === 'shock' ? 0.6 : 0.35;
+    const age = t - born;
+    if (age > LIFE) continue;
+    const p = age / LIFE;
+    const maxR = (fx.kind === 'shock' ? range * 1.4 : range * 0.9) * scale;
+    const r = maxR * p;
+    const alpha = (1 - p) * 0.8;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = fx.kind === 'shock' ? `rgba(220,235,255,${alpha.toFixed(3)})` : `rgba(160,225,255,${alpha.toFixed(3)})`;
+    ctx.lineWidth = (fx.kind === 'shock' ? 5 : 3) * (1 - p) + 1;
+    ctx.beginPath();
+    ctx.arc(tx(fx.x), ty(fx.y), r, 0, TAU);
+    ctx.stroke();
+  }
+  ctx.restore();
+  const live = new Set(s.superFx.map((f) => f.seq));
+  for (const k of burstSeen.keys()) if (!live.has(k)) burstSeen.delete(k);
 }

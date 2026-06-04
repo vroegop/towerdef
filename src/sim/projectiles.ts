@@ -3,6 +3,7 @@
    at fire time and deal it ONLY on collision; they expire after a travel-distance budget. */
 import type { Enemy, Hero, Projectile, Rng, State, Stats } from '../types';
 import { MAX_REND, REND_DECAY, PX_PER_METER, FROST_DURATION, POISON_DURATION, STUN_DURATION, SPLASH_RADIUS } from './skills';
+import { chronoOnHit } from './superpowers';
 
 export const BULLET_SPEED = 416; // px/s — ~20% slower than the old 520 so the shot's travel reads clearly; still well above enemy speeds so only lateral movers slip past
 export const BULLET_R = 4;
@@ -90,6 +91,9 @@ export function applyHit(state: State, e: Enemy, baseDmg: number, stats: Stats, 
   state.econ.dmgDealt += dealt;
   e.hitFlash = 0.12;
   e.hitDmg = Math.round(dealt);
+  // Chrono Field: a tower hit can strip the enemy of levels while the time window holds (no-op + no
+  // RNG draw otherwise, so non-Chrono runs keep the exact legacy stream).
+  chronoOnHit(state, e, rng);
   // Execute card: a surviving non-boss left below a fraction of its max HP is finished instantly.
   if (stats && stats.execute > 0 && e.type !== 'boss' && e.hp > 0 && e.hp <= e.hpMax * stats.execute) {
     state.econ.dmgDealt += e.hp;
