@@ -71,6 +71,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       '<circle class="vb vb3" cx="12" cy="16.6" r=".7" fill="currentColor" stroke="none"/></g>',
     burst: '<path d="M12 2v5M12 17v5M2 12h5M17 12h5M5.2 5.2l3.4 3.4M18.8 5.2l-3.4 3.4M5.2 18.8l3.4-3.4M18.8 18.8l-3.4-3.4"/>',
     bow: '<path d="M8 3a10 10 0 0 1 0 18"/><path d="M8 3v18"/><path d="M5 12h13"/><path d="M15 9l3 3-3 3"/><path d="M5 12l2.5-2M5 12l2.5 2"/>',
+    // bolt = a forked lightning strike (the Multi-hit / Max-Bolts skill icon, replacing the old bow)
+    bolt: '<path d="M13 2 4 14h6l-1 8 9-12h-6z"/>',
     bullseye: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.6"/>',
     rate: '<circle cx="12" cy="13" r="7"/><path d="M12 13V9.5"/><path d="M10 3h4M12 3v3"/>',
     heart: '<path d="M12 20s-6.5-4.3-6.5-9.3A3.7 3.7 0 0 1 12 8a3.7 3.7 0 0 1 6.5 2.7c0 5-6.5 9.3-6.5 9.3z"/>',
@@ -281,10 +283,10 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   const STARP = 'M12 2l2.9 6.3 6.8.6-5.1 4.6 1.5 6.7L12 17.3 5.9 20.8l1.5-6.7L2.3 9.5l6.8-.6z';
   const STAT_ICON: Record<string, string> = { rangedDamage: 'bow', attackSpeed: 'rate', health: 'heart', regen: 'regen',
     critChance: 'crit', critDamage: 'burst', gold: 'coin',
-    thorns: 'shield', msChance: 'bow', bounceChance: 'arrow', rendMult: 'burst', range: 'range', interest: 'coin' };
+    thorns: 'shield', msChance: 'bolt', bounceChance: 'arrow', rendMult: 'burst', range: 'range', interest: 'coin' };
   const STAT_LABEL: Record<string, string> = { rangedDamage: 'Damage', attackSpeed: 'Speed', health: 'HP', regen: 'Regen',
     critChance: 'Crit', critDamage: 'Crit Dmg', gold: 'Gold',
-    thorns: 'Disintegrate', msChance: 'Lightning', bounceChance: 'Lightning Arc', rendMult: 'Amp', range: 'Range', interest: 'Interest' };
+    thorns: 'Disintegrate', msChance: 'Multi hit', bounceChance: 'Lightning Arc', rendMult: 'Amp', range: 'Range', interest: 'Interest' };
   // currencies shown on the Hero screen
   const CURRENCIES: { key: 'coins' | 'gems' | 'vials' | 'energy'; icon: string; cls: string }[] = [
     { key: 'coins', icon: 'coinstar', cls: 'coin' },
@@ -919,7 +921,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     // The letter holds only a compass-rose seal and the spoils chips — no title, no claim button.
     checkinFloat.innerHTML =
       '<span class="cr-glow" aria-hidden="true"></span>' +
-      '<span class="cr-emblem">' + icon('compassHand', 46) + '</span>' +
+      '<span class="cr-emblem">' + icon('compassHand', 30) + '</span>' +
       '<span class="cr-loot">' +
         '<span class="cr-chip">' + icon('vial', 13, 'vial') + '<b>+' + pend * CHECKIN_VIALS + '</b></span>' +
         '<span class="cr-chip">' + icon('gem', 13, 'gem') + '<b>+' + pend * CHECKIN_GEMS + '</b></span>' +

@@ -514,6 +514,11 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     if (floats.length) {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+      // Floats sit on the light parchment, where white damage numbers and golden gold gains wash out.
+      // A soft dark drop shadow keeps every floating number legible against any background.
+      ctx.shadowColor = 'rgba(0,0,0,.78)';
+      ctx.shadowBlur = 4;
+      ctx.shadowOffsetY = 1;
       for (const f of floats) {
         f.x += f.vx * rdt;
         f.y += f.vy * rdt;
@@ -523,6 +528,9 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
         ctx.fillStyle = f.color;
         ctx.fillText(f.text, f.x, f.y);
       }
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
       ctx.globalAlpha = 1;
       ctx.textAlign = 'start';
       ctx.textBaseline = 'alphabetic';
