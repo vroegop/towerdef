@@ -154,7 +154,10 @@ export function Canvas2DRenderer(canvas: HTMLCanvasElement, settings?: Partial<S
     // TOP 60% of the height, then centre the tower within that top band. Slight ring overlap into
     // the bottom band is fine; the tower body stays up top.
     const availH = H * (1 - BOTTOM_MARGIN);
-    const scale = Math.min(W, availH) / (2 * range * (1 + RANGE_PAD));
+    // Player-set camera zoom (Settings slider): >1 magnifies the tower, <1 pulls back to reveal more
+    // of the field. Defaults to 1 so the framing is unchanged unless the player moves the slider.
+    const zoom = cfg.zoom && cfg.zoom > 0 ? cfg.zoom : 1;
+    const scale = (Math.min(W, availH) / (2 * range * (1 + RANGE_PAD))) * zoom;
     const hp = ipos(HERO_ID, s.hero.x, s.hero.y);
     let shx = 0,
       shy = 0;

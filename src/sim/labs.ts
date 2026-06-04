@@ -189,7 +189,7 @@ export function researchProgress(meta: Meta, id: string, nowMs: number): number 
   if (total <= 0) return 1;
   // Progress is measured in lab-WORK done, not real time, so an active boost fills the bar faster
   // without ever jumping it backwards (remainingWorkMs inverts the boost-aware endsAt projection).
-  return Math.max(0, Math.min(1, 1 - remainingWorkMs(meta, r.endsAt, nowMs) / total));
+  return Math.max(0, Math.min(1, 1 - remainingWorkMs(meta, id, r.endsAt, nowMs) / total));
 }
 export function labAtMax(meta: Meta, id: string): boolean {
   const L = LAB_BY_ID[id];
@@ -208,72 +208,76 @@ export function labTimeSec(meta: Meta, id: string): number {
   return Math.max(0, Math.round(L.time.at(lvl(meta, id)) / speed));
 }
 
-// ---- timed global lab-speed boost (the "Speed Up" modal) ----------------------------------------
-// A boost makes EVERY running lab advance `mult`× faster for a fixed real-time window. The window is
-// NOT shortened by the multiplier: a 1-day 2× boost runs a full day of real time and banks 2 days of
-// lab work. We bake the boost into each research's `endsAt` (a wall-clock instant), so reconcile stays
-// a dumb `now >= endsAt` check and offline catch-up needs no special-casing.
+// ---- timed PER-LAB speed boost (the per-lab "Speed Up" control) ----------------------------------
+// A boost makes ONE lab advance `mult`× faster for a fixed real-time window. The window is NOT
+// shortened by the multiplier: a 1-day 2× boost runs a full day of real time and banks 2 days of that
+// lab's work. We bake the boost into the lab's research `endsAt` (a wall-clock instant) and key the
+// boost by lab id (meta.labBoosts), so reconcile stays a dumb `now >= endsAt` check, offline catch-up
+// needs no special-casing, and the boost follows the lab as it auto-chains its next levels.
 export const MAX_BOOST_MULT = 5; // multipliers go 2×..5×
 export const MAX_BOOST_DAYS = 7; // durations go up to 7 days
 
-// The boost multiplier in effect right now (1 = none / expired).
-export function labBoostMult(meta: Meta, nowMs: number): number {
-  const b = meta.labBoost;
+// The active boost record for a single lab (or undefined).
+const boostOf = (meta: Meta, id: string): { mult: number; endsAt: number } | undefined =>
+  meta.labBoosts ? meta.labBoosts[id] : undefined;
+
+// The boost multiplier in effect for a lab right now (1 = none / expired).
+export function labBoostMult(meta: Meta, id: string, nowMs: number): number {
+  const b = boostOf(meta, id);
   return b && b.mult > 1 && b.endsAt > nowMs ? b.mult : 1;
 }
-// Seconds left on the active boost (0 if none).
-export function labBoostRemaining(meta: Meta, nowMs: number): number {
-  const b = meta.labBoost;
+// Seconds left on a lab's active boost (0 if none).
+export function labBoostRemaining(meta: Meta, id: string, nowMs: number): number {
+  const b = boostOf(meta, id);
   return b && b.endsAt > nowMs ? (b.endsAt - nowMs) / 1000 : 0;
 }
-// How many labs a boost would pay for / speed up: every assigned slot (running OR coins-blocked).
-export const boostLabCount = (meta: Meta): number => (meta.research || []).length;
 
-// Vial price to run all assigned labs at `mult`× for `durationSec`. Base "block" = 1 vial / hour / lab
-// (one multiplier step at full price). Each step above 2× is 10% cheaper than the last, so for N labs
-// over H hours: 2× = N·H, 3× = +0.9·N·H, 4× = +0.8·N·H, 5× = +0.7·N·H.
-export function labBoostCost(meta: Meta, mult: number, durationSec: number): number {
-  const block = boostLabCount(meta) * (durationSec / 3600);
+// Vial price to run ONE lab at `mult`× for `durationSec`. Base "block" = 1 vial / hour (one multiplier
+// step at full price). Each step above 2× is 10% cheaper than the last, so over H hours:
+// 2× = H, 3× = +0.9·H, 4× = +0.8·H, 5× = +0.7·H.
+export function labBoostCost(mult: number, durationSec: number): number {
+  const block = durationSec / 3600;
   let cost = 0;
   for (let k = 0; k <= mult - 2; k++) cost += block * (1 - 0.1 * k);
   return Math.round(cost);
 }
 
-// Wall-clock instant that `workMs` of lab-work begun at `startMs` finishes, honouring the boost window.
-function projectEndsAt(meta: Meta, startMs: number, workMs: number): number {
-  const b = meta.labBoost;
+// Wall-clock instant that `workMs` of lab `id`'s work begun at `startMs` finishes, honouring its boost.
+function projectEndsAt(meta: Meta, id: string, startMs: number, workMs: number): number {
+  const b = boostOf(meta, id);
   if (!b || b.mult <= 1 || b.endsAt <= startMs) return startMs + workMs;
   const D = b.endsAt - startMs, // real ms of boost still ahead of startMs
     m = b.mult;
   if (workMs <= m * D) return startMs + workMs / m; // finishes inside the boost window
   return startMs + workMs - (m - 1) * D; // boost the first D real-ms, run the tail at 1×
 }
-// Inverse of projectEndsAt: lab-WORK still left at `nowMs` for a level finishing at `endsAt`.
-function remainingWorkMs(meta: Meta, endsAt: number, nowMs: number): number {
+// Inverse of projectEndsAt: lab-WORK still left at `nowMs` for a level of lab `id` finishing at `endsAt`.
+function remainingWorkMs(meta: Meta, id: string, endsAt: number, nowMs: number): number {
   if (endsAt <= nowMs) return 0;
-  const b = meta.labBoost;
+  const b = boostOf(meta, id);
   if (!b || b.mult <= 1 || b.endsAt <= nowMs) return endsAt - nowMs; // no live boost → 1:1
   if (endsAt <= b.endsAt) return (endsAt - nowMs) * b.mult; // whole tail inside the boost
   return (b.endsAt - nowMs) * b.mult + (endsAt - b.endsAt); // boosted part + unboosted tail
 }
 
-// Purchase a global lab-speed boost: charge vials, then re-time every running lab to the new rate.
-export function applyLabBoost(meta: Meta, mult: number, durationSec: number, nowMs: number): boolean {
+// Purchase a speed boost for ONE lab: charge vials, then re-time that lab to the new rate. The lab must
+// currently be researching (or coins-blocked) — the per-lab "Speed Up" control only shows on such rows.
+export function applyLabBoost(meta: Meta, id: string, mult: number, durationSec: number, nowMs: number): boolean {
   mult = Math.round(mult);
   if (mult < 2 || mult > MAX_BOOST_MULT) return false;
   if (durationSec <= 0 || durationSec > MAX_BOOST_DAYS * 86400) return false;
-  if (labBoostMult(meta, nowMs) > 1) return false; // one boost at a time — no stacking
-  if (boostLabCount(meta) <= 0) return false; // nothing to boost
-  const cost = labBoostCost(meta, mult, durationSec);
+  if (labBoostMult(meta, id, nowMs) > 1) return false; // one boost per lab — no stacking
+  const r = researchOf(meta, id);
+  if (!r) return false; // the lab isn't being researched — nothing to boost
+  const cost = labBoostCost(mult, durationSec);
   if ((meta.vials || 0) < cost) return false;
   meta.vials = (meta.vials || 0) - cost;
-  meta.labBoost = { mult, endsAt: nowMs + durationSec * 1000 };
-  // No boost was active a moment ago, so each running lab's remaining real-time IS its remaining work;
-  // re-project that work onto the new (faster) timeline.
-  for (const r of meta.research || []) {
-    if (r.waiting) continue;
-    r.endsAt = projectEndsAt(meta, nowMs, Math.max(0, r.endsAt - nowMs));
-  }
+  meta.labBoosts = meta.labBoosts || {};
+  meta.labBoosts[id] = { mult, endsAt: nowMs + durationSec * 1000 };
+  // No boost was active for this lab a moment ago, so its remaining real-time IS its remaining work;
+  // re-project that work onto the new (faster) timeline. A coins-blocked (waiting) lab has no timer yet
+  // — it'll project onto the boost when it resumes in reconcileResearch.
+  if (!r.waiting) r.endsAt = projectEndsAt(meta, id, nowMs, Math.max(0, r.endsAt - nowMs));
   return true;
 }
 
@@ -300,7 +304,7 @@ export function startResearch(meta: Meta, id: string, nowMs: number): boolean {
     return true;
   }
   meta.research = meta.research || [];
-  meta.research.push({ id, cost, endsAt: projectEndsAt(meta, nowMs, t * 1000) });
+  meta.research.push({ id, cost, endsAt: projectEndsAt(meta, id, nowMs, t * 1000) });
   return true;
 }
 
@@ -311,7 +315,7 @@ function beginNextLevel(meta: Meta, id: string, startMs: number): Research {
   const cost = labCoinCost(meta, id);
   if ((meta.coins || 0) < cost) return { id, cost: 0, endsAt: 0, waiting: true };
   meta.coins -= cost;
-  return { id, cost, endsAt: projectEndsAt(meta, startMs, labTimeSec(meta, id) * 1000) };
+  return { id, cost, endsAt: projectEndsAt(meta, id, startMs, labTimeSec(meta, id) * 1000) };
 }
 
 // Cancel an in-progress lab: refund its coins, free the slot.
@@ -329,7 +333,7 @@ export function rushVialCost(meta: Meta, id: string, nowMs: number): number {
   const r = researchOf(meta, id);
   if (!r || r.waiting) return 0; // a waiting (not-yet-started) level has nothing to rush
   // rushing pays out the remaining lab-WORK, so a boosted lab is correspondingly cheaper to finish.
-  return Math.max(1, Math.ceil(remainingWorkMs(meta, r.endsAt, nowMs) / 1000 / 60));
+  return Math.max(1, Math.ceil(remainingWorkMs(meta, id, r.endsAt, nowMs) / 1000 / 60));
 }
 export function rushResearch(meta: Meta, id: string, nowMs: number): boolean {
   const r = researchOf(meta, id);
@@ -442,6 +446,9 @@ export function migrateMeta(meta: Meta): Meta {
   // implicitly in skills.ts, so we only need to default the map for purchased groups.
   if (meta.unlocked == null) meta.unlocked = {};
   if (!Array.isArray(meta.research)) meta.research = [];
+  if (meta.labBoosts == null || typeof meta.labBoosts !== 'object') meta.labBoosts = {};
+  // drop any pre-per-lab global boost field — boosts are now keyed per lab in meta.labBoosts.
+  if ('labBoost' in meta) delete (meta as Record<string, unknown>).labBoost;
   if (meta.labSlots == null) meta.labSlots = 1;
   if (meta.vials == null) meta.vials = 0;
   if (meta.cardSlots == null) meta.cardSlots = 1;

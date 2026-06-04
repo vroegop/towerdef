@@ -207,29 +207,32 @@ const CSS = `
 .hud.theme-dnd .enemytbl th { color: var(--ink-dim); border-bottom-color: var(--rule); font-family: 'Roboto', system-ui, sans-serif; }
 .hud.theme-dnd .enemytbl td { color: var(--ink); border-bottom-color: rgba(176,154,106,.4); }
 
-/* check-in reward coffer: a wax-sealed parchment treasure chest with a gilt halo. It should read as
-   found loot from the campaign — gold chest, gem/vial spoils, a crimson wax "Claim" seal. */
+/* check-in reward LETTER: an aged parchment note tacked to the board with an iron pin, floating over
+   the game with a drop shadow behind it. It holds only a treasure-chest seal and the gem/vial spoils —
+   no heading, no button — matching the weathered "wanted poster" look of the rest of the skin. */
 .hud.theme-dnd .checkin-reward {
-  background: linear-gradient(180deg, var(--parch-lt), var(--parch-dk));
-  border: 2px solid #8a6a3a; color: var(--ink); font-family: 'Roboto', system-ui, sans-serif;
-  box-shadow: inset 0 0 0 2px var(--parch-lt), 0 6px 16px rgba(0,0,0,.4);
+  background:
+    radial-gradient(circle at 26% 12%, rgba(255,251,235,.85), rgba(255,251,235,0) 55%),
+    linear-gradient(165deg, #ece0c2 0%, #e3d4ac 55%, #d2bd8e 100%);
+  border: 1px solid #b89a64; border-radius: 2px; color: var(--ink); font-family: 'Roboto', system-ui, sans-serif;
+  /* a warm paper sheen inside + a deep drop shadow so the letter floats above the board */
+  box-shadow: inset 0 0 22px rgba(120,86,40,.18), 0 16px 30px rgba(0,0,0,.5), 0 5px 12px rgba(0,0,0,.34);
 }
-.hud.theme-dnd .checkin-reward:hover { border-color: var(--crimson); }
+.hud.theme-dnd .checkin-reward:hover { border-color: var(--gold-ink); }
+/* the iron pin tacking the letter to the board */
+.hud.theme-dnd .checkin-reward::after {
+  content: ''; position: absolute; top: 7px; left: 50%; width: 8px; height: 8px; margin-left: -4px; z-index: 2;
+  border-radius: 50%; background: radial-gradient(circle at 38% 32%, #7a5a32, #2a1a0c 78%);
+  box-shadow: 0 1px 2px rgba(0,0,0,.55), inset 0 1px 1px rgba(255,255,255,.35);
+}
 .hud.theme-dnd .checkin-reward .cr-glow {
-  background: radial-gradient(circle at 50% 36%, rgba(212,160,60,.55), rgba(212,160,60,0) 70%);
+  background: radial-gradient(circle at 50% 42%, rgba(212,160,60,.4), rgba(212,160,60,0) 68%);
 }
-.hud.theme-dnd .checkin-reward .cr-chest { color: #a9741f; filter: drop-shadow(0 1px 1px rgba(255,255,255,.5)); }
-.hud.theme-dnd .checkin-reward .cr-title { color: var(--accent); }
-.hud.theme-dnd .checkin-reward .cr-chip { background: rgba(122,74,26,.12); color: var(--ink); }
+.hud.theme-dnd .checkin-reward .cr-chest { color: #9a6a1e; filter: drop-shadow(0 1px 1px rgba(255,255,255,.5)); }
+.hud.theme-dnd .checkin-reward .cr-chip { background: rgba(122,74,26,.14); border: 1px solid rgba(122,74,26,.22); color: var(--ink); }
 .hud.theme-dnd .checkin-reward .cr-chip b { color: var(--ink); }
 .hud.theme-dnd .checkin-reward .cr-chip .ic.vial { color: #14564a; }
 .hud.theme-dnd .checkin-reward .cr-chip .ic.gem { color: #1f3f6a; }
-/* the Claim affordance speaks the same wax-seal language as the Start seal */
-.hud.theme-dnd .checkin-reward .cr-claim {
-  background: radial-gradient(circle at 50% 38%, #b3331f, #7a1a10);
-  color: var(--parch-lt); border: 1px solid #5a140c;
-  box-shadow: 0 2px 0 #4a100a, inset 0 0 8px rgba(0,0,0,.25);
-}
 .hud.theme-dnd .earncard .el { color: var(--ink-dim); font-family: 'Roboto', system-ui, sans-serif; }
 .hud.theme-dnd .earncard .ev { color: var(--gold-ink); font-family: 'Roboto', system-ui, sans-serif; }
 .hud.theme-dnd .earncard .ev span, .hud.theme-dnd .earncard .es { color: var(--ink-dim); }
@@ -435,6 +438,10 @@ const CSS = `
 .hud.theme-dnd .setrow .switch i { background: var(--ink-dim); }
 .hud.theme-dnd .setrow.on .switch { background: #6a8a3a; }
 .hud.theme-dnd .setrow.on .switch i { background: var(--parch-lt); }
+.hud.theme-dnd .set-slider .ss-ic { color: var(--ink-dim); }
+.hud.theme-dnd .set-slider .ss-label { color: var(--ink); }
+.hud.theme-dnd .set-slider .ss-range { accent-color: var(--accent); }
+.hud.theme-dnd .set-slider .ss-val { color: var(--ink-dim); }
 /* milestone trail on parchment: an inked spine, gilded to the furthest wave, a wax-seal "here" pin */
 .hud.theme-dnd .msrail::before { background: var(--rule); }
 .hud.theme-dnd .msrow.reached .msrail::before { background: linear-gradient(180deg, #d9a94a, var(--gold-ink)); }

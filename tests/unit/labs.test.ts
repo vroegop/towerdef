@@ -1,11 +1,11 @@
 /* tests/unit/labs.test.ts — lab auto-start chaining, the never-idle "waiting" state, and the timed
-   global lab-speed boost (cost ladder + boost-aware timer projection). */
+   per-lab speed boost (cost ladder + boost-aware timer projection + per-lab isolation). */
 import { describe, it, expect } from 'vitest';
 import {
-  migrateMeta, reconcileResearch, startResearch, applyLabBoost, labBoostCost, labBoostMult,
+  migrateMeta, reconcileResearch, applyLabBoost, labBoostCost, labBoostMult,
   labBoostRemaining, labCoinCost, labLevel, LAB_BY_ID,
 } from '../../src/sim/labs';
-import type { Meta, Research } from '../../src/types';
+import type { Meta } from '../../src/types';
 
 function freshMeta(over: Partial<Meta> = {}): Meta {
   return migrateMeta({
@@ -66,44 +66,47 @@ describe('the never-idle "waiting" state (coins-blocked)', () => {
   });
 });
 
-describe('timed global lab-speed boost', () => {
-  it('prices the example ladder: 5 labs, 1 day → 2x=120, 3x=228, 4x=324, 5x=408 vials', () => {
-    const research: Research[] = Array.from({ length: 5 }, (_, i) => ({ id: 'lab' + i, cost: 0, endsAt: 0 }));
-    const m = freshMeta({ research });
-    expect(labBoostCost(m, 2, 86400)).toBe(120);
-    expect(labBoostCost(m, 3, 86400)).toBe(228);
-    expect(labBoostCost(m, 4, 86400)).toBe(324);
-    expect(labBoostCost(m, 5, 86400)).toBe(408);
+describe('timed per-lab speed boost', () => {
+  it('prices one lab over a day: 2x=24, 3x=46, 4x=65, 5x=82 vials (each step 10% cheaper)', () => {
+    expect(labBoostCost(2, 86400)).toBe(24);
+    expect(labBoostCost(3, 86400)).toBe(46);
+    expect(labBoostCost(4, 86400)).toBe(65);
+    expect(labBoostCost(5, 86400)).toBe(82);
   });
 
-  it('charges 1 vial / hour / lab at 2x (a single lab, 1 day → 24 vials)', () => {
-    const m = freshMeta({ research: [{ id: 'dmgLab', cost: 0, endsAt: 0 }] });
-    expect(labBoostCost(m, 2, 86400)).toBe(24);
+  it('charges 1 vial / hour at 2x (1 day → 24 vials)', () => {
+    expect(labBoostCost(2, 86400)).toBe(24);
   });
 
   it('does not shorten the window, but banks multiplier×duration of lab time', () => {
     const now = 5_000_000;
     // a level with 48h of work left; a 1-day 2x boost should finish it in 24h of REAL time.
     const m = freshMeta({ vials: 10_000, research: [{ id: 'dmgLab', cost: 0, endsAt: now + 48 * H }] });
-    expect(applyLabBoost(m, 2, 86400, now)).toBe(true);
-    expect(labBoostMult(m, now)).toBe(2);
-    expect(Math.round(labBoostRemaining(m, now))).toBe(86400); // window is a full real day, not 12h
-    expect(m.research[0].endsAt).toBe(now + 24 * H);           // 48h work / 2x = 24h real
-    expect(m.vials).toBe(10_000 - 24);                          // 1 lab × 24h × 1x block
+    expect(applyLabBoost(m, 'dmgLab', 2, 86400, now)).toBe(true);
+    expect(labBoostMult(m, 'dmgLab', now)).toBe(2);
+    expect(Math.round(labBoostRemaining(m, 'dmgLab', now))).toBe(86400); // window is a full real day, not 12h
+    expect(m.research[0].endsAt).toBe(now + 24 * H);                      // 48h work / 2x = 24h real
+    expect(m.vials).toBe(10_000 - 24);                                    // 1 lab × 24h × 1x block
   });
 
-  it('refuses to stack a second boost while one is live', () => {
+  it('refuses to stack a second boost on the SAME lab while one is live', () => {
     const now = 5_000_000;
     const m = freshMeta({ vials: 10_000, research: [{ id: 'dmgLab', cost: 0, endsAt: now + 10 * H }] });
-    expect(applyLabBoost(m, 2, 86400, now)).toBe(true);
-    expect(applyLabBoost(m, 3, 86400, now + H)).toBe(false); // still inside the first window
+    expect(applyLabBoost(m, 'dmgLab', 2, 86400, now)).toBe(true);
+    expect(applyLabBoost(m, 'dmgLab', 3, 86400, now + H)).toBe(false); // still inside the first window
+  });
+
+  it('refuses to boost a lab that is not being researched', () => {
+    const now = 5_000_000;
+    const m = freshMeta({ vials: 10_000, research: [] });
+    expect(applyLabBoost(m, 'dmgLab', 2, 86400, now)).toBe(false);
   });
 
   it('speeds up auto-started levels begun during the boost window', () => {
     const now = 5_000_000;
     const m = freshMeta({ coins: 1_000_000_000, vials: 10_000, labs: { dmgLab: 0 },
       research: [{ id: 'dmgLab', cost: 30, endsAt: now + H }] });
-    applyLabBoost(m, 3, 7 * 86400, now); // a week-long 3x boost
+    applyLabBoost(m, 'dmgLab', 3, 7 * 86400, now); // a week-long 3x boost
     // level 2 of dmgLab takes 360s of work; auto-started under the 3x boost it should finish ~3x sooner.
     const beforeStart = m.research[0].endsAt; // level-1 completion
     reconcileResearch(m, beforeStart);
@@ -114,14 +117,32 @@ describe('timed global lab-speed boost', () => {
   });
 });
 
-describe('startResearch honours an active boost', () => {
-  it('projects a freshly started level onto the boosted timeline', () => {
+describe('per-lab boost isolation', () => {
+  it('boosts only the targeted lab, leaving others at 1×', () => {
     const now = 5_000_000;
-    const m = freshMeta({ coins: 1_000_000_000, vials: 10_000, labSlots: 2, labs: { dmgLab: 1 },
-      research: [{ id: 'hpLab', cost: 0, endsAt: now + 100 * H }] });
-    applyLabBoost(m, 2, 7 * 86400, now);
-    expect(startResearch(m, 'dmgLab', now)).toBe(true); // dmgLab level 2 = 360s work
-    const r = m.research.find((x) => x.id === 'dmgLab')!;
-    expect(r.endsAt - now).toBeCloseTo((360 * 1000) / 2, -1); // started under 2x → half the real time
+    const m = freshMeta({ vials: 10_000, labSlots: 2,
+      research: [{ id: 'dmgLab', cost: 0, endsAt: now + 48 * H }, { id: 'hpLab', cost: 0, endsAt: now + 48 * H }] });
+    expect(applyLabBoost(m, 'dmgLab', 2, 86400, now)).toBe(true);
+    expect(labBoostMult(m, 'dmgLab', now)).toBe(2);
+    expect(labBoostMult(m, 'hpLab', now)).toBe(1);
+    expect(m.research.find((r) => r.id === 'dmgLab')!.endsAt).toBe(now + 24 * H); // boosted → finishes sooner
+    expect(m.research.find((r) => r.id === 'hpLab')!.endsAt).toBe(now + 48 * H);  // untouched
+  });
+
+  it('lets a SECOND lab be boosted while the first is still boosted', () => {
+    const now = 5_000_000;
+    const m = freshMeta({ vials: 10_000, labSlots: 2,
+      research: [{ id: 'dmgLab', cost: 0, endsAt: now + 10 * H }, { id: 'hpLab', cost: 0, endsAt: now + 10 * H }] });
+    expect(applyLabBoost(m, 'dmgLab', 2, 86400, now)).toBe(true);
+    expect(applyLabBoost(m, 'hpLab', 3, 86400, now)).toBe(true); // a different lab → allowed
+    expect(labBoostMult(m, 'hpLab', now)).toBe(3);
+  });
+
+  it('re-projects the running level onto the boost the moment it is bought', () => {
+    const now = 5_000_000;
+    // dmgLab has 100h of work left; a 2× boost should re-time it to 50h of REAL time immediately.
+    const m = freshMeta({ vials: 10_000, research: [{ id: 'dmgLab', cost: 0, endsAt: now + 100 * H }] });
+    expect(applyLabBoost(m, 'dmgLab', 2, 7 * 86400, now)).toBe(true);
+    expect(m.research[0].endsAt - now).toBeCloseTo(50 * H, -1);
   });
 });

@@ -61,10 +61,11 @@ export interface Meta {
   labSlots: number;
   vials: number;
   lastCheckIn: number;
-  // A purchased, time-limited GLOBAL lab-speed boost (the "Speed Up" modal). While endsAt is in the
-  // future every running lab advances `mult`× faster; the window is real wall-clock time and is NOT
-  // shortened by the multiplier (a 1-day 2× boost runs a full day and banks 2 days of lab time).
-  labBoost?: { mult: number; endsAt: number } | null;
+  // Purchased, time-limited PER-LAB speed boosts (the per-lab "Speed Up" control), keyed by lab id.
+  // While a lab's endsAt is in the future it advances `mult`× faster; the window is real wall-clock
+  // time and is NOT shortened by the multiplier (a 1-day 2× boost runs a full day and banks 2 days of
+  // that lab's work). The boost follows the lab as it auto-chains its next levels.
+  labBoosts?: Record<string, { mult: number; endsAt: number }>;
   // ---- Superpowers (Prestige tab): Energy currency + per-power unlock/level/enable state ----
   // Optional so existing save literals / tests stay valid; migrateMeta + loadMeta always seed them.
   energy?: number;                          // earned +1 per boss kill (+ moat/crystal bonuses)
@@ -370,6 +371,7 @@ export interface Settings {
   damageNumbers: boolean;
   showTutorials: boolean;     // play the in-run guided tutorials (also re-enables them after a skip)
   showOfflineReward: boolean; // show the "while you were away" summary modal when a run survives offline
+  zoom: number;               // camera zoom on the tower (1 = default; <1 sees more, >1 zooms in)
   // ---- per-wave info messages (transient on-screen notes) ----
   msgWaveSkip: boolean;       // "Wave N skipped"
   msgInterest: boolean;       // "+X interest"
@@ -406,7 +408,7 @@ export interface HudHandlers {
   onStartResearch?: (id: string) => boolean;
   onCancelResearch?: (id: string) => boolean;
   onRushResearch?: (id: string) => boolean;
-  onApplyLabBoost?: (mult: number, durationSec: number) => boolean; // buy a timed global lab-speed boost
+  onApplyLabBoost?: (id: string, mult: number, durationSec: number) => boolean; // buy a timed speed boost for one lab
   onBuyLabSlot?: () => boolean;
   onBuySuperpower?: (id: string) => boolean;          // unlock a superpower with Energy
   onBuySuperTrack?: (spId: string, trackId: string) => boolean; // level a superpower track with Energy
