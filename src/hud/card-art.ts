@@ -117,6 +117,41 @@ const CARD_ART: Record<string, string> = {
     '<g class="rush rush2"><path d="M10 7l4.4 5-4.4 5" stroke-width="2"/></g>' +
     '<g class="rush rush3"><path d="M16 7l4.4 5-4.4 5" stroke-width="2"/></g>',
 
+  // Critical Power — a crit starburst with a struck "×" multiplier at its heart.
+  critPower:
+    '<g class="spark"><path d="M12 2.2 14.1 8.9 21 11 14.1 13.1 12 20 9.9 13.1 3 11 9.9 8.9Z" fill="currentColor" fill-opacity=".92" stroke-width="1"/></g>' +
+    '<path d="M9.6 9.6l4.8 4.8M14.4 9.6l-4.8 4.8" stroke="#fff" stroke-opacity=".8" stroke-width="1.5"/>',
+
+  // Frenzy — a radial burst of rays around a hot core (a fire-rate flare).
+  frenzy:
+    '<g class="spark"><path d="M12 12V3M12 12v9M12 12H3M12 12h9M12 12 5.6 5.6M12 12l6.4 6.4M12 12 18.4 5.6M12 12l-6.4 6.4" stroke-width="1.4"/></g>' +
+    '<circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/>',
+
+  // Volley — a forked bolt splitting toward two struck targets.
+  volley:
+    '<path d="M12 2 7 12h4l-2 10 9-13h-5l3-7Z" fill="currentColor" fill-opacity=".85" stroke-width="1"/>' +
+    '<path d="M13.4 11.2 17.6 14.6M10.4 13 6.4 16.4" stroke-width="1.3"/>' +
+    '<circle cx="18.4" cy="15.2" r="1.5" fill="currentColor" stroke="none"/>' +
+    '<circle cx="5.6" cy="17" r="1.5" fill="currentColor" stroke="none"/>',
+
+  // Lifesteal — a heart drawing a bright drop up into itself.
+  lifesteal:
+    '<g class="beat">' +
+    '<path d="M12 20C6 16 4 12 4 9a3.4 3.4 0 0 1 8-1 3.4 3.4 0 0 1 8 1c0 3-2 7-8 11Z" fill="currentColor" fill-opacity=".85" stroke-width="1.3"/>' +
+    '<path d="M12 8.4c0 2 1.5 3.4 1.5 5.1a1.5 1.5 0 0 1-3 0C10.5 11.8 12 10.4 12 8.4Z" fill="#fff" fill-opacity=".8" stroke="none"/>' +
+    '</g>',
+
+  // Thorns — a shield bearing a spiked star that bites back.
+  thorns:
+    '<path d="M12 2.6 20 5.3v5.8c0 5.4-3.6 8.4-8 10.3-4.4-1.9-8-4.9-8-10.3V5.3Z" fill="currentColor" fill-opacity=".22" stroke-width="1.6"/>' +
+    '<path d="M12 6.6 13.7 10.4 17.8 10.8 14.7 13.4 15.6 17.4 12 15.2 8.4 17.4 9.3 13.4 6.2 10.8 10.3 10.4Z" fill="currentColor" fill-opacity=".7" stroke-width="1"/>',
+
+  // Bounty — a money sack stamped with the compass-rose coin mark.
+  bounty:
+    '<path d="M8.6 3.4h6.8l-1.5 2.7C16.4 7.4 18.4 9.8 18.4 13a6.4 6.4 0 0 1-12.8 0c0-3.2 2-5.6 4.5-6.9Z" fill="currentColor" fill-opacity=".82" stroke="#9a7416" stroke-width="1.2"/>' +
+    '<path d="M9 4.4h6" stroke="#9a7416" stroke-width="1.2"/>' +
+    '<g transform="translate(12 13)" stroke="none"><path fill="#9a7416" fill-opacity=".7" d="M0 -3.4 L1 -1 L3.4 0 L1 1 L0 3.4 L-1 1 L-3.4 0 L-1 -1 Z"/></g>',
+
   // ---- RARE ----
   // Free Upgrades — a rising upgrade arrow with a sparkle of "free".
   freeUpgrades:
@@ -142,6 +177,30 @@ const CARD_ART: Record<string, string> = {
   waveSkip:
     '<g class="skip"><path d="M5 7l5 5-5 5M11 7l5 5-5 5" stroke-width="2"/><path d="M18.5 7v10" stroke-width="2"/></g>' +
     '<path d="M3 20c2-1.7 3.6-1.7 5.6 0s3.6 1.7 5.6 0 3.6-1.7 5.6 0" stroke-opacity=".5" stroke-width="1.3"/>',
+
+  // Amplify — rising equalizer bars with an upward boost arrow.
+  amplify:
+    '<g class="lift"><path d="M4 15v3M8 12v6M12 8v10M16 5v13M20 10v8" stroke-width="2.1"/></g>' +
+    '<path d="M16 5l-2.4 2.4M16 5l2.4 2.4" stroke="#fff" stroke-opacity=".7" stroke-width="1.3"/>',
+
+  // Overload — an overcharged many-pointed star pulsing around a white core.
+  overload:
+    '<g class="spark"><path d="M12 2 13.4 8 18.7 5.3 16 10.6 22 12 16 13.4 18.7 18.7 13.4 16 12 22 10.6 16 5.3 18.7 8 13.4 2 12 8 10.6 5.3 5.3 10.6 8Z" fill="currentColor" fill-opacity=".9" stroke-width=".8"/></g>' +
+    '<circle cx="12" cy="12" r="2.3" fill="#fff" fill-opacity=".9" stroke="none"/>',
+
+  // Onslaught — three fast chevrons compressing forward (waves arriving sooner).
+  onslaught:
+    '<g class="rush rush1"><path d="M3 6l6 6-6 6" stroke-width="2.2"/></g>' +
+    '<g class="rush rush2"><path d="M10 6l6 6-6 6" stroke-width="2.2"/></g>' +
+    '<g class="rush rush3"><path d="M17 7l3.6 5-3.6 5" stroke-width="2.2"/></g>',
+
+  // Investor — a coin stack with a rising trend arrow (interest compounding).
+  investor:
+    '<ellipse cx="8" cy="17.4" rx="4.6" ry="1.8" fill="currentColor" fill-opacity=".82" stroke="#9a7416" stroke-width="1"/>' +
+    '<ellipse cx="8" cy="14.6" rx="4.6" ry="1.8" fill="currentColor" fill-opacity=".9" stroke="#9a7416" stroke-width="1"/>' +
+    '<ellipse cx="8" cy="11.8" rx="4.6" ry="1.8" fill="currentColor" stroke="#9a7416" stroke-width="1"/>' +
+    '<path d="M13 13.6 16.6 9.6 18.4 11.4 21.4 7" stroke-width="1.7"/>' +
+    '<path d="M21.4 7h-3M21.4 7v3" stroke-width="1.7"/>',
 
   // ---- EPIC ----
   // Super Tower — a turret with a pulsing power core inside a charged aura.

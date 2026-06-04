@@ -26,9 +26,12 @@ const CARD_STAT: Record<string, keyof Stats> = {
   damage: 'rangedDamage', attackSpeed: 'fireRate', health: 'maxHp', healthRegen: 'regen',
   range: 'range', cash: 'goldFind', coins: 'cardCoinMult', slowAura: 'slowAura',
   critChance: 'critChance', enemyBalance: 'enemyBalance', extraDefense: 'defPct', fortress: 'armor',
-  overrun: 'lullReduce', freeUpgrades: 'cardFreeUp', plasmaCanon: 'plasmaCanon',
-  criticalCoin: 'criticalCoin', waveSkip: 'waveSkip', superTower: 'superTower',
-  secondWind: 'secondWind', demonMode: 'demonMode',
+  overrun: 'lullReduce', critPower: 'critMult', frenzy: 'rapidChance', volley: 'msChance',
+  lifesteal: 'lifesteal', thorns: 'thorns', bounty: 'goldPerWave',
+  freeUpgrades: 'cardFreeUp', plasmaCanon: 'plasmaCanon',
+  criticalCoin: 'criticalCoin', waveSkip: 'waveSkip',
+  amplify: 'rendChance', overload: 'superCrit', onslaught: 'waveAccel', investor: 'interest',
+  superTower: 'superTower', secondWind: 'secondWind', demonMode: 'demonMode',
 };
 
 // Seed in-run upgrade levels so every base stat the cards touch is non-zero (regen/coinsPerKill/armor
