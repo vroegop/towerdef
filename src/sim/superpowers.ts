@@ -16,8 +16,8 @@ import { evalCurve, PX_PER_METER } from './skills';
 
 // ---- balance constants (the few magnitudes not expressed as per-level tracks) ----
 // Energy to unlock the 1st…9th power (by PURCHASE ORDER, not which power). 9 powers now exist; the
-// ladder climbs steeply so later unlocks are a real prestige sink.
-export const UNLOCK_COSTS = [500, 10_000, 100_000, 500_000, 1_500_000, 4_000_000, 10_000_000, 25_000_000, 60_000_000];
+// ladder is 500 / 2k / 5k, then +5k for each unlock after that.
+export const UNLOCK_COSTS = [500, 2_000, 5_000, 10_000, 15_000, 20_000, 25_000, 30_000, 35_000];
 const TRACK_COST_BASE = 200;
 const TRACK_COST_PER = 300;
 export const MOAT_INNER_M = 18;       // moat inner edge, metres from the tower
@@ -686,12 +686,15 @@ function emitSuperFx(s: State, x: number, y: number, kind: 'shatter' | 'gem' | '
 }
 
 // pay out gems / vials / energy for one crystal-or-shard contact; bosses also yield bulk Energy.
-function payCrystalHit(s: State, e: Enemy): void {
+// Shards (fromShard) are deliberately weak: a flat 1 gem + 1 vial and no Energy per hit — but the
+// 20× boss-Energy bonus still applies. The orbiting crystals pay the full per-level track values.
+function payCrystalHit(s: State, e: Enemy, fromShard = false): void {
   const meta = s.meta;
-  meta.gems = (meta.gems || 0) + Math.round(trackValue(meta, 'crystal', 'gems'));
-  const v = Math.round(trackValue(meta, 'crystal', 'vials'));
+  const gems = fromShard ? 1 : Math.round(trackValue(meta, 'crystal', 'gems'));
+  meta.gems = (meta.gems || 0) + gems;
+  const v = fromShard ? 1 : Math.round(trackValue(meta, 'crystal', 'vials'));
   if (v) meta.vials = (meta.vials || 0) + v;
-  const en = Math.round(trackValue(meta, 'crystal', 'energy'));
+  const en = fromShard ? 0 : Math.round(trackValue(meta, 'crystal', 'energy'));
   meta.energy = (meta.energy || 0) + en + (e.type === 'boss' ? CRYSTAL_BOSS_ENERGY : 0);
   e.hp = 0;
   e.lastHurt = 'crystal';
@@ -715,9 +718,9 @@ function tickCrystal(s: State, dt: number, _rng: Rng): void {
       if (dx * dx + dy * dy > fog2) continue; // flew into the fog → gone
       const hit = nearestEnemyWithin(s, fr.x, fr.y, CRYSTAL_HIT_R);
       if (hit) {
-        payCrystalHit(s, hit);
+        payCrystalHit(s, hit, true);
         continue;
-      } // shard shatters on the enemy
+      } // shard hits one enemy, then shatters (is removed)
       keep.push(fr);
     }
     s.crystalFrags = keep;

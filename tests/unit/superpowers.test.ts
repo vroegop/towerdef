@@ -39,16 +39,16 @@ function freshMeta(over: Partial<Meta> = {}): Meta {
 }
 
 describe('superpowers — Energy economy', () => {
-  it('unlock cost follows purchase order (500 / 10k / 100k), not which power', () => {
+  it('unlock cost follows purchase order (500 / 2k / 5k, then +5k), not which power', () => {
     const m = freshMeta({ energy: 1_000_000 });
     expect(nextUnlockCost(m)).toBe(500);
     expect(buySuperpower(m, 'moat')).toBe(true); // moat first is fine
-    expect(nextUnlockCost(m)).toBe(10_000);
+    expect(nextUnlockCost(m)).toBe(2_000);
     expect(buySuperpower(m, 'crystal')).toBe(true);
-    expect(nextUnlockCost(m)).toBe(100_000);
+    expect(nextUnlockCost(m)).toBe(5_000);
     expect(buySuperpower(m, 'golden')).toBe(true);
     expect(unlockedCount(m)).toBe(3);
-    expect(nextUnlockCost(m)).toBe(500_000); // 4th rung of the 9-power ladder
+    expect(nextUnlockCost(m)).toBe(10_000); // 4th rung: +5k for each unlock after the 5k third
   });
 
   it('refuses to unlock without enough Energy and deducts on success', () => {
