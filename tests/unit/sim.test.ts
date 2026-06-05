@@ -326,7 +326,7 @@ describe('labs scale stats', () => {
   it('a scale lab multiplies its target stat', () => {
     const base = computeStats(createState(1, freshMeta(), false));
     const labbed = computeStats(createState(1, freshMeta({ labs: { dmgLab: 10 } }), false));
-    expect(labbed.rangedDamage).toBeCloseTo(base.rangedDamage * (1 + 0.02 * 10)); // Damage Lab: +0.02/level
+    expect(labbed.rangedDamage).toBeCloseTo(base.rangedDamage * (1 + LAB_BY_ID.dmgLab.per * 10)); // Damage Lab: per/level
     expect(waveStrSafe()).toBe(true);
   });
 });

@@ -66,14 +66,41 @@ const tcurve = (points: [number, number][]): LabCurve => ({
     return Math.round(interp(points, n));
   },
 });
+// build a [level,value] table from a flat per-level value list: position i (0-indexed) is the
+// price/time to REACH level i+1 (mirrors the dashboard's exported `perLevel` arrays exactly).
+const tbl = (vals: number[]): [number, number][] => vals.map((v, i) => [i, v] as [number, number]);
+
+// ---- exact per-level tables for the labs added from the balancing dashboard (tools/labs-dashboard).
+// Each list is that lab's exported `perLevel` / `perLevelSeconds` array: entry i = the coin cost / wall-
+// clock seconds to reach level i+1. Pasted verbatim from the dashboard export so the game matches it. ----
+// prettier-ignore
+const ATKSPEED_COST = [30,90,397,1082,2253,4001,6409,9554,13507,18336,24105,30876,38706,47654,57774,69119,81742,95692,111019,127772,145996,165738,187043,209955,234519,260775,288768,318537,350123,383567,418908,456186,495438,536702,580017,625418,672944,722629,774510,828622,885000,943680,1004694,1068078,1133865,1202088,1272780,1345975,1421704,1500000];
+// prettier-ignore
+const ATKSPEED_TIME = [120,348,1325,3308,6480,10985,16949,24482,33686,44651,57463,72202,88941,107753,128705,151861,177282,205029,235157,267723,302780,340379,380570,423402,468922,517177,568212,622070,678795,738429,801012,866585,935187,1006857,1081634,1159554,1240654,1324970,1412538,1503393,1597568,1695098,1796015,1900354,2008145,2119421,2234214,2352555,2474473,2600000];
+// prettier-ignore
+const CRITCHANCE_COST = [30,259,1158,2896,5584,9308,14142,20147,27379,35888,45721,56920,69524,83571,99096,116132,134711,154863,176617,200000];
+// prettier-ignore
+const CRITCHANCE_TIME = [600,2905,11191,26442,49262,80105,119339,167277,224193,290330,365908,451130,546180,651231,766446,891975,1027962,1174544,1331848,1500000];
+// prettier-ignore
+const REGEN_COST = [30,45,107,234,437,725,1107,1589,2178,2880,3700,4644,5715,6919,8260,9742,11369,13145,15074,17158,19402,21809,24381,27123,30036,33125,36391,39839,43469,47286,51292,55489,59880,64467,69253,74241,79432,84828,90433,96249,102276,108519,114978,121656,128556,135678,143025,150600,158404,166438,174705,183207,191946,200923,210141,219601,229304,239253,249450,259895,270592,281541,292744,304203,315920,327895,340132,352631,365393,378422,391717,405281,419114,433220,447599,462252,477181,492388,507874,523641,539689,556021,572637,589540,606730,624209,641978,660039,678393,697041,715985,735226,754765,774604,794743,815185,835930,856980,878337,900000];
+// prettier-ignore
+const REGEN_TIME = [120,169,361,731,1304,2099,3130,4410,5953,7768,9865,12253,14941,17937,21248,24881,28844,33142,37781,42768,48108,53807,59870,66302,73108,80293,87861,95818,104167,112913,122059,131611,141572,151946,162737,173949,185585,197648,210143,223073,236441,250251,264506,279209,294363,309972,326038,342565,359555,377011,394937,413336,432209,451560,471391,491706,512507,533796,555576,577850,600620,623889,647659,671933,696713,722002,747801,774113,800941,828287,856153,884542,913455,942894,972863,1003363,1034396,1065965,1098071,1130716,1163903,1197634,1231911,1266736,1302110,1338036,1374515,1411551,1449143,1487296,1526009,1565286,1605128,1645537,1686515,1728063,1770184,1812880,1856151,1900000];
+// prettier-ignore
+const BOUNCE_COST = [30,374,1722,4329,8361,13948,21199,30207,41055,53820,68570,85369,104276,125348,148637,174192,202062,232291,264924,300000];
+// prettier-ignore
+const BOUNCE_TIME = [600,3059,11897,28166,52508,85407,127258,178393,239105,309653,390272,481177,582566,694624,817522,951424,1096480,1252838,1420634,1600000];
+// prettier-ignore
+const GEMFIND_COST = [50,707,4624,14285,31906,59553,99189,152700,221907,308582,414451,541204,690494,863948,1063164,1289715,1545152,1831007,2148792,2500000];
+// prettier-ignore
+const GEMFIND_TIME = [600,2257,10644,29424,61496,109382,175354,261509,369806,502093,660129,845597,1060111,1305229,1582457,1893255,2239044,2621204,3041084,3500000];
 
 // ---- the two pickable labs (kind 'scale' → multiplies a SIM STAT in computeStats) ----
-// Damage: ×(1 + 0.02·lvl) on rangedDamage; Health: ×(1 + 0.03·lvl) on maxHp. Max level 100.
+// Damage: ×(1 + 0.04·lvl) on rangedDamage; Health: ×(1 + 0.05·lvl) on maxHp. Max level 100.
 export const LABS: LabDef[] = [
   { id: 'dmgLab', cat: 'attack', kind: 'scale', target: 'rangedDamage', label: 'Damage Lab',
-    per: 0.02, max: 100, coin: tcurve(LAB_COST), time: tcurve(LAB_TIME), gate: { wave: 30 } },
+    per: 0.04, max: 100, coin: tcurve(LAB_COST), time: tcurve(LAB_TIME), gate: { wave: 30 } },
   { id: 'hpLab', cat: 'defense', kind: 'scale', target: 'maxHp', label: 'Health Lab',
-    per: 0.03, max: 100, coin: tcurve(LAB_COST), time: tcurve(LAB_TIME), gate: { wave: 30 } },
+    per: 0.05, max: 100, coin: tcurve(LAB_COST), time: tcurve(LAB_TIME), gate: { wave: 30 } },
   // Game Speed: a 'special' lab. It does NOT scale a sim stat (so it never enters labScaleMults /
   // computeStats) — completing a level just widens the set of selectable battle speeds (see below).
   // Unlike every other lab it is available from wave 0 (gate.wave 0): it's the tutorial lab that
@@ -95,15 +122,15 @@ export const LABS: LabDef[] = [
     per: 0.1, max: 20, coin: tcurve(LAB_COST), time: tcurve(LAB_TIME), gate: { wave: 30 } },
   { id: 'coinKillLab', cat: 'economic', kind: 'scale', target: 'coinsPerKill', label: 'Coin/Kill Lab',
     per: 0.1, max: 20, coin: tcurve(LAB_COST), time: tcurve(LAB_TIME), gate: { wave: 30 } },
-  // +1% per level (20 levels), first-20 Damage durations. Level 20 = a one-time +20% (linear, not compounding).
+  // +5% per level (20 levels), first-20 Damage durations. Level 20 = a one-time +100% (linear, not compounding).
   { id: 'critDmgLab', cat: 'attack', kind: 'scale', target: 'critMult', label: 'Crit Damage Lab',
-    per: 0.01, max: 20, coin: tcurve(LAB_COST), time: tcurve(LAB_TIME), gate: { wave: 30 } },
+    per: 0.05, max: 20, coin: tcurve(LAB_COST), time: tcurve(LAB_TIME), gate: { wave: 30 } },
   { id: 'dpmLab', cat: 'attack', kind: 'scale', target: 'dmgPerMeter', label: 'Damage/Metre Lab',
-    per: 0.01, max: 20, coin: tcurve(LAB_COST), time: tcurve(LAB_TIME), gate: { wave: 30 } },
+    per: 0.02, max: 20, coin: tcurve(LAB_COST), time: tcurve(LAB_TIME), gate: { wave: 30 } },
   { id: 'armorLab', cat: 'defense', kind: 'scale', target: 'armor', label: 'Armor Lab',
-    per: 0.01, max: 20, coin: tcurve(LAB_COST), time: tcurve(LAB_TIME), gate: { wave: 30 } },
+    per: 0.04, max: 20, coin: tcurve(LAB_COST), time: tcurve(LAB_TIME), gate: { wave: 30 } },
   { id: 'goldWaveLab', cat: 'economic', kind: 'scale', target: 'goldPerWave', label: 'Gold/Wave Lab',
-    per: 0.01, max: 20, coin: tcurve(LAB_COST), time: tcurve(LAB_TIME), gate: { wave: 30 } },
+    per: 0.05, max: 20, coin: tcurve(LAB_COST), time: tcurve(LAB_TIME), gate: { wave: 30 } },
 
   // ---- special labs (kind 'special' → applied OUTSIDE computeStats, via dedicated helpers) ----
   // Starting Gold: +30 gold at run start per level (20 levels). Durations: 1 min, +1 min per level.
@@ -118,6 +145,24 @@ export const LABS: LabDef[] = [
   // 'interestcap' unit through that helper, not per·level.
   { id: 'interestCapLab', cat: 'economic', kind: 'special', target: 'interestCap', label: 'Interest Cap Lab',
     per: 0, max: 20, unit: 'interestcap', coin: tcurve(LAB_COST), time: tcurve(LAB_TIME), gate: { wave: 30 } },
+
+  // ---- labs designed in the balancing dashboard (tools/labs-dashboard); curves are bespoke tables. ----
+  // Attack Speed: ×(1 + 0.01·lvl) on fireRate — a second multiplicative DPS axis alongside Damage. 50
+  // levels (capped at +50%) so it stays behind the 100-level Damage Lab.
+  { id: 'atkSpeedLab', cat: 'attack', kind: 'scale', target: 'fireRate', label: 'Attack Speed Lab',
+    per: 0.01, max: 50, coin: tcurve(tbl(ATKSPEED_COST)), time: tcurve(tbl(ATKSPEED_TIME)), gate: { wave: 30 } },
+  // Crit Chance: ADDS +0.5% crit chance per level (flat), to +10% at level 20 — pairs with the Crit Damage lab.
+  { id: 'critChanceLab', cat: 'attack', kind: 'flat', target: 'critChance', label: 'Crit Chance Lab',
+    per: 0.005, max: 20, unit: 'pct', coin: tcurve(tbl(CRITCHANCE_COST)), time: tcurve(tbl(CRITCHANCE_TIME)), gate: { wave: 30 } },
+  // HP Regen: ×(1 + 0.1·lvl) on regen — sustain scaling for long waves. 100 levels (×11 at max).
+  { id: 'regenLab', cat: 'defense', kind: 'scale', target: 'regen', label: 'HP Regen Lab',
+    per: 0.1, max: 100, coin: tcurve(tbl(REGEN_COST)), time: tcurve(tbl(REGEN_TIME)), gate: { wave: 30 } },
+  // Bounce Chance: ADDS +1% per level (flat) to the Lightning/Arc bounce roll (+20% at level 20).
+  { id: 'bounceLab', cat: 'attack', kind: 'flat', target: 'bounceChance', label: 'Bounce Chance Lab',
+    per: 0.01, max: 20, unit: 'pct', coin: tcurve(tbl(BOUNCE_COST)), time: tcurve(tbl(BOUNCE_TIME)), gate: { wave: 30 } },
+  // Gem Find: a 'special' lab — ×(1 + 0.024·lvl) on gem rewards (milestones + check-ins) via labGemMult.
+  { id: 'gemFindLab', cat: 'economic', kind: 'special', target: 'gemMult', label: 'Gem Find Lab',
+    per: 0.024, max: 20, unit: 'pct', coin: tcurve(tbl(GEMFIND_COST)), time: tcurve(tbl(GEMFIND_TIME)), gate: { wave: 30 } },
 ];
 export const LAB_BY_ID: Record<string, LabDef> = {};
 for (const L of LABS) LAB_BY_ID[L.id] = L;
@@ -163,6 +208,9 @@ export function labFlatAdds(meta: Meta): Record<string, number> {
 export const labStartingGold = (meta: Meta): number => 30 * lvl(meta, 'startGoldLab');
 // Tier Coin multiplier — ×(1 + 0.01·level) on the end-of-run coin reward.
 export const labTierCoinMult = (meta: Meta): number => 1 + 0.01 * lvl(meta, 'tierCoinLab');
+// Gem Find multiplier — ×(1 + 0.024·level) on gem rewards (milestones + check-ins). Mirrors gemFindLab.per
+// and the 'gemMult' cosmetic buff; applied at the same reward sites so the two stack multiplicatively.
+export const labGemMult = (meta: Meta): number => 1 + 0.024 * lvl(meta, 'gemFindLab');
 // Interest Cap — the per-wave gold ceiling on interest income. Geometric ladder over 20 levels:
 // 25·800^(level/20), so level 0 = 25/wave and level 20 = 20,000/wave with accelerating increments.
 export const labInterestCap = (meta: Meta): number =>
@@ -404,7 +452,7 @@ export function claimCheckIn(meta: Meta, nowMs: number): { claims: number; vials
   const n = checkInPending(meta, nowMs);
   if (n <= 0) return null;
   const vials = n * CHECKIN_VIALS,
-    gems = Math.round(n * CHECKIN_GEMS * cosmeticBuffMult(meta, 'gemMult')); // ×gem cosmetic buff
+    gems = Math.round(n * CHECKIN_GEMS * cosmeticBuffMult(meta, 'gemMult') * labGemMult(meta)); // ×gem cosmetic buff ×Gem Find lab
   meta.vials = (meta.vials || 0) + vials;
   meta.gems = (meta.gems || 0) + gems;
   meta.lastCheckIn = nowMs;

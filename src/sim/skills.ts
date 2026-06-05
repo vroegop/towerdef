@@ -7,7 +7,7 @@
    The effective number of levels a stat has is perm + run (capped at the upgrade's max).
    Tabs: attack / defense / economic (icons, not words). */
 import type { BulkQty, CardDef, CardSpec, CardDrawResult, Curve, Meta, State, Stats, TabDef, UpgradeCurve, UpgradeDef, UpgradeSpec } from '../types';
-import { labCapBonus, labFlatAdds, labInterestCap, labScaleMults, labTierCoinMult } from './labs';
+import { labCapBonus, labFlatAdds, labGemMult, labInterestCap, labScaleMults, labTierCoinMult } from './labs';
 import { coinMult } from './waves';
 import { cosmeticBuffMult, towerForTier, TOWER_UNLOCK_WAVE } from './cosmetics';
 import {
@@ -1055,7 +1055,7 @@ export function claimMilestone(meta: Meta, tier: number, wave: number): Mileston
   const key = msKey(tier, wave);
   const r = milestoneReward(wave, tier);
   if (msBest(meta, tier) >= wave && !meta.claimedMilestones[key] && isClaimable(r)) {
-    r.gems = Math.round(r.gems * cosmeticBuffMult(meta, 'gemMult')); // ×gem cosmetic buff
+    r.gems = Math.round(r.gems * cosmeticBuffMult(meta, 'gemMult') * labGemMult(meta)); // ×gem cosmetic buff ×Gem Find lab
     meta.coins = (meta.coins || 0) + r.coins;
     meta.gems = (meta.gems || 0) + r.gems;
     meta.vials = (meta.vials || 0) + r.vials;
