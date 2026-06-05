@@ -151,9 +151,9 @@ export const LABS: LabDef[] = [
   // levels (capped at +50%) so it stays behind the 100-level Damage Lab.
   { id: 'atkSpeedLab', cat: 'attack', kind: 'scale', target: 'fireRate', label: 'Attack Speed Lab',
     per: 0.01, max: 50, coin: tcurve(tbl(ATKSPEED_COST)), time: tcurve(tbl(ATKSPEED_TIME)), gate: { wave: 30 } },
-  // Crit Chance: ADDS +5% crit chance per level (flat), to +100% at level 20 — pairs with the Crit Damage lab.
+  // Crit Chance: ADDS +0.5% crit chance per level (flat), to +10% at level 20 — pairs with the Crit Damage lab.
   { id: 'critChanceLab', cat: 'attack', kind: 'flat', target: 'critChance', label: 'Crit Chance Lab',
-    per: 0.05, max: 20, unit: 'pct', coin: tcurve(tbl(CRITCHANCE_COST)), time: tcurve(tbl(CRITCHANCE_TIME)), gate: { wave: 30 } },
+    per: 0.005, max: 20, unit: 'pct', coin: tcurve(tbl(CRITCHANCE_COST)), time: tcurve(tbl(CRITCHANCE_TIME)), gate: { wave: 30 } },
   // HP Regen: ×(1 + 0.1·lvl) on regen — sustain scaling for long waves. 100 levels (×11 at max).
   { id: 'regenLab', cat: 'defense', kind: 'scale', target: 'regen', label: 'HP Regen Lab',
     per: 0.1, max: 100, coin: tcurve(tbl(REGEN_COST)), time: tcurve(tbl(REGEN_TIME)), gate: { wave: 30 } },

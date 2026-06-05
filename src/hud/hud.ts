@@ -2112,7 +2112,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     }
     if (unit === 'meters') return 'Adds +' + Math.round(per * lv) + 'm attack range (+' + per + 'm per level).';
     if (target === 'gemMult') return 'Gem rewards ×' + (1 + per * lv).toFixed(2) + ' at lv ' + lv + ' (+' + (per * 100).toFixed(1) + '% per level, on milestones & check-ins).';
-    if (unit === 'pct') return 'Adds +' + Math.round(per * lv * 100) + '% ' + label.replace(/ Lab$/, '') + ' (+' + Math.round(per * 100) + '% per level).';
+    if (unit === 'pct') return 'Adds +' + +(per * lv * 100).toFixed(1) + '% ' + label.replace(/ Lab$/, '') + ' (+' + +(per * 100).toFixed(2) + '% per level).';
     if (unit === 'gold') return 'Begin each run with +' + per * lv + ' gold (+' + per + ' per level).';
     if (unit === 'tierpct') return '+' + Math.round(per * lv * 100) + '% coins from runs (+' + Math.round(per * 100) + '% per level).';
     if (unit === 'interestcap') return 'Caps Interest income at ' + Math.round(25 * Math.pow(800, lv / 20)).toLocaleString() + ' gold/wave (25 → 20,000 across 20 levels).';
