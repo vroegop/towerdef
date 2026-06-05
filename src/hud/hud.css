@@ -1091,6 +1091,16 @@
 .hud .infomodal-card.im-gold .im-ok { background: linear-gradient(180deg, #ffeaa6, #ffc738); }
 .hud .im-ok:hover { filter: brightness(1.06); }
 .hud .im-ok:active { transform: translateY(1px); }
+/* disabled while the offline tally is still running — no hover/press feedback, looks inert */
+.hud .im-ok:disabled { cursor: default; opacity: 0.55; filter: none; transform: none; }
+/* "Simulating…" status row under the live chips, with a small spinner */
+.hud .im-progress { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 14px;
+  color: #aab3c7; font: 700 12.5px 'Roboto', system-ui, sans-serif; }
+.hud .im-spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(255,210,74,0.35);
+  border-top-color: #ffd24a; animation: im-spin 0.7s linear infinite; }
+@keyframes im-spin { to { transform: rotate(360deg); } }
+/* live chips before the first non-zero tally — faintly pulsing placeholder */
+.hud .im-pending { opacity: 0.5; }
 /* subdued secondary action (e.g. "I paused on purpose") below the primary button */
 .hud .im-secondary { display: block; width: 100%; margin-top: 10px; padding: 10px; border-radius: 10px; cursor: pointer;
   background: transparent; border: 1px solid #2f3854; color: #aab3c7; font: 700 13px 'Roboto', system-ui, sans-serif; }

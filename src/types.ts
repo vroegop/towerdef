@@ -463,7 +463,14 @@ export interface Hud {
   hideOverview(): void;
   showHint(html: string): void;
   hideHint(): void;
-  showOfflineReward(reward: OfflineReward): void;
+  // The "while you were away" summary. opts.computing opens it in a live state: numbers tick up as
+  // the offline sim runs on the worker and the Collect button stays disabled until it finishes.
+  showOfflineReward(reward: OfflineReward, opts?: { computing?: boolean }): void;
+  // While a computing reward modal is open: replace its live totals. `done` enables Collect and drops
+  // the "Simulating…" indicator. No-op if no offline modal is open. Optional (host no-ops if absent).
+  updateOfflineReward?(reward: OfflineReward, done: boolean): void;
+  // Dismiss the offline reward modal outright (e.g. the hero died catching up → straight to overview).
+  hideOfflineReward?(): void;
   // Returned-while-paused prompt: ask if the pause was intentional. onCollect fast-forwards the
   // missed time at `speed`; onKeepPaused (optional) just dismisses.
   showPausePrompt(info: { awaySec: number; speed: number }, onCollect: () => void, onKeepPaused?: () => void): void;

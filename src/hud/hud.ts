@@ -1478,12 +1478,16 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
   // again" switch flips the matching Display setting, so each popup can be re-enabled from Settings.
   const infomodal = $('#h-infomodal'),
     infocard = $('#h-infomodal-card');
+  // While the offline catch-up is still computing the modal is "locked": no backdrop-dismiss, so the
+  // player can't tap past the in-progress tally before the sim has finished and Collect is enabled.
+  let infoLocked = false;
   function hideInfoModal(): void {
+    infoLocked = false;
     infomodal.classList.add('hide');
   }
   // click the dimmed backdrop (not the card) to dismiss — same idiom as the other modals
   infomodal.addEventListener('click', (e) => {
-    if (e.target === infomodal) hideInfoModal();
+    if (e.target === infomodal && !infoLocked) hideInfoModal();
   });
   interface InfoModalOpts {
     accent: string;     // tint class suffix for the glow/badge: 'amber' (tutorial) | 'gold' (reward)
@@ -1492,12 +1496,14 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     body: string;       // inner HTML
     rewards?: string;   // optional reward-chip HTML row
     primary: string;    // primary button label
+    primaryDisabled?: boolean; // render the primary button disabled (e.g. while an offline tally runs)
     onPrimary?: () => void;
     secondary?: string;     // optional second (subdued) button below the primary
     onSecondary?: () => void;
     dontShowAgain?: { key: keyof Settings; label: string };
   }
   function showInfoModal(o: InfoModalOpts): void {
+    infoLocked = false; // a fresh modal starts unlocked; showOfflineReward re-locks if it's still computing
     const dsa = o.dontShowAgain;
     infocard.className = 'infomodal-card im-' + o.accent;
     infocard.innerHTML =
@@ -1507,7 +1513,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       '<div class="im-body">' + o.body + '</div>' +
       (o.rewards ? '<div class="im-rewards">' + o.rewards + '</div>' : '') +
       (dsa ? '<button class="im-dsa" id="h-im-dsa"><span class="im-check"><i></i></span><span>' + dsa.label + '</span></button>' : '') +
-      '<button class="im-ok" id="h-im-ok">' + o.primary + '</button>' +
+      '<button class="im-ok" id="h-im-ok"' + (o.primaryDisabled ? ' disabled' : '') + '>' + o.primary + '</button>' +
       (o.secondary ? '<button class="im-secondary" id="h-im-sec">' + o.secondary + '</button>' : '');
     if (o.secondary) {
       $('#h-im-sec').addEventListener('click', () => {
@@ -1526,17 +1532,18 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       });
     }
     $('#h-im-ok').addEventListener('click', () => {
+      if ((($('#h-im-ok') as HTMLButtonElement).disabled)) return; // still computing → ignore
       hideInfoModal();
       o.onPrimary && o.onPrimary();
     });
     infomodal.classList.remove('hide');
   }
-  // Public: the "while you were away" summary, shown once on return when a run survived offline.
-  function showOfflineReward(reward: OfflineReward): void {
-    // Spoils are the CURRENCIES the run banked while away, each as a gemstone hexagon (matching the
-    // home-screen currency chips). Only non-zero gains appear; kills/waves are progress, not loot,
-    // so they're not shown here. gold is the in-run purse (cur-gold tint); the rest are meta coins
-    // and — should a future run mechanic grant them — gems/vials.
+  // Spoils are the CURRENCIES the run banked while away, each as a gemstone hexagon (matching the
+  // home-screen currency chips). Only non-zero gains appear; kills/waves are progress, not loot,
+  // so they're not shown here. gold is the in-run purse (cur-gold tint); the rest are meta coins,
+  // and gems/vials when a superpower minted them mid-replay. While still computing we keep a faint
+  // placeholder so the chip row doesn't pop in empty.
+  function offlineChipsHtml(reward: OfflineReward, computing: boolean): string {
     const specs: { key: string; ic: string; cls: string; amt: number }[] = [
       { key: 'gold', ic: 'coin', cls: 'gold', amt: reward.gold || 0 },
       { key: 'coins', ic: 'coinstar', cls: 'coin', amt: reward.coins || 0 },
@@ -1547,15 +1554,49 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
       .filter((s) => s.amt > 0)
       .map((s) => '<span class="chip cur-' + s.key + '">' + icon(s.ic, 13, s.cls) + ' <b>+' + abbr(s.amt) + '</b></span>')
       .join('');
+    return chips || (computing ? '<span class="chip cur-gold im-pending">' + icon('coin', 13, 'gold') + ' <b>+0</b></span>' : '');
+  }
+  // Public: the "while you were away" summary. With opts.computing it opens LIVE — the offline sim is
+  // still running on the worker, so the totals tick up via updateOfflineReward() and Collect stays
+  // disabled (and the backdrop locked) until the replay finishes.
+  function showOfflineReward(reward: OfflineReward, opts?: { computing?: boolean }): void {
+    const computing = !!(opts && opts.computing);
     showInfoModal({
       accent: 'gold',
       iconName: 'best',
       title: 'While you were away',
-      body: 'Your hero kept fighting in your absence and banked these spoils:',
-      rewards: '<div class="chips">' + chips + '</div>',
-      primary: 'Collect',
+      body: computing
+        ? 'Your hero is still fighting through the time you were gone — tallying the spoils&hellip;'
+        : 'Your hero kept fighting in your absence and banked these spoils:',
+      rewards:
+        '<div class="chips" id="h-off-chips">' + offlineChipsHtml(reward, computing) + '</div>' +
+        (computing ? '<div class="im-progress" id="h-off-prog"><span class="im-spin"></span><span>Simulating&hellip;</span></div>' : ''),
+      primary: computing ? 'Simulating&hellip;' : 'Collect',
+      primaryDisabled: computing,
       dontShowAgain: { key: 'showOfflineReward', label: "Don't show this again" },
     });
+    infoLocked = computing; // lock the backdrop until the tally completes
+  }
+  // Public: refresh the live totals on an open computing modal. `done` finishes it: enable Collect,
+  // unlock the backdrop and drop the "Simulating…" row. No-op if no offline modal is showing.
+  function updateOfflineReward(reward: OfflineReward, done: boolean): void {
+    const chips = root.querySelector('#h-off-chips');
+    if (!chips) return; // not the offline modal (or already collected)
+    chips.innerHTML = offlineChipsHtml(reward, !done);
+    if (done) {
+      infoLocked = false;
+      const ok = root.querySelector('#h-im-ok') as HTMLButtonElement | null;
+      if (ok) {
+        ok.disabled = false;
+        ok.textContent = 'Collect';
+      }
+      const prog = root.querySelector('#h-off-prog');
+      if (prog) prog.remove();
+    }
+  }
+  // Public: dismiss the offline modal outright (e.g. the hero died catching up).
+  function hideOfflineReward(): void {
+    if (root.querySelector('#h-off-chips')) hideInfoModal();
   }
   // Public: shown on return when the run was left PAUSED (so it earned nothing). Asks whether the
   // pause was intentional; "collect" lets the caller fast-forward the missed time at the player's
@@ -2590,7 +2631,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     }
   }, 1000);
 
-  return { update, showMenu, refreshMenu, hideMenu, showOverview, hideOverview, showHint, hideHint, showOfflineReward, showPausePrompt, setMeta, root };
+  return { update, showMenu, refreshMenu, hideMenu, showOverview, hideOverview, showHint, hideHint, showOfflineReward, updateOfflineReward, hideOfflineReward, showPausePrompt, setMeta, root };
 }
 
 // Factory for a themed skin: same core + wiring, restyled by `theme = { cls, css }`.
