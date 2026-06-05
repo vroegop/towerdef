@@ -77,9 +77,7 @@ export const SUPERPOWERS: SuperpowerDef[] = [
     tracks: [
       { id: 'cooldown', label: 'Cooldown', max: 40, curve: lin(500, -10), fmt: sec },        // 500s → 100s
       { id: 'count', label: 'Crystals', max: 14, curve: lin(4, 1), fmt: (v) => '' + Math.round(v) }, // 4 → 18
-      { id: 'gems', label: 'Gems / hit', max: 9, curve: lin(1, 1), fmt: (v) => '' + Math.round(v) }, // 1 → 10
-      { id: 'vials', label: 'Vials / hit', max: 10, curve: lin(0, 1), fmt: (v) => '' + Math.round(v) },
-      { id: 'energy', label: 'Energy / hit', max: 10, curve: lin(0, 1), fmt: (v) => '' + Math.round(v) },
+      // each crystal/shard hit pays a flat 1 gem + 1 vial (and 20× boss Energy) — see payCrystalHit
       { id: 'gold', label: 'Gold/Coin ×', max: 10, curve: lin(1, 0.2), fmt: mult },          // ×1 → ×3
     ],
   },
