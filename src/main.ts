@@ -1,6 +1,6 @@
 /* src/main.ts — game boot + main loop. Wires the deterministic sim to the Canvas2D renderer
-   and the swappable HUD host, owns persistence (localStorage), offline catch-up, and the dev
-   overlay. This is the only module that touches the browser lifecycle. */
+   and the swappable HUD host, owns persistence (localStorage + the backend sync layer), offline
+   catch-up, and the dev overlay. This is the only module that touches the browser lifecycle. */
 import './hud/hud.css';
 import type { EarnSummary, HudHandlers, Meta, OfflineReward, Settings, State } from './types';
 import { DT, catchUp, plannedTicks } from './sim/offline';
@@ -19,11 +19,16 @@ import { Canvas2DRenderer } from './render/canvas2d';
 import { createHudHost } from './hud/host';
 import { createDevMenu, savedHud } from './hud/devmenu';
 import { DEFAULT_HUD, HUDS } from './hud/registry';
+import { hydrateDevice, schedulePush, type StorageKeys } from './backend/sync';
 
 const SAVE = 'arena.save',
   METAK = 'arena.meta',
   SETK = 'arena.settings',
   OFFLINE_CAP = 12 * 3600;
+
+// Keys the backend sync layer mirrors to "the server" (mock today, a Node service later). The device's
+// localStorage stays authoritative — sync only restores on a fresh install and backs up in the background.
+const KEYS: StorageKeys = { meta: METAK, settings: SETK, save: SAVE, device: 'arena.deviceId' };
 
 // visual-indicator settings (default ON); shared by reference with the renderer + HUD
 function loadSettings(): Settings {
@@ -50,6 +55,7 @@ function loadSettings(): Settings {
 }
 function saveSettings(): void {
   localStorage.setItem(SETK, JSON.stringify(settings));
+  schedulePush(KEYS);
 }
 
 function loadMeta(): Meta {
@@ -96,6 +102,7 @@ function loadMeta(): Meta {
 }
 function saveMeta(): void {
   localStorage.setItem(METAK, JSON.stringify(meta));
+  schedulePush(KEYS);
 }
 function loadSave(): { savedAt: number; state: State } | null {
   try {
@@ -651,7 +658,10 @@ function frame(now: number): void {
 
 // ---- persistence (only a mid-run is ever saved) ----
 function persist(): void {
-  if (sim) localStorage.setItem(SAVE, JSON.stringify({ savedAt: Date.now(), state: sim.serialize() }));
+  if (sim) {
+    localStorage.setItem(SAVE, JSON.stringify({ savedAt: Date.now(), state: sim.serialize() }));
+    schedulePush(KEYS);
+  }
 }
 document.addEventListener('visibilitychange', () => {
   if (offlineBusy) return; // a catch-up worker is already running — don't double-replay or persist a stale state
@@ -694,33 +704,47 @@ setInterval(() => {
 setInterval(reconcileLabs, 5000);
 
 // ---- boot ----
-reconcileLabs();
-const saved = loadSave();
-if (saved && saved.state) {
-  saved.state.meta = meta;
-  sim = new Sim(saved.state);
-  mode = 'playing';
-  hud.hideMenu();
-  const elapsed = (Date.now() - saved.savedAt) / 1000;
-  // A run saved while paused (speed 0) earned nothing — we'll ask about it below rather than replay.
-  const wasPaused = gameSpeed(meta) === 0;
-  const resume = (): void => {
-    last = performance.now();
-    running = true;
-    requestAnimationFrame(frame);
-    if (elapsed > PAUSE_PROMPT_MIN && wasPaused) promptOfflinePause(elapsed);
-  };
-  if (elapsed > 2 && !wasPaused) {
-    // The catch-up runs on a worker: the canvas holds (black is fine — nothing has drawn yet) while
-    // the live "while you were away" tally fills in, then the loop starts on the caught-up state.
-    applyOfflineCatchUp(elapsed, effSpeed(), true).then((ended) => {
-      if (!ended) resume(); // hero died catching up → overview already shown
-    });
-  } else {
-    resume();
+// On a fresh device, restore the last server-side bundle before reading local state (client-wins: an
+// existing local save is never overwritten). The await is a no-op for returning players and is guarded
+// so an offline/missing backend can never block launch.
+async function boot(): Promise<void> {
+  if (await hydrateDevice(KEYS)) {
+    // Remote data was written into localStorage — re-read it into the live objects (mutated in place so
+    // the renderer/HUD/handlers that already hold these references pick the values up) and refresh.
+    Object.assign(settings, loadSettings());
+    Object.assign(meta, loadMeta());
+    hud.setMeta(meta);
   }
-} else if (!meta.hasPlayed) {
-  startRun(true);
-} else {
-  goToMenu({});
+  reconcileLabs();
+  const saved = loadSave();
+  if (saved && saved.state) {
+    saved.state.meta = meta;
+    sim = new Sim(saved.state);
+    mode = 'playing';
+    hud.hideMenu();
+    const elapsed = (Date.now() - saved.savedAt) / 1000;
+    // A run saved while paused (speed 0) earned nothing — we'll ask about it below rather than replay.
+    const wasPaused = gameSpeed(meta) === 0;
+    const resume = (): void => {
+      last = performance.now();
+      running = true;
+      requestAnimationFrame(frame);
+      if (elapsed > PAUSE_PROMPT_MIN && wasPaused) promptOfflinePause(elapsed);
+    };
+    if (elapsed > 2 && !wasPaused) {
+      // The catch-up runs on a worker: the canvas holds (black is fine — nothing has drawn yet) while
+      // the live "while you were away" tally fills in, then the loop starts on the caught-up state.
+      applyOfflineCatchUp(elapsed, effSpeed(), true).then((ended) => {
+        if (!ended) resume(); // hero died catching up → overview already shown
+      });
+    } else {
+      resume();
+    }
+  } else if (!meta.hasPlayed) {
+    startRun(true);
+  } else {
+    goToMenu({});
+  }
 }
+
+void boot();

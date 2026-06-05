@@ -6,6 +6,10 @@
 node_modules/
 dist/
 
+# local backend config (real-server URL); .env.example is committed as the template
+.env.local
+.env*.local
+
 # test artifacts (baselines under tests/visual/__screenshots__ ARE committed)
 playwright-report/
 test-results/

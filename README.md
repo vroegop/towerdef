@@ -37,6 +37,7 @@ src/sim/      pure game logic & rules — no DOM, no canvas, no Date.now() in a 
 src/render/   reads a sim snapshot and paints it — never mutates the sim, holds no rules
 src/hud/      DOM overlay: menus, upgrade docks, modals, the swappable-HUD host + dev menu
 src/huds/     themed HUD skins (D&D) built on the one themeable HUD core
+src/backend/  async "server" abstraction (mock-in-browser today, Node/fetch later) + device sync
 src/main.ts   boot + fixed-timestep loop + persistence + offline catch-up (the only lifecycle owner)
 ```
 
@@ -62,6 +63,18 @@ save corruption, or layering bugs.
   saved or authoritative state.
 - **Save migration is forward-only and idempotent** (`migrateMeta` in `src/sim/labs.ts`): new
   `meta.*` fields are backfilled on load so old saves keep working. Add new fields there.
+
+### Backend / persistence
+
+The device's `localStorage` is the authoritative save (`arena.meta`, `arena.settings`, `arena.save`).
+On top of it, `src/backend/` adds an **async server abstraction** so the static GitHub Pages build can
+already behave like it has a backend — and become a real one without touching game code. `getBackend()`
+returns the in-browser `MockBackend` (a fake server over an `arena.server.*` localStorage namespace,
+with seeded fake players + a sample tournament for testing online-only features) unless
+`VITE_BACKEND_URL` is set, in which case it returns the `fetch`-based `HttpBackend`. The sync policy is
+**client-wins**: `hydrateDevice()` restores from the server only on a fresh install (never overwriting
+local progression), and `schedulePush()` backs up in the background. It all runs outside `step()`, so
+determinism is untouched. See `src/backend/README.md` for the endpoint contract + migration steps.
 
 ### Renderer contract
 
