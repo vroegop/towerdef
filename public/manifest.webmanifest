@@ -1,0 +1,20 @@
+{
+  "name": "Arena — Hero vs Horde",
+  "short_name": "Arena",
+  "description": "A deterministic browser tower-defense / roguelite.",
+  "start_url": ".",
+  "scope": ".",
+  "id": "arena-hero-vs-horde",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#070910",
+  "theme_color": "#070910",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

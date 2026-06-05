@@ -19,6 +19,8 @@ import { Canvas2DRenderer } from './render/canvas2d';
 import { createHudHost } from './hud/host';
 import { createDevMenu, savedHud } from './hud/devmenu';
 import { DEFAULT_HUD, HUDS } from './hud/registry';
+import { registerServiceWorker, fetchServerVersion, applyUpdate } from './pwa';
+import { APP_BUILD, APP_VERSION, updateBreaksSave, type UpdateInfo } from './version';
 
 const SAVE = 'arena.save',
   METAK = 'arena.meta',
@@ -724,3 +726,49 @@ if (saved && saved.state) {
 } else {
   goToMenu({});
 }
+
+// ---- PWA: cache for fast startup, but always ask the server whether a newer version is out ----
+registerServiceWorker();
+
+let updatePrompted = false; // we only auto-open the modal once per session; the rail button persists
+
+// Wipe the local save (mid-run state + meta progression) before a save-breaking update, so the fresh
+// build boots clean instead of choking on an incompatible save. Display settings are version-agnostic,
+// so they're left intact.
+function clearGameSave(): void {
+  clearSave();
+  localStorage.removeItem(METAK);
+}
+
+// Apply an available update: clear a save-breaking save first, then drop caches + reload (see pwa.ts).
+function runUpdate(info: UpdateInfo): void {
+  if (info.breaksSave) clearGameSave();
+  applyUpdate();
+}
+
+// Ask the server for its current version; if it's newer than the build we're running, surface the
+// rail upgrade button (always) and the update modal (once per session).
+async function checkForUpdate(): Promise<void> {
+  const server = await fetchServerVersion();
+  if (!server || !(server.build > APP_BUILD)) return; // offline / dev / up-to-date → nothing to do
+  const info: UpdateInfo = {
+    current: APP_VERSION,
+    currentBuild: APP_BUILD,
+    latest: server.version || 'build ' + server.build,
+    latestBuild: server.build,
+    breaksSave: updateBreaksSave(APP_BUILD, server.build, server.saveBreakingBuilds),
+  };
+  // Always expose the workshop-rail upgrade button so the player can update later even if they dismiss
+  // the modal — "Keep playing" just leaves this button as their way back to the update.
+  hud.setUpdateAvailable?.(true, () => runUpdate(info));
+  if (!updatePrompted) {
+    updatePrompted = true;
+    hud.showUpdatePrompt?.(info, () => runUpdate(info), () => {});
+  }
+}
+
+checkForUpdate();
+// Re-check on every return to the foreground, so a deploy that lands mid-session is still noticed.
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) checkForUpdate();
+});

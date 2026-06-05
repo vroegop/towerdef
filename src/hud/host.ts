@@ -5,6 +5,7 @@
    createHudHost(root, handlers, { reenter }) → facade with the same method names main.ts
    calls on a HUD, plus switchTo(name), attachDevMenu(dm), getActiveName(). */
 import type { DevMenu, EarnSummary, Hud, HudHandlers, HudHost, MenuOpts, Meta, OfflineReward, State } from '../types';
+import type { UpdateInfo } from '../version';
 import { DEFAULT_HUD, HUDS } from './registry';
 
 export function createHudHost(root: HTMLElement, handlers: HudHandlers, opts?: { reenter?: (h: Hud) => void }): HudHost {
@@ -173,6 +174,9 @@ export function createHudHost(root: HTMLElement, handlers: HudHandlers, opts?: {
     hideOfflineReward: () => void call('hideOfflineReward', []),
     showPausePrompt: (info: { awaySec: number; speed: number }, onCollect: () => void, onKeepPaused?: () => void) =>
       void call('showPausePrompt', [info, onCollect, onKeepPaused]),
+    showUpdatePrompt: (info: UpdateInfo, onUpdate: () => void, onKeep?: () => void) =>
+      void call('showUpdatePrompt', [info, onUpdate, onKeep]),
+    setUpdateAvailable: (on: boolean, onUpdate?: () => void) => void call('setUpdateAvailable', [on, onUpdate]),
     setMeta: (meta: Meta) => void call('setMeta', [meta]),
   };
   return facade;

@@ -505,6 +505,12 @@
 .hud .menutabs button.tut { color: #ffd24a; border-top-color: #ffd24a; animation: tutpulse 1.2s ease-in-out infinite; }
 .hud .menutabs button.tut-off { opacity: .35; pointer-events: none; } /* gated out during a tutorial step */
 @keyframes tutpulse { 0%,100% { background: rgba(255,210,74,.05); } 50% { background: rgba(255,210,74,.18); } }
+/* "update available" rail button: an up-arrow that flexes in beside the tabs, gently pulsing amber so
+   it reads as an action, not a tab. Hidden until the version check reveals a newer server build. */
+.hud .menutabs button.mtab-update { color: #ffc24a; max-width: 64px; flex: 0 0 auto; animation: updpulse 1.6s ease-in-out infinite; }
+.hud .menutabs button.mtab-update:hover { color: #ffe1a0; }
+.hud .menutabs button.mtab-update.hide { display: none; }
+@keyframes updpulse { 0%,100% { background: rgba(255,194,74,.06); } 50% { background: rgba(255,194,74,.20); } }
 /* corner count badge on the labs tab button (active-research count) */
 .hud .menutabs .tabbadge { position: absolute; bottom: 3px; display: inline-flex; align-items: center; gap: 2px;
   font-size: 9px; font-weight: 800; color: #d8deea; line-height: 1; pointer-events: none; }
@@ -1067,6 +1073,12 @@
 .hud .im-body { color: #aab3c7; font-size: 13.5px; line-height: 1.5; }
 /* extra .infomodal-card scope keeps these from losing a specificity tie to a theme's `b` color */
 .hud .infomodal-card .im-body b { color: #e6ebf5; }
+/* save-reset warning inside the update modal: a tinted amber callout with its own icon */
+.hud .im-body .im-warn { display: flex; align-items: flex-start; gap: 8px; margin-top: 14px; padding: 10px 12px;
+  text-align: left; border-radius: 10px; background: rgba(255,174,58,.10); border: 1px solid rgba(255,174,58,.4);
+  color: #ffd9a0; font-size: 12.5px; line-height: 1.45; }
+.hud .im-body .im-warn .ic { flex: 0 0 auto; color: #ffae3a; margin-top: 1px; }
+.hud .infomodal-card .im-body .im-warn b { color: #fff; }
 /* reward chips row */
 .hud .im-rewards { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
 .hud .im-chip { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 10px;

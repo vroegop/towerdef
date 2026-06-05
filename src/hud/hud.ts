@@ -26,6 +26,7 @@ import {
 import { drawTowerSkin } from '../render/towers';
 import { attachOverscrollBounce, attachOverscrollBounceAll } from './overscroll';
 import { cardArt } from './card-art';
+import type { UpdateInfo } from '../version';
 
 // The HUD is a single themeable core: identical structure + wiring for every theme, restyled
 // by a scoping class (`theme.cls`) + an injected override stylesheet (`theme.css`).
@@ -44,6 +45,8 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     check: '<path d="M5 13l4 4 10-10"/>',
     back: '<path d="M15 5l-7 7 7 7"/>',
     arrow: '<path d="M5 12h13"/><path d="M12 6l6 6-6 6"/>',
+    // arrowup = the "an update is available" rail button + update-modal badge
+    arrowup: '<path d="M12 19V6"/><path d="M6 12l6-6 6 6"/>',
     chart: '<path d="M5 20V11"/><path d="M11 20V5"/><path d="M17 20v-7"/><path d="M3 20h18"/>',
     close: '<path d="M6 6l12 12M18 6L6 18"/>',
     cards: '<rect x="3" y="7" width="12" height="14" rx="1"/><path d="M8 7V5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2"/>',
@@ -1615,6 +1618,39 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     });
   }
 
+  // ---------- PWA update prompt + workshop-rail "upgrade" button ----------
+  // The rail button (an up-arrow appended to the menu tab bar) is wired in the MENU_TABS section below;
+  // these refs let setUpdateAvailable() reveal it and bind its click without rebuilding the rail.
+  let updateRailBtn: HTMLButtonElement | null = null;
+  let onUpdateClick: (() => void) | null = null;
+  // The on-return / on-boot update modal: shows the player's version vs the server's, warns when the
+  // jump will reset a pre-alpha save, and offers Update now / Keep playing.
+  function showUpdatePrompt(info: UpdateInfo, onUpdate: () => void, onKeep?: () => void): void {
+    const warn = info.breaksSave
+      ? '<div class="im-warn">' + icon('best', 15) +
+        ' This update changes the save format. Your current progress <b>will be reset</b> when you update.</div>'
+      : '';
+    showInfoModal({
+      accent: 'amber',
+      iconName: 'arrowup',
+      title: 'Update available',
+      body:
+        'You\'re playing <b>' + info.current + '</b>.<br>' +
+        'The latest version is <b>' + info.latest + '</b>.' +
+        warn,
+      primary: 'Update now',
+      onPrimary: onUpdate,
+      secondary: 'Keep playing',
+      onSecondary: onKeep,
+    });
+  }
+  // Reveal (or hide) the up-arrow upgrade button in the workshop tab rail and bind what it does. Shown
+  // after the player chose "Keep playing" so they can still update later from the menu at any time.
+  function setUpdateAvailable(on: boolean, onUpdate?: () => void): void {
+    onUpdateClick = on ? onUpdate || null : null;
+    if (updateRailBtn) updateRailBtn.classList.toggle('hide', !on);
+  }
+
   // ---------- side menu: a narrow icon rail, toggled by the header button; no auto-dismiss ----------
   // Each rail icon opens a self-dismissing modal (Settings) or panel (Run Stats), so the unintrusive
   // rail can stay open without a big panel hogging the screen.
@@ -2023,6 +2059,15 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     }
     menuTabsEl.appendChild(b);
   });
+
+  // The "upgrade available" button: an up-arrow pinned to the end of the tab rail, hidden until the
+  // PWA update check (via setUpdateAvailable) finds a newer server build. Clicking it updates the game.
+  updateRailBtn = document.createElement('button');
+  updateRailBtn.className = 'mtab-update hide';
+  updateRailBtn.title = 'Update available';
+  updateRailBtn.innerHTML = icon('arrowup', 24);
+  updateRailBtn.addEventListener('click', () => onUpdateClick && onUpdateClick());
+  menuTabsEl.appendChild(updateRailBtn);
 
   // The menu "character sheet" tower: draws the player's selected tower skin, animated via a
   // self-cancelling rAF loop (stops as soon as the canvas leaves the DOM on a re-render / tab swap).
@@ -2631,7 +2676,7 @@ function buildHud(root: HTMLElement, handlers: HudHandlers, theme: ThemeDef | nu
     }
   }, 1000);
 
-  return { update, showMenu, refreshMenu, hideMenu, showOverview, hideOverview, showHint, hideHint, showOfflineReward, updateOfflineReward, hideOfflineReward, showPausePrompt, setMeta, root };
+  return { update, showMenu, refreshMenu, hideMenu, showOverview, hideOverview, showHint, hideHint, showOfflineReward, updateOfflineReward, hideOfflineReward, showPausePrompt, showUpdatePrompt, setUpdateAvailable, setMeta, root };
 }
 
 // Factory for a themed skin: same core + wiring, restyled by `theme = { cls, css }`.
