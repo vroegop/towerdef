@@ -2,8 +2,9 @@
    and the swappable HUD host, owns persistence (localStorage), offline catch-up, and the dev
    overlay. This is the only module that touches the browser lifecycle. */
 import './hud/hud.css';
-import type { EarnSummary, HudHandlers, Meta, Settings, State } from './types';
-import { DT, catchUp } from './sim/offline';
+import type { EarnSummary, HudHandlers, Meta, OfflineReward, Settings, State } from './types';
+import { DT, catchUp, plannedTicks } from './sim/offline';
+import type { CatchUpResult } from './sim/offline';
 import { Sim, tickDying } from './sim/core';
 import { requestActiveSkill } from './sim/cards-active';
 import { createState } from './sim/state';
@@ -319,6 +320,9 @@ let sim: Sim | null = null,
   hiddenAt = 0,
   paused = false,
   dyingT = 0,
+  // True while a long offline catch-up is replaying on the worker: frame() bails (the canvas stays
+  // frozen, no sim steps) so only the HUD's live tally updates until the replay finishes.
+  offlineBusy = false,
   turbo = false, // dev cheat: when on, the loop runs the sim at gameSpeed × TURBO_MUL (bypasses the lab cap)
   lastEarn: EarnSummary | null = null;
 
@@ -366,18 +370,118 @@ function maxUnlockedSpeed(): number {
   return sp[sp.length - 1];
 }
 
-// Replay the offline window at `speed`× and bank the result. If the hero died during the replay we
-// drop straight to the overview (returns true). Otherwise optionally surface the "while you were
-// away" spoils. A non-positive speed (paused) replays nothing.
-function applyOfflineCatchUp(elapsedSec: number, speed: number, surface: boolean): boolean {
-  if (speed <= 0 || elapsedSec <= 0) return false;
-  const r = catchUp(sim!, elapsedSec * speed, OFFLINE_CAP * speed);
-  if (!sim!.s.alive) {
+const OFFLINE_MODAL_DELAY = 180; // ms before the live "Simulating…" modal appears — skip the flash on quick tallies
+
+// The currency chips the offline-reward modal shows, pulled from a replay result.
+function rewardFrom(r: CatchUpResult): OfflineReward {
+  return { gold: r.gold, coins: r.coins, kills: r.kills, waves: r.waves, gems: r.gems, vials: r.vials };
+}
+
+// Spin up the dedicated catch-up worker (module worker, bundled by Vite). Returns null if the
+// environment can't host one, so the caller can fall back to a blocking replay.
+function makeOfflineWorker(): Worker | null {
+  try {
+    return new Worker(new URL('./sim/offline.worker.ts', import.meta.url), { type: 'module' });
+  } catch {
+    return null;
+  }
+}
+
+// Finish a SYNCHRONOUS (blocking) replay — used when no worker can be spawned or the worker errored
+// mid-flight. The live sim was mutated in place. Returns true if the hero died (overview shown).
+function finishOfflineSync(r: CatchUpResult, elapsedSec: number, surface: boolean, modalHandled: boolean): boolean {
+  if (r.died) {
     enterOverview(bankRun(), true);
     return true;
   }
-  if (surface && elapsedSec > 20 && settings.showOfflineReward) hud.showOfflineReward(r);
+  if (!modalHandled && surface && elapsedSec > 20 && settings.showOfflineReward) hud.showOfflineReward(rewardFrom(r));
   return false;
+}
+
+// Replay the offline window at `speed`× and bank the result. Resolves true if the hero died during
+// the replay (the overview is already shown), false otherwise — the caller then restarts the loop.
+//
+// Long windows run the replay on a WORKER so the main thread is free: the canvas stays frozen
+// (offlineBusy gates frame()) while the HUD's "while you were away" tally ticks up live and Collect
+// stays disabled until the sim finishes. Quick windows (or a missing worker) replay inline.
+function applyOfflineCatchUp(elapsedSec: number, speed: number, surface: boolean): Promise<boolean> {
+  if (speed <= 0 || elapsedSec <= 0 || !sim) return Promise.resolve(false);
+  const simSeconds = elapsedSec * speed;
+  const capSeconds = OFFLINE_CAP * speed;
+  if (plannedTicks(simSeconds, capSeconds) <= 0) return Promise.resolve(false);
+
+  const worker = makeOfflineWorker();
+  if (!worker) {
+    const r = catchUp(sim, simSeconds, capSeconds);
+    return Promise.resolve(finishOfflineSync(r, elapsedSec, surface, false));
+  }
+
+  offlineBusy = true; // freeze frame(): no sim steps, no canvas draws until the worker reports done
+  running = false;
+  let modalShown = false;
+
+  return new Promise<boolean>((resolve) => {
+    const showTimer = surface
+      ? window.setTimeout(() => {
+          modalShown = true;
+          hud.showOfflineReward({ gold: 0, coins: 0, kills: 0, waves: 0, gems: 0, vials: 0 }, { computing: true });
+        }, OFFLINE_MODAL_DELAY)
+      : 0;
+
+    const cleanup = (): void => {
+      clearTimeout(showTimer);
+      worker.onmessage = null;
+      worker.onerror = null;
+      worker.terminate();
+      offlineBusy = false;
+    };
+
+    worker.onmessage = (ev: MessageEvent) => {
+      const msg = ev.data as { type: string; result: CatchUpResult; state?: State };
+      if (msg.type === 'progress') {
+        if (modalShown) hud.updateOfflineReward!(rewardFrom(msg.result), false);
+        return;
+      }
+      // type === 'done'
+      const r = msg.result;
+      const newState = msg.state as State;
+      // The worker mutated a structured-clone of meta, so fold its currency GAINS (deltas) into our
+      // live meta — additively, so a lab payout that landed during the replay isn't clobbered — then
+      // reattach it so the rebuilt sim shares our single live meta object (matches the boot path's
+      // `saved.state.meta = meta`).
+      meta.energy = (meta.energy || 0) + (r.energy || 0);
+      meta.gems = (meta.gems || 0) + (r.gems || 0);
+      meta.vials = (meta.vials || 0) + (r.vials || 0);
+      newState.meta = meta;
+      sim = new Sim(newState);
+      saveMeta();
+      cleanup();
+      if (r.died) {
+        if (modalShown) hud.hideOfflineReward!();
+        enterOverview(bankRun(), true);
+        resolve(true);
+        return;
+      }
+      if (modalShown) hud.updateOfflineReward!(rewardFrom(r), true); // enable Collect on the live modal
+      else if (surface && elapsedSec > 20 && settings.showOfflineReward) hud.showOfflineReward(rewardFrom(r));
+      persist(); // the caller restarts the loop next; bank the caught-up state now in case it doesn't
+      resolve(false);
+    };
+
+    worker.onerror = () => {
+      // Worker failed mid-replay: fall back to a blocking replay on the live sim so the player is
+      // never stranded on a frozen screen.
+      cleanup();
+      const r = catchUp(sim!, simSeconds, capSeconds);
+      if (modalShown) {
+        if (r.died) hud.hideOfflineReward!();
+        else hud.updateOfflineReward!(rewardFrom(r), true);
+      }
+      resolve(finishOfflineSync(r, elapsedSec, surface, modalShown));
+    };
+
+    worker.postMessage({ state: sim!.serialize(), elapsedSec: simSeconds, maxSec: capSeconds });
+  });
 }
 
 // The run sat idle while PAUSED, so it earned nothing. Ask whether that was intentional; if not,
@@ -388,9 +492,15 @@ function promptOfflinePause(elapsedSec: number): void {
     paused = false;
     setGameSpeed(meta, speed);
     hud.setDevToggle('pause', false);
-    if (applyOfflineCatchUp(elapsedSec, speed, true)) return; // hero died catching up → overview
-    saveMeta();
-    last = performance.now(); // the long real gap is consumed; don't feed it to the next frame
+    applyOfflineCatchUp(elapsedSec, speed, true).then((died) => {
+      if (died) return; // hero died catching up → overview already shown
+      saveMeta();
+      last = performance.now(); // the long real gap is consumed; don't feed it to the next frame
+      if (!running) {
+        running = true;
+        requestAnimationFrame(frame);
+      }
+    });
   });
 }
 
@@ -499,7 +609,9 @@ function enterOverview(earn: EarnSummary, offline = false): void {
 
 // ---- main loop: fixed-step sim, free-rate render ----
 function frame(now: number): void {
-  if (!running || (mode !== 'playing' && mode !== 'dying')) return;
+  // offlineBusy: a worker catch-up is replaying — keep the canvas frozen (no steps, no draw) and let
+  // the loop die; applyOfflineCatchUp re-kicks it once the replay is done.
+  if (!running || offlineBusy || (mode !== 'playing' && mode !== 'dying')) return;
   const dt = Math.min((now - last) / 1000, 0.25);
   last = now;
   if (mode === 'dying') {
@@ -542,6 +654,7 @@ function persist(): void {
   if (sim) localStorage.setItem(SAVE, JSON.stringify({ savedAt: Date.now(), state: sim.serialize() }));
 }
 document.addEventListener('visibilitychange', () => {
+  if (offlineBusy) return; // a catch-up worker is already running — don't double-replay or persist a stale state
   if (document.hidden) {
     if (mode === 'playing' && sim && sim.s.alive) {
       hiddenAt = Date.now();
@@ -554,13 +667,20 @@ document.addEventListener('visibilitychange', () => {
     // A paused run (speed 0, or the dev/space pause) earns nothing while away — ask if that was
     // intentional instead of silently dropping the time. Otherwise replay at the current speed.
     const wasPaused = paused || gameSpeed(meta) === 0;
+    const resume = (): void => {
+      last = performance.now();
+      running = true;
+      requestAnimationFrame(frame);
+      if (el > PAUSE_PROMPT_MIN && wasPaused) promptOfflinePause(el);
+    };
     if (el > 2 && !wasPaused) {
-      if (applyOfflineCatchUp(el, effSpeed(), true)) return; // hero died catching up → overview
+      // Replay off the main thread; the canvas stays frozen until done, then we resume the loop.
+      applyOfflineCatchUp(el, effSpeed(), true).then((died) => {
+        if (!died) resume(); // hero died catching up → overview already shown
+      });
+    } else {
+      resume();
     }
-    last = performance.now();
-    running = true;
-    requestAnimationFrame(frame);
-    if (el > PAUSE_PROMPT_MIN && wasPaused) promptOfflinePause(el);
   } else {
     reconcileLabs();
   }
@@ -580,17 +700,24 @@ if (saved && saved.state) {
   saved.state.meta = meta;
   sim = new Sim(saved.state);
   mode = 'playing';
+  hud.hideMenu();
   const elapsed = (Date.now() - saved.savedAt) / 1000;
   // A run saved while paused (speed 0) earned nothing — we'll ask about it below rather than replay.
   const wasPaused = gameSpeed(meta) === 0;
-  let ended = false;
-  if (elapsed > 2 && !wasPaused) ended = applyOfflineCatchUp(elapsed, effSpeed(), true);
-  if (!ended) {
-    hud.hideMenu();
+  const resume = (): void => {
     last = performance.now();
     running = true;
     requestAnimationFrame(frame);
     if (elapsed > PAUSE_PROMPT_MIN && wasPaused) promptOfflinePause(elapsed);
+  };
+  if (elapsed > 2 && !wasPaused) {
+    // The catch-up runs on a worker: the canvas holds (black is fine — nothing has drawn yet) while
+    // the live "while you were away" tally fills in, then the loop starts on the caught-up state.
+    applyOfflineCatchUp(elapsed, effSpeed(), true).then((ended) => {
+      if (!ended) resume(); // hero died catching up → overview already shown
+    });
+  } else {
+    resume();
   }
 } else if (!meta.hasPlayed) {
   startRun(true);
