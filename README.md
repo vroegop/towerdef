@@ -101,6 +101,28 @@ survives HUD swaps; it exposes cheats, time-skip, and the HUD switcher. HUD visu
 covered by `tests/visual/hud.spec.ts` (screenshots of `dnd` across menu tabs and the run-over
 overview); re-bless baselines with `npm run test:visual:update` after intentional UI changes.
 
+## PWA & version management
+
+The game ships as an installable PWA, cached for instant startup, that always checks the server for a
+newer version on boot (and on every return to the foreground).
+
+- **Service worker** (`public/sw.js`, registered in `src/main.ts`): caches every same-origin asset
+  cache-first (instant boot, works offline) and refreshes it in the background. `version.json` is the
+  one file it never caches, so the update check always sees the server's live version.
+- **One source of truth for the version.** `version.config.json` holds the human-set semver and
+  `saveBreakingBuilds` (the build numbers that invalidated the save format — noted by hand, since only
+  a human knows a change breaks saves). The `app-version` Vite plugin (`vite.config.ts`):
+  - bakes `APP_VERSION` / `APP_BUILD` / `SAVE_BREAKING_BUILDS` into the client (`src/version.ts`), so a
+    shipped build knows exactly which version it is, and
+  - emits `dist/version.json` for the live game to poll.
+  The **build number** comes from `GITHUB_RUN_NUMBER`, so it bumps automatically on every Pages deploy
+  — no commit-back, no manual step.
+- **The flow** (`checkForUpdate` in `src/main.ts`): if the server build is newer, a modal shows the
+  player's version vs the server's, warns when the jump crosses a save-breaking build, and offers
+  **Update now** / **Keep playing**. "Keep playing" leaves an up-arrow **upgrade button** in the
+  workshop tab rail so they can update later. Updating drops all caches and reloads; a save-breaking
+  update clears the local save (and meta progression) first.
+
 ## Technical backlog (non-game)
 
 Genuinely-technical, still-open items (game/feature ideas are intentionally not tracked here):

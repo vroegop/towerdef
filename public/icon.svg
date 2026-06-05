@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Arena — Hero vs Horde">
+  <!-- Full-bleed dark backdrop so the icon reads as "maskable": safe content stays well inside. -->
+  <rect width="512" height="512" fill="#070910"/>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="34%" r="72%">
+      <stop offset="0%" stop-color="#16203a"/>
+      <stop offset="100%" stop-color="#070910"/>
+    </radialGradient>
+    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5fc0ff"/>
+      <stop offset="100%" stop-color="#2a7fd6"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- Heraldic shield (the "defense") -->
+  <path d="M256 96 L392 144 V272 C392 360 332 412 256 444 C180 412 120 360 120 272 V144 Z"
+        fill="url(#shield)" stroke="#bfe4ff" stroke-width="10" stroke-linejoin="round"/>
+  <!-- Sword down the centre (the "hero") -->
+  <g stroke="#0b1020" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="#eaf4ff">
+    <path d="M256 150 L286 200 L256 392 L226 200 Z"/>
+    <path d="M196 232 H316"/>
+    <path d="M256 392 v34"/>
+  </g>
+</svg>

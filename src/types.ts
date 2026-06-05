@@ -1,6 +1,7 @@
 /* src/types.ts — shared type definitions for the whole game.
    These describe the serializable sim state (the save file), the persistent meta, and the
    data registries. The sim mutates these objects in place; the renderer + HUD read them. */
+import type { UpdateInfo } from './version';
 
 export interface Rng {
   next(): number;
@@ -474,6 +475,11 @@ export interface Hud {
   // Returned-while-paused prompt: ask if the pause was intentional. onCollect fast-forwards the
   // missed time at `speed`; onKeepPaused (optional) just dismisses.
   showPausePrompt(info: { awaySec: number; speed: number }, onCollect: () => void, onKeepPaused?: () => void): void;
+  // PWA update prompt: the player's version vs the server's, with a save-reset warning when the jump
+  // crosses a save-breaking build. onUpdate applies it; onKeep dismisses (and the rail button appears).
+  showUpdatePrompt?(info: UpdateInfo, onUpdate: () => void, onKeep?: () => void): void;
+  // Reveal/hide the up-arrow "upgrade" button in the workshop tab rail, binding what it does on click.
+  setUpdateAvailable?(on: boolean, onUpdate?: () => void): void;
   setMeta(meta: Meta): void;
   root: HTMLElement;
   destroy?: () => void;

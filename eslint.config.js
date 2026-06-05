@@ -34,5 +34,13 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'off',
     },
   },
+  {
+    // The hand-written service worker (shipped verbatim from public/) runs in the SW global scope:
+    // `self`, `caches`, `fetch`, `URL`, etc. It is plain JS, not part of the TypeScript program.
+    files: ['public/**/*.js'],
+    languageOptions: {
+      globals: { ...globals.serviceworker },
+    },
+  },
   prettier,
 );
