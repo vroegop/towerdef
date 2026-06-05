@@ -11,9 +11,15 @@
  *   • "live"  — use the exact sampled table from the game (default for shipped labs; read-only).
  *   • "curve" — a 3-knob power ramp: value(L) = L1 + (Lmax − L1)·t^exp, t = (L−1)/(max−1).
  *               L1 = the start (level-1) value, Lmax = the value at the final level, exp = steepness
- *               (1 = linear, >1 = back-loaded, <1 = front-loaded). Untick "use game curve" to edit it. */
+ *               (1 = linear, >1 = back-loaded, <1 = front-loaded). Untick "use game curve" to edit it.
+ *
+ * Each lab that maps to a workshop SKILL also shows the combined "both maxed" ceiling — the skill's
+ * maxed value (read live from the game) stacked with the lab's max effect. Interest is special-cased
+ * (the skill is a rate, the lab is a ceiling — they don't multiply). */
 
-import { LABS } from '../../src/sim/labs';
+import { LABS, labInterestCap, migrateMeta } from '../../src/sim/labs';
+import { UP_BY_ID, upgradeCap, effectiveUpgradeValue } from '../../src/sim/skills';
+import type { Meta } from '../../src/types';
 
 // ── tiny DOM + format helpers ───────────────────────────────────────────────────────────────────────
 const $ = <T extends HTMLElement = HTMLElement>(sel: string): T => document.querySelector(sel) as T;
@@ -96,7 +102,7 @@ function currentModels(): LabModel[] {
     const liveTime = (n: number): number => L.time.at(n);
     return {
       id: L.id, label: L.label, cat: L.cat, kind: L.kind, target: L.target,
-      unit: L.unit || (L.kind === 'scale' ? 'mult' : 'mult'),
+      unit: L.unit || 'mult',
       per: L.per, max: L.max, gateWave: (L.gate && L.gate.wave) || 0,
       cost: { live: true, l1: liveCost(0), lmax: liveCost(L.max - 1), exp: fitExp(liveCost, L.max) },
       time: { live: true, l1: liveTime(0), lmax: liveTime(L.max - 1), exp: fitExp(liveTime, L.max) },
@@ -118,42 +124,14 @@ function suggestedModels(): LabModel[] {
     time: { live: false, l1: time[0], lmax: time[1], exp: time[2] },
     ...o,
   });
+  // Earlier suggestions (Attack Speed, Crit Chance, HP Regen, Bounce, Gem Find) have since shipped and
+  // now appear under "Current labs"; Lifesteal is the one still on the table.
   return [
-    mk(
-      { id: 'atkSpeedLab', label: 'Attack Speed Lab', cat: 'attack', kind: 'scale', target: 'fireRate', per: 0.02, max: 50 },
-      [30, 1_500_000, 2.6], [120, 2_600_000, 2.4],
-      'DPS is damage×fire rate, but only the Damage Lab scales it. An Attack Speed lab adds the second ' +
-        'multiplicative axis. Capped at 50 (+100%) so it stays behind the 100-level Damage Lab.',
-    ),
-    mk(
-      { id: 'critChanceLab', label: 'Crit Chance Lab', cat: 'attack', kind: 'flat', target: 'critChance', per: 0.005, max: 20, unit: 'pct' },
-      [30, 200_000, 2.3], [600, 1_500_000, 2.2],
-      'A Crit DAMAGE lab already exists; pairing it with crit chance makes crit a real build. +0.5%/level, ' +
-        'capped at +10% so it complements skills/cards rather than replacing them.',
-    ),
-    mk(
-      { id: 'regenLab', label: 'HP Regen Lab', cat: 'defense', kind: 'scale', target: 'regen', per: 0.05, max: 30 },
-      [30, 900_000, 2.4], [120, 1_900_000, 2.3],
-      'Sustain scaling for long waves; multiplies the Regen skill (+5%/level → ×2.5 at max). Defense ' +
-        'currently only has Health / Defense% / Armor — this rounds it out.',
-    ),
     mk(
       { id: 'lifestealLab', label: 'Lifesteal Lab', cat: 'defense', kind: 'scale', target: 'lifesteal', per: 0.03, max: 20 },
       [30, 500_000, 2.4], [120, 1_400_000, 2.3],
       'Offence-as-defence: scales the Lifesteal skill so high-damage builds heal themselves. Keeps ' +
         'defence interesting for aggressive players.',
-    ),
-    mk(
-      { id: 'bounceLab', label: 'Bounce Chance Lab', cat: 'attack', kind: 'flat', target: 'bounceChance', per: 0.01, max: 20, unit: 'pct' },
-      [30, 300_000, 2.3], [600, 1_600_000, 2.2],
-      'Feeds the Lightning/Multishot group: +1% bounce per level (+20% at max), giving that build a ' +
-        'long-term progression sink it currently lacks.',
-    ),
-    mk(
-      { id: 'gemFindLab', label: 'Gem Find Lab', cat: 'economic', kind: 'special', target: 'gemMult', per: 0.02, max: 20, unit: 'pct' },
-      [50, 2_500_000, 2.8], [600, 3_500_000, 2.6],
-      'The only economic lab that touches the gem economy (check-ins / lab-slots / rushes). Would need a ' +
-        'small labGemMult() helper mirroring labTierCoinMult. Slow, expensive curve — a long-term goal.',
     ),
   ];
 }
@@ -181,19 +159,77 @@ function expand(m: LabModel): { costs: number[]; times: number[]; cumCost: numbe
   }
   return { costs, times, cumCost, cumTime };
 }
-// cumulative effect at a given level, phrased for the HUD's unit.
+// cumulative effect at a given level, phrased for the lab's unit.
 function effectAt(m: LabModel, level: number): string {
+  // special labs whose real effect isn't per·level — driven by dedicated game helpers, not `per`.
+  if (m.target === 'gemMult') return '×' + (1 + m.per * level).toFixed(2) + ' gems';
+  if (m.target === 'interestCap' || m.unit === 'interestcap')
+    return labInterestCap({ labs: { interestCapLab: level } } as unknown as Meta).toLocaleString() + '/wave';
   const v = m.per * level;
   switch (m.unit) {
     case 'meters': return '+' + round(v) + ' m';
-    case 'pct': return '+' + (v * 100).toFixed(1) + '%';
+    case 'pct': return '+' + +(v * 100).toFixed(2) + '%';
     case 'gold': return '+' + round(v) + ' gold';
-    case 'tierpct': return '+' + (v * 100).toFixed(0) + '% coins';
-    case 'interestcap': return 'cap raised';
+    case 'tierpct': return '+' + +(v * 100).toFixed(1) + '% coins';
     default:
       if (m.kind === 'scale') return '×' + (1 + v).toFixed(2);
       return '+' + Number(v.toFixed(3));
   }
+}
+
+// ── skill ↔ lab pairing: a lab's sim-stat target maps to a workshop skill, so we can show the combined
+// "both maxed" ceiling. Skill maxes are read live from the game; the lab side uses the editable model,
+// so the readout tracks your edits. ─────────────────────────────────────────────────────────────────
+const SKILL_FOR_TARGET: Record<string, string> = {
+  rangedDamage: 'rangedDamage', maxHp: 'health', fireRate: 'attackSpeed', regen: 'regen',
+  critMult: 'critDamage', critChance: 'critChance', bounceChance: 'bounceChance', rangeM: 'range',
+  lifesteal: 'lifesteal',
+};
+// a full, lab-free meta for driving the game's stat math (effectiveUpgradeValue → computeStats).
+const NO_LABS: Meta = migrateMeta({
+  coins: 0, perm: {}, unlocked: {}, hasPlayed: true, bestWave: 99999, claimedMilestones: {}, tier: 1,
+  tierBest: {}, gems: 0, cards: [], cardBuys: 0, cardSlots: 1, activeCards: [], totalWaves: 0,
+  labs: {}, research: [], labSlots: 1, vials: 0, lastCheckIn: 0, ver: 0,
+} as unknown as Meta);
+// skill-only maxed value + base level cap (no labs), cached — independent of the dashboard's lab edits.
+const SKILL_MAX: Record<string, { val: number; cap: number }> = {};
+for (const t in SKILL_FOR_TARGET) {
+  const up = SKILL_FOR_TARGET[t];
+  if (!UP_BY_ID[up]) continue;
+  const cap = upgradeCap(NO_LABS, up);
+  SKILL_MAX[up] = { val: effectiveUpgradeValue(NO_LABS, up, cap), cap };
+}
+const interestRateMax = UP_BY_ID.interest ? UP_BY_ID.interest.value(UP_BY_ID.interest.max) : 0;
+
+// format a stat value for display, honouring its unit (pct → %, meters → m, small → 2dp, big → k/M/B).
+function fmtVal(n: number, unit: string, target: string): string {
+  if (unit === 'pct') return +(n * 100).toFixed(1) + '%';
+  if (unit === 'meters' || target === 'rangeM') return +n.toFixed(1) + ' m';
+  if (Math.abs(n) < 100) return String(+n.toFixed(2));
+  return fmtCoins(n);
+}
+// the "skill + lab, both maxed" sentence for a lab (or '' if it has no workshop-skill counterpart).
+function comboInfo(m: LabModel): string {
+  // Interest is special: the skill is a RATE and the lab is a CEILING — they don't multiply.
+  if (m.target === 'interestCap') {
+    const cap = labInterestCap({ labs: { interestCapLab: Math.round(m.max) } } as unknown as Meta);
+    const cross = interestRateMax > 0 ? Math.round(cap / interestRateMax) : 0;
+    return `Interest skill maxed <b>${+(interestRateMax * 100).toFixed(1)}%/wave</b> · cap (lab max) ` +
+      `<b>${cap.toLocaleString()}/wave</b> · the cap binds only above <b>${cross.toLocaleString()}</b> ` +
+      `banked gold (rate vs ceiling — they don't multiply).`;
+  }
+  const up = SKILL_FOR_TARGET[m.target];
+  if (!up || !SKILL_MAX[up]) return '';
+  const sm = SKILL_MAX[up].val;
+  const labEff = m.per * Math.round(m.max);
+  const flat = m.kind === 'flat';
+  const combined = flat ? sm + labEff : sm * (1 + labEff);
+  const labStr = flat ? '+' + fmtVal(labEff, m.unit, m.target) : '×' + (1 + labEff).toFixed(2);
+  // Damage/Health labs also lift the skill's level cap (LAB_CAPS).
+  const rc = upgradeCap({ labs: { [m.id]: Math.round(m.max) } } as unknown as Meta, up);
+  const capNote = rc > SKILL_MAX[up].cap ? ` · raises skill cap ${SKILL_MAX[up].cap}→${rc} lvls` : '';
+  return `skill maxed <b>${fmtVal(sm, m.unit, m.target)}</b> ${flat ? '＋' : '×'} lab <b>${labStr}</b> ` +
+    `= <b>${fmtVal(combined, m.unit, m.target)}</b>${capNote}`;
 }
 // which levels to show in the breakdown (all if short, else ~20 sampled milestones incl. 1 and max).
 function sampleLevels(max: number): number[] {
@@ -331,6 +367,10 @@ function labCard(m: LabModel): HTMLElement {
   const chips = el('div', { class: 'chips' });
   card.appendChild(chips);
 
+  // ── skill + lab combined (refreshed; hidden for labs with no workshop-skill counterpart) ──
+  const combo = el('div', { class: 'combo' });
+  card.appendChild(combo);
+
   // ── rationale (suggested labs) ──
   if (m.rationale) card.appendChild(el('div', { class: 'rationale' }, '<b>Why:</b> ' + m.rationale));
 
@@ -356,6 +396,10 @@ function labCard(m: LabModel): HTMLElement {
       `<span class="chip warn"><span class="k">total time to max</span> <b>${fmtDur(totTime)}</b></span>` +
       `<span class="chip"><span class="k">avg / level</span> <b>${fmtDur(avgTime)}</b></span>` +
       `<span class="chip"><span class="k">effect @ max</span> <b>${effectAt(m, total)}</b></span>`;
+
+    const ci = comboInfo(m);
+    combo.innerHTML = ci ? '<span class="k">Skill + lab, both maxed</span>' + ci : '';
+    combo.style.display = ci ? '' : 'none';
 
     const rows = sampleLevels(m.max).map((L) => {
       const i = L - 1;
