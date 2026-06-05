@@ -685,17 +685,13 @@ function emitSuperFx(s: State, x: number, y: number, kind: 'shatter' | 'gem' | '
   if (s.superFx.length > 48) s.superFx.shift();
 }
 
-// pay out gems / vials / energy for one crystal-or-shard contact; bosses also yield bulk Energy.
-// Shards (fromShard) are deliberately weak: a flat 1 gem + 1 vial and no Energy per hit — but the
-// 20× boss-Energy bonus still applies. The orbiting crystals pay the full per-level track values.
-function payCrystalHit(s: State, e: Enemy, fromShard = false): void {
+// pay out for one crystal-or-shard contact: a flat 1 gem + 1 vial and no Energy per hit — bosses also
+// yield the bulk 20× boss-Energy bonus. Orbiting crystals and shards pay identically.
+function payCrystalHit(s: State, e: Enemy): void {
   const meta = s.meta;
-  const gems = fromShard ? 1 : Math.round(trackValue(meta, 'crystal', 'gems'));
-  meta.gems = (meta.gems || 0) + gems;
-  const v = fromShard ? 1 : Math.round(trackValue(meta, 'crystal', 'vials'));
-  if (v) meta.vials = (meta.vials || 0) + v;
-  const en = fromShard ? 0 : Math.round(trackValue(meta, 'crystal', 'energy'));
-  meta.energy = (meta.energy || 0) + en + (e.type === 'boss' ? CRYSTAL_BOSS_ENERGY : 0);
+  meta.gems = (meta.gems || 0) + 1;
+  meta.vials = (meta.vials || 0) + 1;
+  if (e.type === 'boss') meta.energy = (meta.energy || 0) + CRYSTAL_BOSS_ENERGY;
   e.hp = 0;
   e.lastHurt = 'crystal';
   emitSuperFx(s, e.x, e.y, e.type === 'boss' ? 'energy' : 'gem');
@@ -718,7 +714,7 @@ function tickCrystal(s: State, dt: number, _rng: Rng): void {
       if (dx * dx + dy * dy > fog2) continue; // flew into the fog → gone
       const hit = nearestEnemyWithin(s, fr.x, fr.y, CRYSTAL_HIT_R);
       if (hit) {
-        payCrystalHit(s, hit, true);
+        payCrystalHit(s, hit);
         continue;
       } // shard hits one enemy, then shatters (is removed)
       keep.push(fr);
